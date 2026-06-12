@@ -403,8 +403,22 @@ const config: BotConfig = {
 // --- EVENT: Bot Ready ---
 client.on('ready', async () => {
   console.log(`\n🤖 DiscordForge Bot conectado como ${client.user?.tag}`)
-  console.log(`📍 En ${client.guilds.cache.size} servidores`)
-  console.log(`👥 Sirviendo a ${client.guilds.cache.reduce((a, g) => a + g.memberCount, 0)} usuarios\n`)
+
+  // Fetch guilds actively (needed if Guilds intent is not fully cached)
+  try {
+    const guilds = await client.guilds.fetch()
+    console.log(`📍 En ${guilds.size} servidores`)
+
+    // Fetch full guild data for each
+    for (const [id] of guilds) {
+      try {
+        const guild = await client.guilds.fetch(id)
+        console.log(`👥 Servidor: ${guild.name} (${guild.memberCount || '?'} miembros)`)
+      } catch {}
+    }
+  } catch (e) {
+    console.log(`📍 En ${client.guilds.cache.size} servidores (caché)`)
+  }
 
   client.botStatus.online = true
   client.botStatus.lastReady = new Date().toISOString()
@@ -418,10 +432,49 @@ client.on('ready', async () => {
   // Notificar al dashboard
   client.emitToDashboard('bot:ready', client.getStatus())
 
-  // Sincronizar servidores con la base de datos
-  for (const [id, guild] of client.guilds.cache) {
-    console.log(`  📌 Sincronizando servidor: ${guild.name} (${guild.memberCount} miembros)`)
-    client.emitToDashboard('bot:guildSync', {
+  // Sincronizar servidores con la base de datos usando REST API
+  try {
+    const rest = new (await import('discord.js')).REST({ version: '10' }).setToken(config.token)
+    const guildsData = await rest.get((await import('discord.js')).Routes.userGuilds()) as any[]
+
+    for (const guild of guildsData) {
+      console.log(`  📌 Sincronizando servidor: ${guild.name} (${guild.id})`)
+      client.emitToDashboard('bot:guildSync', {
+        discordId: guild.id,
+        name: guild.name,
+        icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
+        memberCount: guild.approximate_member_count || 0,
+      })
+
+      // Sincronizar con la base de datos
+      try {
+        const { PrismaClient } = await import('@prisma/client')
+        const prisma = new PrismaClient()
+        await db.server.upsert({
+          where: { discordId: guild.id },
+          update: { name: guild.name, icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null },
+          create: {
+            discordId: guild.id,
+            name: guild.name,
+            icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
+            ownerId: guild.owner_id || 'unknown',
+            memberCount: guild.approximate_member_count || 0,
+          },
+        })
+        await prisma.$disconnect()
+      } catch (dbErr) {
+        console.error(`  ⚠️ Error DB para ${guild.name}:`, dbErr)
+      }
+    }
+
+    // Update status with real guild count
+    client.botStatus.guilds = guildsData.length
+    client.emitToDashboard('bot:status', client.getStatus())
+  } catch (err) {
+    console.log('  ⚠️ No se pudieron obtener guilds via REST, usando caché')
+    for (const [id, guild] of client.guilds.cache) {
+      console.log(`  📌 Sincronizando servidor: ${guild.name} (${guild.memberCount} miembros)`)
+      client.emitToDashboard('bot:guildSync', {
       discordId: guild.id,
       name: guild.name,
       icon: guild.iconURL(),
