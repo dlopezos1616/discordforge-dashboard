@@ -2,10 +2,22 @@ import { db } from '@/lib/db'
 
 export async function POST() {
   try {
-    const user = await db.user.findFirst({ where: { isAdmin: true } })
+    let user = await db.user.findFirst({ where: { isAdmin: true } })
+
+    // Auto-create admin user if none exists (first login on fresh DB)
     if (!user) {
-      return Response.json({ error: 'No admin user found. Run /api/seed first.' }, { status: 404 })
+      user = await db.user.create({
+        data: {
+          discordId: 'admin_001',
+          username: 'Admin',
+          discriminator: '0001',
+          avatar: null,
+          email: 'admin@discordforge.com',
+          isAdmin: true,
+        },
+      })
     }
+
     return Response.json({
       user: {
         id: user.id,
@@ -17,6 +29,7 @@ export async function POST() {
       },
     })
   } catch (error) {
+    console.error('Login error:', error)
     return Response.json({ error: String(error) }, { status: 500 })
   }
 }
