@@ -17,6 +17,8 @@ export type Section =
   | 'settings'
   | 'superadmin'
 
+export type AppView = 'landing' | 'server-select' | 'dashboard'
+
 export interface DiscordServer {
   id: string
   discordId: string
@@ -36,6 +38,10 @@ export interface DiscordUser {
 }
 
 interface AppState {
+  // App view (landing, server-select, dashboard)
+  view: AppView
+  setView: (view: AppView) => void
+
   // Auth
   user: DiscordUser | null
   isAuthenticated: boolean
@@ -57,18 +63,18 @@ interface AppState {
   toggleSidebar: () => void
   isLoading: boolean
   setLoading: (loading: boolean) => void
-
-  // Login modal
-  showLoginModal: boolean
-  setShowLoginModal: (show: boolean) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
+  // App view
+  view: 'landing',
+  setView: (view) => set({ view }),
+
   // Auth
   user: null,
   isAuthenticated: false,
   setUser: (user) => set({ user, isAuthenticated: !!user }),
-  logout: () => set({ user: null, isAuthenticated: false, currentServer: null }),
+  logout: () => set({ user: null, isAuthenticated: false, currentServer: null, view: 'landing' }),
 
   // Navigation
   currentSection: 'dashboard',
@@ -78,15 +84,11 @@ export const useAppStore = create<AppState>((set) => ({
   servers: [],
   currentServer: null,
   setServers: (servers) => set({ servers }),
-  setCurrentServer: (server) => set({ currentServer: server }),
+  setCurrentServer: (server) => set({ currentServer: server, view: server ? 'dashboard' : 'server-select' }),
 
   // UI
   sidebarCollapsed: false,
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   isLoading: false,
   setLoading: (loading) => set({ isLoading: loading }),
-
-  // Login modal
-  showLoginModal: false,
-  setShowLoginModal: (show) => set({ showLoginModal: show }),
 }))
