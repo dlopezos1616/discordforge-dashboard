@@ -1,0 +1,598 @@
+     1→'use client'
+     2→
+     3→import { useState } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useAppStore } from '@/lib/store'
+     6→import {
+     7→  HandMetal, Eye, Palette, Type, Image as ImageIcon, FileText, MessageSquare,
+     8→  Hash, Users, ChevronDown, Sparkles, Info, Copy, RotateCcw,
+     9→  Check, X, Wand2, Settings2
+    10→} from 'lucide-react'
+    11→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    12→import { Button } from '@/components/ui/button'
+    13→import { Input } from '@/components/ui/input'
+    14→import { Textarea } from '@/components/ui/textarea'
+    15→import { Badge } from '@/components/ui/badge'
+    16→import { Switch } from '@/components/ui/switch'
+    17→import { Label } from '@/components/ui/label'
+    18→import { Separator } from '@/components/ui/separator'
+    19→import { ScrollArea } from '@/components/ui/scroll-area'
+    20→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    21→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    22→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+    23→import { toast } from 'sonner'
+    24→
+    25→const defaultConfig = {
+    26→  enabled: true,
+    27→  type: 'embed' as 'image' | 'gif' | 'embed' | 'simple',
+    28→  title: '¡Bienvenido/a a {server}!',
+    29→  description: '¡Hola {user}! Eres el miembro #{membercount}.',
+    30→  footer: '{server} • {date}',
+    31→  color: '#5865F2',
+    32→  useAvatar: true,
+    33→  bannerUrl: '',
+    34→  autoRoleIds: [] as string[],
+    35→}
+    36→
+    37→const variables = [
+    38→  { key: '{user}', value: 'AdminDemo', description: 'Nombre del usuario' },
+    39→  { key: '{server}', value: 'Server Name', description: 'Nombre del servidor' },
+    40→  { key: '{membercount}', value: '15,420', description: 'Número de miembros' },
+    41→  { key: '{date}', value: new Date().toLocaleDateString('es-ES'), description: 'Fecha actual' },
+    42→  { key: '{user.mention}', value: '@AdminDemo', description: 'Mención del usuario' },
+    43→  { key: '{user.avatar}', value: 'Avatar URL', description: 'Avatar del usuario' },
+    44→  { key: '{server.icon}', value: 'Server Icon', description: 'Icono del servidor' },
+    45→]
+    46→
+    47→const mockRoles = [
+    48→  { id: 'rol_1', name: 'Miembro', color: '#5865F2' },
+    49→  { id: 'rol_2', name: 'Verificado', color: '#10B981' },
+    50→  { id: 'rol_3', name: 'VIP', color: '#F59E0B' },
+    51→  { id: 'rol_4', name: 'Staff', color: '#EF4444' },
+    52→  { id: 'rol_5', name: 'Streamer', color: '#8B5CF6' },
+    53→]
+    54→
+    55→const mockChannels = [
+    56→  { id: 'ch_1', name: 'bienvenidas' },
+    57→  { id: 'ch_2', name: 'general' },
+    58→  { id: 'ch_3', name: 'anuncios' },
+    59→  { id: 'ch_4', name: 'presentaciones' },
+    60→]
+    61→
+    62→const container = {
+    63→  hidden: { opacity: 0 },
+    64→  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+    65→}
+    66→
+    67→const item = {
+    68→  hidden: { opacity: 0, y: 20 },
+    69→  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    70→}
+    71→
+    72→export function WelcomeSystem() {
+    73→  const { currentServer } = useAppStore()
+    74→  const [config, setConfig] = useState(defaultConfig)
+    75→  const [welcomeChannel, setWelcomeChannel] = useState('ch_1')
+    76→  const [activeType, setActiveType] = useState<string>('embed')
+    77→
+    78→  const processText = (text: string) => {
+    79→    let result = text
+    80→    variables.forEach(v => {
+    81→      result = result.replace(new RegExp(v.key.replace(/[{}]/g, '\\$&'), 'g'), v.value)
+    82→    })
+    83→    if (currentServer) {
+    84→      result = result.replace(/\{server\}/g, currentServer.name)
+    85→    }
+    86→    return result
+    87→  }
+    88→
+    89→  const processedTitle = processText(config.title)
+    90→  const processedDescription = processText(config.description)
+    91→  const processedFooter = processText(config.footer)
+    92→
+    93→  const toggleRole = (roleId: string) => {
+    94→    setConfig(prev => ({
+    95→      ...prev,
+    96→      autoRoleIds: prev.autoRoleIds.includes(roleId)
+    97→        ? prev.autoRoleIds.filter(id => id !== roleId)
+    98→        : [...prev.autoRoleIds, roleId],
+    99→    }))
+   100→  }
+   101→
+   102→  const handleSave = () => {
+   103→    toast.success('Configuración de bienvenida guardada')
+   104→  }
+   105→
+   106→  const handleReset = () => {
+   107→    setConfig(defaultConfig)
+   108→    setActiveType('embed')
+   109→    setWelcomeChannel('ch_1')
+   110→    toast.info('Configuración restablecida')
+   111→  }
+   112→
+   113→  const typeOptions = [
+   114→    { value: 'image', label: 'Imagen', icon: ImageIcon },
+   115→    { value: 'gif', label: 'GIF', icon: FileText },
+   116→    { value: 'embed', label: 'Embed', icon: Palette },
+   117→    { value: 'simple', label: 'Mensaje Simple', icon: MessageSquare },
+   118→  ]
+   119→
+   120→  return (
+   121→    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-4 md:p-6">
+   122→      {/* Header */}
+   123→      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+   124→        <div>
+   125→          <h2 className="text-xl font-bold flex items-center gap-2">
+   126→            <HandMetal className="w-5 h-5 text-violet-400" />
+   127→            Sistema de Bienvenidas
+   128→          </h2>
+   129→          <p className="text-sm text-muted-foreground mt-1">Configura mensajes de bienvenida automáticos</p>
+   130→        </div>
+   131→        <div className="flex items-center gap-3">
+   132→          <div className="flex items-center gap-2 bg-card/50 border border-border rounded-lg px-3 py-1.5">
+   133→            <Label className="text-xs text-muted-foreground">Sistema</Label>
+   134→            <Switch
+   135→              checked={config.enabled}
+   136→              onCheckedChange={v => setConfig(c => ({ ...c, enabled: v }))}
+   137→            />
+   138→            <Badge variant="secondary" className={`text-[9px] ${config.enabled ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
+   139→              {config.enabled ? 'Activo' : 'Inactivo'}
+   140→            </Badge>
+   141→          </div>
+   142→        </div>
+   143→      </motion.div>
+   144→
+   145→      {/* Main Content */}
+   146→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   147→        {/* Left: Configuration */}
+   148→        <motion.div variants={item} className="lg:col-span-2 space-y-4">
+   149→          {/* Type Selector */}
+   150→          <Card>
+   151→            <CardHeader className="pb-3">
+   152→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   153→                <Settings2 className="w-4 h-4 text-violet-400" />
+   154→                Tipo de Mensaje
+   155→              </CardTitle>
+   156→            </CardHeader>
+   157→            <CardContent>
+   158→              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+   159→                {typeOptions.map(option => (
+   160→                  <motion.button
+   161→                    key={option.value}
+   162→                    whileHover={{ scale: 1.02 }}
+   163→                    whileTap={{ scale: 0.98 }}
+   164→                    onClick={() => {
+   165→                      setActiveType(option.value)
+   166→                      setConfig(c => ({ ...c, type: option.value as typeof c.type }))
+   167→                    }}
+   168→                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200 ${
+   169→                      activeType === option.value
+   170→                        ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+   171→                        : 'border-border/50 bg-card/30 text-muted-foreground hover:border-border hover:bg-card/50'
+   172→                    }`}
+   173→                  >
+   174→                    <option.icon className="w-5 h-5" />
+   175→                    <span className="text-[11px] font-medium">{option.label}</span>
+   176→                  </motion.button>
+   177→                ))}
+   178→              </div>
+   179→            </CardContent>
+   180→          </Card>
+   181→
+   182→          {/* Embed Configuration (visible for embed type) */}
+   183→          {(activeType === 'embed' || activeType === 'simple') && (
+   184→            <motion.div
+   185→              initial={{ opacity: 0, height: 0 }}
+   186→              animate={{ opacity: 1, height: 'auto' }}
+   187→              exit={{ opacity: 0, height: 0 }}
+   188→              transition={{ duration: 0.3 }}
+   189→            >
+   190→              <Card>
+   191→                <CardHeader className="pb-3">
+   192→                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   193→                    <Type className="w-4 h-4 text-fuchsia-400" />
+   194→                    Contenido del Mensaje
+   195→                  </CardTitle>
+   196→                  <CardDescription className="text-xs">
+   197→                    Usa variables como {'{user}'}, {'{server}'}, {'{membercount}'}, {'{date}'}
+   198→                  </CardDescription>
+   199→                </CardHeader>
+   200→                <CardContent className="space-y-4">
+   201→                  <div>
+   202→                    <Label className="text-xs mb-1.5 block">Título</Label>
+   203→                    <Input
+   204→                      value={config.title}
+   205→                      onChange={e => setConfig(c => ({ ...c, title: e.target.value }))}
+   206→                      placeholder="¡Bienvenido/a a {server}!"
+   207→                      className="h-9 text-xs"
+   208→                    />
+   209→                  </div>
+   210→                  <div>
+   211→                    <Label className="text-xs mb-1.5 block">Descripción</Label>
+   212→                    <Textarea
+   213→                      value={config.description}
+   214→                      onChange={e => setConfig(c => ({ ...c, description: e.target.value }))}
+   215→                      placeholder="¡Hola {user}! Eres el miembro #{membercount}."
+   216→                      className="min-h-[80px] text-xs resize-none"
+   217→                    />
+   218→                  </div>
+   219→                  <div>
+   220→                    <Label className="text-xs mb-1.5 block">Footer</Label>
+   221→                    <Input
+   222→                      value={config.footer}
+   223→                      onChange={e => setConfig(c => ({ ...c, footer: e.target.value }))}
+   224→                      placeholder="{server} • {date}"
+   225→                      className="h-9 text-xs"
+   226→                    />
+   227→                  </div>
+   228→
+   229→                  <div className="grid grid-cols-2 gap-4">
+   230→                    <div>
+   231→                      <Label className="text-xs mb-1.5 block">Color del Embed</Label>
+   232→                      <div className="flex items-center gap-2">
+   233→                        <input
+   234→                          type="color"
+   235→                          value={config.color}
+   236→                          onChange={e => setConfig(c => ({ ...c, color: e.target.value }))}
+   237→                          className="w-9 h-9 rounded-lg border border-border cursor-pointer"
+   238→                        />
+   239→                        <Input
+   240→                          value={config.color}
+   241→                          onChange={e => setConfig(c => ({ ...c, color: e.target.value }))}
+   242→                          className="h-9 font-mono text-xs"
+   243→                          maxLength={7}
+   244→                        />
+   245→                      </div>
+   246→                    </div>
+   247→                    <div>
+   248→                      <Label className="text-xs mb-1.5 block">Canal de Bienvenida</Label>
+   249→                      <Select value={welcomeChannel} onValueChange={setWelcomeChannel}>
+   250→                        <SelectTrigger className="h-9">
+   251→                          <Hash className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+   252→                          <SelectValue />
+   253→                        </SelectTrigger>
+   254→                        <SelectContent>
+   255→                          {mockChannels.map(ch => (
+   256→                            <SelectItem key={ch.id} value={ch.id}>
+   257→                              #{ch.name}
+   258→                            </SelectItem>
+   259→                          ))}
+   260→                        </SelectContent>
+   261→                      </Select>
+   262→                    </div>
+   263→                  </div>
+   264→
+   265→                  <Separator />
+   266→
+   267→                  <div>
+   268→                    <Label className="text-xs mb-1.5 block">Banner URL</Label>
+   269→                    <Input
+   270→                      value={config.bannerUrl}
+   271→                      onChange={e => setConfig(c => ({ ...c, bannerUrl: e.target.value }))}
+   272→                      placeholder="https://ejemplo.com/banner.png"
+   273→                      className="h-9 text-xs"
+   274→                    />
+   275→                  </div>
+   276→
+   277→                  <div className="flex items-center justify-between">
+   278→                    <div className="flex items-center gap-2">
+   279→                      <Switch
+   280→                        checked={config.useAvatar}
+   281→                        onCheckedChange={v => setConfig(c => ({ ...c, useAvatar: v }))}
+   282→                      />
+   283→                      <Label className="text-xs">Mostrar Avatar del Usuario</Label>
+   284→                    </div>
+   285→                  </div>
+   286→                </CardContent>
+   287→              </Card>
+   288→            </motion.div>
+   289→          )}
+   290→
+   291→          {/* Image/GIF Configuration */}
+   292→          {(activeType === 'image' || activeType === 'gif') && (
+   293→            <motion.div
+   294→              initial={{ opacity: 0, height: 0 }}
+   295→              animate={{ opacity: 1, height: 'auto' }}
+   296→              exit={{ opacity: 0, height: 0 }}
+   297→              transition={{ duration: 0.3 }}
+   298→            >
+   299→              <Card>
+   300→                <CardHeader className="pb-3">
+   301→                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   302→                    <ImageIcon className="w-4 h-4 text-emerald-400" />
+   303→                    {activeType === 'image' ? 'Imagen de Bienvenida' : 'GIF de Bienvenida'}
+   304→                  </CardTitle>
+   305→                  <CardDescription className="text-xs">
+   306→                    Configura la imagen/GIF que se enviará al canal de bienvenidas
+   307→                  </CardDescription>
+   308→                </CardHeader>
+   309→                <CardContent className="space-y-4">
+   310→                  <div>
+   311→                    <Label className="text-xs mb-1.5 block">URL de la Imagen/GIF</Label>
+   312→                    <Input
+   313→                      value={config.bannerUrl}
+   314→                      onChange={e => setConfig(c => ({ ...c, bannerUrl: e.target.value }))}
+   315→                      placeholder="https://ejemplo.com/welcome.gif"
+   316→                      className="h-9 text-xs"
+   317→                    />
+   318→                  </div>
+   319→                  <div>
+   320→                    <Label className="text-xs mb-1.5 block">Texto Alternativo</Label>
+   321→                    <Input
+   322→                      value={config.title}
+   323→                      onChange={e => setConfig(c => ({ ...c, title: e.target.value }))}
+   324→                      placeholder="¡Bienvenido/a {user}!"
+   325→                      className="h-9 text-xs"
+   326→                    />
+   327→                  </div>
+   328→                  <div>
+   329→                    <Label className="text-xs mb-1.5 block">Canal de Bienvenida</Label>
+   330→                    <Select value={welcomeChannel} onValueChange={setWelcomeChannel}>
+   331→                      <SelectTrigger className="h-9">
+   332→                        <Hash className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+   333→                        <SelectValue />
+   334→                      </SelectTrigger>
+   335→                      <SelectContent>
+   336→                        {mockChannels.map(ch => (
+   337→                          <SelectItem key={ch.id} value={ch.id}>
+   338→                            #{ch.name}
+   339→                          </SelectItem>
+   340→                        ))}
+   341→                      </SelectContent>
+   342→                    </Select>
+   343→                  </div>
+   344→                </CardContent>
+   345→              </Card>
+   346→            </motion.div>
+   347→          )}
+   348→
+   349→          {/* Auto-Role */}
+   350→          <Card>
+   351→            <CardHeader className="pb-3">
+   352→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   353→                <Users className="w-4 h-4 text-amber-400" />
+   354→                Auto-Rol al Unirse
+   355→              </CardTitle>
+   356→              <CardDescription className="text-xs">
+   357→                Roles que se asignarán automáticamente a los nuevos miembros
+   358→              </CardDescription>
+   359→            </CardHeader>
+   360→            <CardContent>
+   361→              <div className="flex flex-wrap gap-2">
+   362→                {mockRoles.map(role => {
+   363→                  const isSelected = config.autoRoleIds.includes(role.id)
+   364→                  return (
+   365→                    <motion.button
+   366→                      key={role.id}
+   367→                      whileHover={{ scale: 1.05 }}
+   368→                      whileTap={{ scale: 0.95 }}
+   369→                      onClick={() => toggleRole(role.id)}
+   370→                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-200 ${
+   371→                        isSelected
+   372→                          ? 'border-violet-500/50 bg-violet-500/15 text-violet-300'
+   373→                          : 'border-border/50 bg-card/30 text-muted-foreground hover:border-border'
+   374→                      }`}
+   375→                    >
+   376→                      <div
+   377→                        className="w-2 h-2 rounded-full"
+   378→                        style={{ backgroundColor: isSelected ? role.color : undefined, border: isSelected ? 'none' : '1px solid hsl(var(--muted-foreground))' }}
+   379→                      />
+   380→                      {role.name}
+   381→                      {isSelected && <Check className="w-3 h-3 ml-0.5" />}
+   382→                    </motion.button>
+   383→                  )
+   384→                })}
+   385→              </div>
+   386→            </CardContent>
+   387→          </Card>
+   388→
+   389→          {/* Action Buttons */}
+   390→          <div className="flex items-center gap-2">
+   391→            <Button
+   392→              onClick={handleSave}
+   393→              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0 gap-1.5"
+   394→            >
+   395→              <Check className="w-4 h-4" /> Guardar Configuración
+   396→            </Button>
+   397→            <Button variant="outline" onClick={handleReset} className="gap-1.5">
+   398→              <RotateCcw className="w-4 h-4" /> Restablecer
+   399→            </Button>
+   400→          </div>
+   401→        </motion.div>
+   402→
+   403→        {/* Right: Preview + Variables */}
+   404→        <motion.div variants={item} className="space-y-4">
+   405→          {/* Live Preview */}
+   406→          <Card className="overflow-hidden">
+   407→            <CardHeader className="pb-3">
+   408→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   409→                <Eye className="w-4 h-4 text-emerald-400" />
+   410→                Vista Previa
+   411→              </CardTitle>
+   412→              <CardDescription className="text-[10px]">
+   413→                Así se verá el mensaje en Discord
+   414→              </CardDescription>
+   415→            </CardHeader>
+   416→            <CardContent>
+   417→              <div className="bg-[#313338] rounded-lg overflow-hidden">
+   418→                {/* Channel header */}
+   419→                <div className="flex items-center gap-2 px-3 py-2 border-b border-[#3F4147]">
+   420→                  <Hash className="w-4 h-4 text-[#80848E]" />
+   421→                  <span className="text-xs font-semibold text-white">bienvenidas</span>
+   422→                </div>
+   423→
+   424→                {/* Message area */}
+   425→                <div className="p-3 space-y-3">
+   426→                  {/* Bot message */}
+   427→                  <div className="flex items-start gap-2.5">
+   428→                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0">
+   429→                      <Sparkles className="w-4 h-4 text-white" />
+   430→                    </div>
+   431→                    <div className="flex-1 min-w-0">
+   432→                      <div className="flex items-center gap-1.5 mb-1">
+   433→                        <span className="text-xs font-semibold text-white">DiscordForge Bot</span>
+   434→                        <span className="text-[9px] bg-[#5865F2] text-white px-1 py-0.5 rounded font-medium">BOT</span>
+   435→                        <span className="text-[9px] text-[#949BA4]">Hoy a las {new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+   436→                      </div>
+   437→
+   438→                      {/* Embed preview */}
+   439→                      {activeType === 'embed' && (
+   440→                        <motion.div
+   441→                          key={`${config.title}-${config.color}`}
+   442→                          initial={{ opacity: 0, scale: 0.95 }}
+   443→                          animate={{ opacity: 1, scale: 1 }}
+   444→                          transition={{ duration: 0.3 }}
+   445→                          className="max-w-[320px]"
+   446→                        >
+   447→                          <div className="bg-[#2B2D31] rounded-l-lg flex overflow-hidden">
+   448→                            {/* Color bar */}
+   449→                            <div
+   450→                              className="w-1 shrink-0"
+   451→                              style={{ backgroundColor: config.color }}
+   452→                            />
+   453→                            <div className="p-2.5 flex-1 min-w-0">
+   454→                              {config.useAvatar && (
+   455→                                <div className="flex items-center gap-2 mb-2">
+   456→                                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center text-[7px] font-bold text-white">
+   457→                                    A
+   458→                                  </div>
+   459→                                  <span className="text-[10px] text-white font-medium">AdminDemo</span>
+   460→                                </div>
+   461→                              )}
+   462→                              {processedTitle && (
+   463→                                <p className="text-[11px] font-semibold text-white mb-1">{processedTitle}</p>
+   464→                              )}
+   465→                              {processedDescription && (
+   466→                                <p className="text-[10px] text-[#DBDEE1] mb-2 whitespace-pre-wrap">{processedDescription}</p>
+   467→                              )}
+   468→                              {config.bannerUrl && (
+   469→                                <div className="rounded overflow-hidden mb-2">
+   470→                                  <div className="h-20 bg-[#1E1F22] flex items-center justify-center">
+   471→                                    <ImageIcon className="w-5 h-5 text-[#949BA4]" />
+   472→                                  </div>
+   473→                                </div>
+   474→                              )}
+   475→                              {processedFooter && (
+   476→                                <p className="text-[9px] text-[#949BA4] mt-1">{processedFooter}</p>
+   477→                              )}
+   478→                            </div>
+   479→                          </div>
+   480→                        </motion.div>
+   481→                      )}
+   482→
+   483→                      {/* Simple message preview */}
+   484→                      {activeType === 'simple' && (
+   485→                        <motion.div
+   486→                          key={config.description}
+   487→                          initial={{ opacity: 0, scale: 0.95 }}
+   488→                          animate={{ opacity: 1, scale: 1 }}
+   489→                          transition={{ duration: 0.3 }}
+   490→                        >
+   491→                          <p className="text-[11px] text-[#DBDEE1]">{processedDescription}</p>
+   492→                        </motion.div>
+   493→                      )}
+   494→
+   495→                      {/* Image/GIF preview */}
+   496→                      {(activeType === 'image' || activeType === 'gif') && (
+   497→                        <motion.div
+   498→                          key={config.bannerUrl}
+   499→                          initial={{ opacity: 0, scale: 0.95 }}
+   500→                          animate={{ opacity: 1, scale: 1 }}
+   501→                          transition={{ duration: 0.3 }}
+   502→                        >
+   503→                          <div className="rounded-lg overflow-hidden border border-[#3F4147]">
+   504→                            <div className="h-32 bg-[#1E1F22] flex flex-col items-center justify-center gap-2">
+   505→                              {config.bannerUrl ? (
+   506→                                <ImageIcon className="w-8 h-8 text-[#949BA4]" />
+   507→                              ) : (
+   508→                                <>
+   509→                                  <ImageIcon className="w-8 h-8 text-[#949BA4]/30" />
+   510→                                  <p className="text-[9px] text-[#949BA4]/50">Sin imagen configurada</p>
+   511→                                </>
+   512→                              )}
+   513→                            </div>
+   514→                          </div>
+   515→                          {config.title && (
+   516→                            <p className="text-[11px] text-[#DBDEE1] mt-1.5">{processText(config.title)}</p>
+   517→                          )}
+   518→                        </motion.div>
+   519→                      )}
+   520→                    </div>
+   521→                  </div>
+   522→                </div>
+   523→              </div>
+   524→            </CardContent>
+   525→          </Card>
+   526→
+   527→          {/* Variables Reference */}
+   528→          <Card>
+   529→            <CardHeader className="pb-3">
+   530→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   531→                <Info className="w-4 h-4 text-cyan-400" />
+   532→                Variables Disponibles
+   533→              </CardTitle>
+   534→              <CardDescription className="text-[10px]">
+   535→                Haz clic para copiar una variable
+   536→              </CardDescription>
+   537→            </CardHeader>
+   538→            <CardContent>
+   539→              <ScrollArea className="max-h-64">
+   540→                <div className="space-y-1.5">
+   541→                  {variables.map(v => (
+   542→                    <TooltipProvider key={v.key}>
+   543→                      <Tooltip>
+   544→                        <TooltipTrigger asChild>
+   545→                          <motion.button
+   546→                            whileHover={{ x: 3 }}
+   547→                            whileTap={{ scale: 0.98 }}
+   548→                            onClick={() => {
+   549→                              navigator.clipboard.writeText(v.key)
+   550→                              toast.success(`Variable ${v.key} copiada`)
+   551→                            }}
+   552→                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent/30 transition-colors group"
+   553→                          >
+   554→                            <div className="flex items-center gap-2">
+   555→                              <code className="text-[10px] font-mono bg-violet-500/15 text-violet-400 px-1.5 py-0.5 rounded">
+   556→                                {v.key}
+   557→                              </code>
+   558→                              <span className="text-[10px] text-muted-foreground">{v.description}</span>
+   559→                            </div>
+   560→                            <Copy className="w-3 h-3 text-muted-foreground/0 group-hover:text-muted-foreground transition-colors" />
+   561→                          </motion.button>
+   562→                        </TooltipTrigger>
+   563→                        <TooltipContent side="left" className="text-[10px]">
+   564→                          <p>Resultado: <strong>{v.value}</strong></p>
+   565→                        </TooltipContent>
+   566→                      </Tooltip>
+   567→                    </TooltipProvider>
+   568→                  ))}
+   569→                </div>
+   570→              </ScrollArea>
+   571→            </CardContent>
+   572→          </Card>
+   573→
+   574→          {/* Quick Preview Values */}
+   575→          <Card>
+   576→            <CardHeader className="pb-3">
+   577→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   578→                <Wand2 className="w-4 h-4 text-fuchsia-400" />
+   579→                Vista de Variables
+   580→              </CardTitle>
+   581→            </CardHeader>
+   582→            <CardContent>
+   583→              <div className="space-y-2">
+   584→                {variables.map(v => (
+   585→                  <div key={v.key} className="flex items-center justify-between text-[10px]">
+   586→                    <span className="text-muted-foreground">{v.key}</span>
+   587→                    <span className="font-medium text-foreground">{v.value}</span>
+   588→                  </div>
+   589→                ))}
+   590→              </div>
+   591→            </CardContent>
+   592→          </Card>
+   593→        </motion.div>
+   594→      </div>
+   595→    </motion.div>
+   596→  )
+   597→}
+   598→

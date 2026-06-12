@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
 import { toast } from 'sonner'
 
 interface ModAction {
@@ -80,6 +81,7 @@ export function ModerationPanel() {
   const [formReason, setFormReason] = useState('')
   const [formDuration, setFormDuration] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [logChannelId, setLogChannelId] = useState<string | null>(null)
 
   const fetchModeration = useCallback(async () => {
     if (!currentServer) return
@@ -119,6 +121,7 @@ export function ModerationPanel() {
           type: formType,
           reason: formReason,
           duration: formType === 'timeout' ? formDuration : null,
+          logChannelId,
         }),
       })
       const data = await res.json()
@@ -319,6 +322,14 @@ export function ModerationPanel() {
                 onChange={(e) => setFormReason(e.target.value)}
                 className="bg-background/50 resize-none"
                 rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Canal de logs de moderación</Label>
+              <ChannelSelector
+                value={logChannelId}
+                onValueChange={setLogChannelId}
+                placeholder="Canal donde enviar logs..."
               />
             </div>
           </CardContent>

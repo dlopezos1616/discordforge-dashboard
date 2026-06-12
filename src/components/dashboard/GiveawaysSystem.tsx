@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '@/lib/store'
 import {
   Gift, Plus, Users, Clock, Trophy, RefreshCw,
-  Calendar, Star, PartyPopper
+  Calendar, Star, PartyPopper, Settings2, Eye
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
+import { EmbedConfig, EmbedPreview, defaultEmbedConfig, type EmbedConfigData } from '@/components/shared/EmbedConfig'
 import { toast } from 'sonner'
 
 interface GiveawayData {
@@ -78,6 +81,8 @@ export function GiveawaysSystem() {
   const [winnerCount, setWinnerCount] = useState('1')
   const [requiredRoles, setRequiredRoles] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [channelId, setChannelId] = useState<string | null>(null)
+  const [embedConfig, setEmbedConfig] = useState<EmbedConfigData>(defaultEmbedConfig)
 
   const fetchData = useCallback(async () => {
     if (!currentServer) return
@@ -100,6 +105,16 @@ export function GiveawaysSystem() {
     fetchData()
   }, [fetchData])
 
+  const resetCreateForm = useCallback(() => {
+    setPrize('')
+    setDescription('')
+    setWinnerCount('1')
+    setRequiredRoles('')
+    setEndDate('')
+    setChannelId(null)
+    setEmbedConfig(defaultEmbedConfig)
+  }, [])
+
   const handleCreate = async () => {
     if (!currentServer || !prize) {
       toast.error('El premio es obligatorio')
@@ -117,17 +132,15 @@ export function GiveawaysSystem() {
           winnerCount: parseInt(winnerCount) || 1,
           requiredRoleIds: requiredRoles ? requiredRoles.split(',').map(r => r.trim()) : [],
           endsAt: endDate || null,
+          channelId,
+          embedConfig,
         }),
       })
       const data = await res.json()
       if (data.giveaway) {
         toast.success('Sorteo creado exitosamente')
         setShowCreate(false)
-        setPrize('')
-        setDescription('')
-        setWinnerCount('1')
-        setRequiredRoles('')
-        setEndDate('')
+        resetCreateForm()
         fetchData()
       } else {
         toast.error(data.error || 'Error al crear sorteo')
@@ -198,83 +211,167 @@ export function GiveawaysSystem() {
             Gestiona sorteos y regalos del servidor
           </p>
         </div>
-        <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <Dialog open={showCreate} onOpenChange={(open) => {
+          setShowCreate(open)
+          if (!open) resetCreateForm()
+        }}>
           <DialogTrigger asChild>
             <Button className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white">
               <Plus className="w-4 h-4" />
               Crear Sorteo
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-violet-400" />
                 Crear Sorteo
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Premio</Label>
-                <Input
-                  placeholder="Ej: Nitro, juego Steam..."
-                  value={prize}
-                  onChange={(e) => setPrize(e.target.value)}
-                  className="bg-background/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Descripción</Label>
-                <Textarea
-                  placeholder="Describe el sorteo..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="bg-background/50 resize-none"
-                  rows={2}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            <Tabs defaultValue="config" className="mt-4">
+              <TabsList className="w-full">
+                <TabsTrigger value="config" className="flex-1 gap-1.5">
+                  <Settings2 className="w-3.5 h-3.5" />
+                  Configuración
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="flex-1 gap-1.5">
+                  <Eye className="w-3.5 h-3.5" />
+                  Vista Previa
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Config Tab */}
+              <TabsContent value="config" className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Ganadores</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Premio</Label>
                   <Input
-                    type="number"
-                    min="1"
-                    value={winnerCount}
-                    onChange={(e) => setWinnerCount(e.target.value)}
+                    placeholder="Ej: Nitro, juego Steam..."
+                    value={prize}
+                    onChange={(e) => setPrize(e.target.value)}
                     className="bg-background/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Fecha de fin</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Descripción</Label>
+                  <Textarea
+                    placeholder="Describe el sorteo..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="bg-background/50 resize-none"
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Canal de destino</Label>
+                  <ChannelSelector
+                    value={channelId}
+                    onValueChange={setChannelId}
+                    placeholder="Selecciona el canal donde se enviará el sorteo..."
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">Ganadores</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={winnerCount}
+                      onChange={(e) => setWinnerCount(e.target.value)}
+                      className="bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">Fecha de fin</Label>
+                    <Input
+                      type="datetime-local"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="bg-background/50"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">Roles requeridos (separados por coma)</Label>
                   <Input
-                    type="datetime-local"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    placeholder="role_id_1, role_id_2"
+                    value={requiredRoles}
+                    onChange={(e) => setRequiredRoles(e.target.value)}
                     className="bg-background/50"
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Roles requeridos (separados por coma)</Label>
-                <Input
-                  placeholder="role_id_1, role_id_2"
-                  value={requiredRoles}
-                  onChange={(e) => setRequiredRoles(e.target.value)}
-                  className="bg-background/50"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setShowCreate(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleCreate}
-                  disabled={!prize}
-                  className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
-                >
-                  Crear Sorteo
-                </Button>
-              </div>
-            </div>
+
+                {/* Embed Configuration */}
+                <div className="pt-2 border-t border-border/50">
+                  <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                    <Gift className="w-4 h-4 text-fuchsia-400" />
+                    Personalizar Embed
+                  </h4>
+                  <EmbedConfig
+                    config={embedConfig}
+                    onChange={setEmbedConfig}
+                    showChannelSelector={false}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setShowCreate(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleCreate}
+                    disabled={!prize}
+                    className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+                  >
+                    Crear Sorteo
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Preview Tab */}
+              <TabsContent value="preview" className="mt-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">Vista Previa del Embed</Label>
+                    <div className="rounded-lg border border-border/50 bg-background/30 p-4">
+                      <EmbedPreview config={embedConfig} />
+                    </div>
+                  </div>
+
+                  {/* Giveaway info summary */}
+                  <div className="space-y-2 rounded-lg border border-border/50 bg-background/30 p-4">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-violet-400" />
+                      Resumen del Sorteo
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="text-muted-foreground">Premio:</div>
+                      <div className="font-medium">{prize || '—'}</div>
+                      <div className="text-muted-foreground">Descripción:</div>
+                      <div className="font-medium">{description || '—'}</div>
+                      <div className="text-muted-foreground">Ganadores:</div>
+                      <div className="font-medium">{winnerCount}</div>
+                      <div className="text-muted-foreground">Fecha de fin:</div>
+                      <div className="font-medium">{endDate ? new Date(endDate).toLocaleString('es-ES') : 'Sin límite'}</div>
+                      <div className="text-muted-foreground">Canal:</div>
+                      <div className="font-medium">{channelId ? channelId : 'No seleccionado'}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setShowCreate(false)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleCreate}
+                      disabled={!prize}
+                      className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+                    >
+                      Crear Sorteo
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </motion.div>

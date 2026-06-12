@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
 
 interface AutoModRule {
   id: string
@@ -62,6 +63,7 @@ export function AutoModConfig() {
   const [rules, setRules] = useState<AutoModRule[]>([])
   const [loading, setLoading] = useState(true)
   const [masterEnabled, setMasterEnabled] = useState(true)
+  const [logChannelId, setLogChannelId] = useState<string | null>(null)
   const [expandedRule, setExpandedRule] = useState<string | null>(null)
   const [showNewRule, setShowNewRule] = useState(false)
 
@@ -127,6 +129,7 @@ export function AutoModConfig() {
           duration: newDuration || null,
           words: JSON.stringify(newWords),
           exemptions: JSON.stringify(newExemptions),
+          logChannelId,
         }),
       })
       const data = await res.json()
@@ -186,6 +189,7 @@ export function AutoModConfig() {
           duration: editDuration || null,
           words: JSON.stringify(editWords),
           exemptions: JSON.stringify(editExemptions),
+          logChannelId,
         }),
       })
       toast.success('Regla actualizada')
@@ -310,6 +314,28 @@ export function AutoModConfig() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Log Channel Selector */}
+      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-600/10">
+              <ShieldAlert className="w-4 h-4 text-violet-400" />
+            </div>
+            <div>
+              <CardTitle className="text-sm font-semibold">Canal de logs de AutoMod</CardTitle>
+              <CardDescription className="text-xs">Selecciona el canal donde se enviarán las alertas de moderación automática</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ChannelSelector
+            value={logChannelId}
+            onValueChange={setLogChannelId}
+            placeholder="Seleccionar canal de logs..."
+          />
+        </CardContent>
+      </Card>
 
       {/* Rules Grid */}
       {loading ? (

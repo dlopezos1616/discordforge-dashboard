@@ -1,0 +1,807 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { useAppStore } from '@/lib/store'
+     6→     6→import {
+     7→     7→  Bot, MessageSquare, Zap, Link, Ban, AtSign, Shield,
+     8→     8→  Plus, Trash2, Pencil, ChevronDown, ChevronUp, X,
+     9→     9→  ToggleLeft, ToggleRight, AlertTriangle, Sparkles,
+    10→    10→  ShieldAlert, Swords
+    11→    11→} from 'lucide-react'
+    12→    12→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    13→    13→import { Button } from '@/components/ui/button'
+    14→    14→import { Input } from '@/components/ui/input'
+    15→    15→import { Badge } from '@/components/ui/badge'
+    16→    16→import { Switch } from '@/components/ui/switch'
+    17→    17→import { Slider } from '@/components/ui/slider'
+    18→    18→import { Label } from '@/components/ui/label'
+    19→    19→import {
+    20→    20→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    21→    21→} from '@/components/ui/select'
+    22→    22→import {
+    23→    23→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+    24→    24→} from '@/components/ui/dialog'
+    25→    25→import { ScrollArea } from '@/components/ui/scroll-area'
+    26→    26→import { toast } from 'sonner'
+    27→    27→
+    28→    28→interface AutoModRule {
+    29→    29→  id: string
+    30→    30→  name: string
+    31→    31→  type: string
+    32→    32→  enabled: boolean
+    33→    33→  threshold: number
+    34→    34→  action: string
+    35→    35→  duration: string | null
+    36→    36→  words: string
+    37→    37→  exemptions: string
+    38→    38→  createdAt: string
+    39→    39→  updatedAt: string
+    40→    40→}
+    41→    41→
+    42→    42→const ruleTypes = [
+    43→    43→  { type: 'spam', label: 'Anti-Spam', icon: MessageSquare, color: 'from-blue-500/20 to-blue-600/10', iconColor: 'text-blue-400' },
+    44→    44→  { type: 'flood', label: 'Anti-Flood', icon: Zap, color: 'from-yellow-500/20 to-yellow-600/10', iconColor: 'text-yellow-400' },
+    45→    45→  { type: 'links', label: 'Anti-Links', icon: Link, color: 'from-cyan-500/20 to-cyan-600/10', iconColor: 'text-cyan-400' },
+    46→    46→  { type: 'invites', label: 'Anti-Invitaciones', icon: Ban, color: 'from-red-500/20 to-red-600/10', iconColor: 'text-red-400' },
+    47→    47→  { type: 'words', label: 'Anti-Palabras', icon: ShieldAlert, color: 'from-orange-500/20 to-orange-600/10', iconColor: 'text-orange-400' },
+    48→    48→  { type: 'mentions', label: 'Anti-Menciones', icon: AtSign, color: 'from-purple-500/20 to-purple-600/10', iconColor: 'text-purple-400' },
+    49→    49→  { type: 'raid', label: 'Anti-Raid', icon: Swords, color: 'from-rose-500/20 to-rose-600/10', iconColor: 'text-rose-400' },
+    50→    50→]
+    51→    51→
+    52→    52→const actionLabels: Record<string, string> = {
+    53→    53→  warn: 'Advertencia',
+    54→    54→  delete: 'Eliminar',
+    55→    55→  mute: 'Silenciar',
+    56→    56→  kick: 'Expulsar',
+    57→    57→  ban: 'Banear',
+    58→    58→}
+    59→    59→
+    60→    60→export function AutoModConfig() {
+    61→    61→  const { currentServer } = useAppStore()
+    62→    62→  const [rules, setRules] = useState<AutoModRule[]>([])
+    63→    63→  const [loading, setLoading] = useState(true)
+    64→    64→  const [masterEnabled, setMasterEnabled] = useState(true)
+    65→    65→  const [expandedRule, setExpandedRule] = useState<string | null>(null)
+    66→    66→  const [showNewRule, setShowNewRule] = useState(false)
+    67→    67→
+    68→    68→  // New rule form
+    69→    69→  const [newName, setNewName] = useState('')
+    70→    70→  const [newType, setNewType] = useState('spam')
+    71→    71→  const [newEnabled, setNewEnabled] = useState(true)
+    72→    72→  const [newThreshold, setNewThreshold] = useState(3)
+    73→    73→  const [newAction, setNewAction] = useState('warn')
+    74→    74→  const [newDuration, setNewDuration] = useState('')
+    75→    75→  const [newWords, setNewWords] = useState<string[]>([])
+    76→    76→  const [newExemptions, setNewExemptions] = useState<string[]>([])
+    77→    77→  const [wordInput, setWordInput] = useState('')
+    78→    78→  const [exemptInput, setExemptInput] = useState('')
+    79→    79→
+    80→    80→  // Edit state
+    81→    81→  const [editingRule, setEditingRule] = useState<AutoModRule | null>(null)
+    82→    82→  const [editWords, setEditWords] = useState<string[]>([])
+    83→    83→  const [editExemptions, setEditExemptions] = useState<string[]>([])
+    84→    84→  const [editWordInput, setEditWordInput] = useState('')
+    85→    85→  const [editExemptInput, setEditExemptInput] = useState('')
+    86→    86→  const [editThreshold, setEditThreshold] = useState(3)
+    87→    87→  const [editAction, setEditAction] = useState('warn')
+    88→    88→  const [editDuration, setEditDuration] = useState('')
+    89→    89→  const [editEnabled, setEditEnabled] = useState(true)
+    90→    90→
+    91→    91→  const fetchRules = useCallback(async () => {
+    92→    92→    if (!currentServer) return
+    93→    93→    setLoading(true)
+    94→    94→    try {
+    95→    95→      const res = await fetch(`/api/automod?serverId=${currentServer.id}`)
+    96→    96→      const data = await res.json()
+    97→    97→      if (data.rules) {
+    98→    98→        setRules(data.rules)
+    99→    99→      }
+   100→   100→    } catch {
+   101→   101→      toast.error('Error al cargar reglas')
+   102→   102→    } finally {
+   103→   103→      setLoading(false)
+   104→   104→    }
+   105→   105→  }, [currentServer])
+   106→   106→
+   107→   107→  useEffect(() => {
+   108→   108→    fetchRules()
+   109→   109→  }, [fetchRules])
+   110→   110→
+   111→   111→  const handleCreateRule = async () => {
+   112→   112→    if (!currentServer || !newName) {
+   113→   113→      toast.error('Ingresa un nombre para la regla')
+   114→   114→      return
+   115→   115→    }
+   116→   116→    try {
+   117→   117→      const res = await fetch('/api/automod', {
+   118→   118→        method: 'POST',
+   119→   119→        headers: { 'Content-Type': 'application/json' },
+   120→   120→        body: JSON.stringify({
+   121→   121→          serverId: currentServer.id,
+   122→   122→          name: newName,
+   123→   123→          type: newType,
+   124→   124→          enabled: newEnabled,
+   125→   125→          threshold: newThreshold,
+   126→   126→          action: newAction,
+   127→   127→          duration: newDuration || null,
+   128→   128→          words: JSON.stringify(newWords),
+   129→   129→          exemptions: JSON.stringify(newExemptions),
+   130→   130→        }),
+   131→   131→      })
+   132→   132→      const data = await res.json()
+   133→   133→      if (data.rule) {
+   134→   134→        toast.success('Regla creada')
+   135→   135→        setShowNewRule(false)
+   136→   136→        setNewName('')
+   137→   137→        setNewWords([])
+   138→   138→        setNewExemptions([])
+   139→   139→        setNewThreshold(3)
+   140→   140→        setNewAction('warn')
+   141→   141→        setNewDuration('')
+   142→   142→        fetchRules()
+   143→   143→      } else {
+   144→   144→        toast.error(data.error || 'Error al crear regla')
+   145→   145→      }
+   146→   146→    } catch {
+   147→   147→      toast.error('Error de conexión')
+   148→   148→    }
+   149→   149→  }
+   150→   150→
+   151→   151→  const handleToggleRule = async (rule: AutoModRule) => {
+   152→   152→    try {
+   153→   153→      await fetch('/api/automod', {
+   154→   154→        method: 'PATCH',
+   155→   155→        headers: { 'Content-Type': 'application/json' },
+   156→   156→        body: JSON.stringify({ ruleId: rule.id, enabled: !rule.enabled }),
+   157→   157→      })
+   158→   158→      setRules(prev => prev.map(r => r.id === rule.id ? { ...r, enabled: !r.enabled } : r))
+   159→   159→      toast.success(rule.enabled ? 'Regla desactivada' : 'Regla activada')
+   160→   160→    } catch {
+   161→   161→      toast.error('Error al cambiar estado')
+   162→   162→    }
+   163→   163→  }
+   164→   164→
+   165→   165→  const handleDeleteRule = async (ruleId: string) => {
+   166→   166→    try {
+   167→   167→      await fetch(`/api/automod?ruleId=${ruleId}`, { method: 'DELETE' })
+   168→   168→      setRules(prev => prev.filter(r => r.id !== ruleId))
+   169→   169→      toast.success('Regla eliminada')
+   170→   170→    } catch {
+   171→   171→      toast.error('Error al eliminar regla')
+   172→   172→    }
+   173→   173→  }
+   174→   174→
+   175→   175→  const handleSaveEdit = async () => {
+   176→   176→    if (!editingRule) return
+   177→   177→    try {
+   178→   178→      await fetch('/api/automod', {
+   179→   179→        method: 'PATCH',
+   180→   180→        headers: { 'Content-Type': 'application/json' },
+   181→   181→        body: JSON.stringify({
+   182→   182→          ruleId: editingRule.id,
+   183→   183→          enabled: editEnabled,
+   184→   184→          threshold: editThreshold,
+   185→   185→          action: editAction,
+   186→   186→          duration: editDuration || null,
+   187→   187→          words: JSON.stringify(editWords),
+   188→   188→          exemptions: JSON.stringify(editExemptions),
+   189→   189→        }),
+   190→   190→      })
+   191→   191→      toast.success('Regla actualizada')
+   192→   192→      setEditingRule(null)
+   193→   193→      fetchRules()
+   194→   194→    } catch {
+   195→   195→      toast.error('Error al actualizar regla')
+   196→   196→    }
+   197→   197→  }
+   198→   198→
+   199→   199→  const openEdit = (rule: AutoModRule) => {
+   200→   200→    setEditingRule(rule)
+   201→   201→    setEditEnabled(rule.enabled)
+   202→   202→    setEditThreshold(rule.threshold)
+   203→   203→    setEditAction(rule.action)
+   204→   204→    setEditDuration(rule.duration || '')
+   205→   205→    try {
+   206→   206→      setEditWords(JSON.parse(rule.words || '[]'))
+   207→   207→      setEditExemptions(JSON.parse(rule.exemptions || '[]'))
+   208→   208→    } catch {
+   209→   209→      setEditWords([])
+   210→   210→      setEditExemptions([])
+   211→   211→    }
+   212→   212→    setEditWordInput('')
+   213→   213→    setEditExemptInput('')
+   214→   214→  }
+   215→   215→
+   216→   216→  const addWord = (word: string, target: 'new' | 'edit') => {
+   217→   217→    if (!word.trim()) return
+   218→   218→    if (target === 'new') {
+   219→   219→      setNewWords(prev => [...prev, word.trim()])
+   220→   220→      setWordInput('')
+   221→   221→    } else {
+   222→   222→      setEditWords(prev => [...prev, word.trim()])
+   223→   223→      setEditWordInput('')
+   224→   224→    }
+   225→   225→  }
+   226→   226→
+   227→   227→  const removeWord = (index: number, target: 'new' | 'edit') => {
+   228→   228→    if (target === 'new') {
+   229→   229→      setNewWords(prev => prev.filter((_, i) => i !== index))
+   230→   230→    } else {
+   231→   231→      setEditWords(prev => prev.filter((_, i) => i !== index))
+   232→   232→    }
+   233→   233→  }
+   234→   234→
+   235→   235→  const addExempt = (exempt: string, target: 'new' | 'edit') => {
+   236→   236→    if (!exempt.trim()) return
+   237→   237→    if (target === 'new') {
+   238→   238→      setNewExemptions(prev => [...prev, exempt.trim()])
+   239→   239→      setExemptInput('')
+   240→   240→    } else {
+   241→   241→      setEditExemptions(prev => [...prev, exempt.trim()])
+   242→   242→      setEditExemptInput('')
+   243→   243→    }
+   244→   244→  }
+   245→   245→
+   246→   246→  const removeExempt = (index: number, target: 'new' | 'edit') => {
+   247→   247→    if (target === 'new') {
+   248→   248→      setNewExemptions(prev => prev.filter((_, i) => i !== index))
+   249→   249→    } else {
+   250→   250→      setEditExemptions(prev => prev.filter((_, i) => i !== index))
+   251→   251→    }
+   252→   252→  }
+   253→   253→
+   254→   254→  const getRuleTypeInfo = (type: string) => ruleTypes.find(r => r.type === type) || ruleTypes[0]
+   255→   255→
+   256→   256→  return (
+   257→   257→    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+   258→   258→      {/* Header */}
+   259→   259→      <motion.div
+   260→   260→        initial={{ opacity: 0, y: -10 }}
+   261→   261→        animate={{ opacity: 1, y: 0 }}
+   262→   262→        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+   263→   263→      >
+   264→   264→        <div>
+   265→   265→          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+   266→   266→            Auto Moderación
+   267→   267→          </h2>
+   268→   268→          <p className="text-sm text-muted-foreground mt-1">
+   269→   269→            Configura reglas automáticas de moderación
+   270→   270→          </p>
+   271→   271→        </div>
+   272→   272→        <div className="flex items-center gap-3">
+   273→   273→          <div className="flex items-center gap-2">
+   274→   274→            <span className="text-xs text-muted-foreground">
+   275→   275→              {masterEnabled ? 'Activado' : 'Desactivado'}
+   276→   276→            </span>
+   277→   277→            <Switch
+   278→   278→              checked={masterEnabled}
+   279→   279→              onCheckedChange={setMasterEnabled}
+   280→   280→              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   281→   281→            />
+   282→   282→          </div>
+   283→   283→          <Button
+   284→   284→            onClick={() => setShowNewRule(true)}
+   285→   285→            size="sm"
+   286→   286→            className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+   287→   287→          >
+   288→   288→            <Plus className="w-4 h-4" />
+   289→   289→            Nueva Regla
+   290→   290→          </Button>
+   291→   291→        </div>
+   292→   292→      </motion.div>
+   293→   293→
+   294→   294→      {/* Master Toggle Indicator */}
+   295→   295→      <AnimatePresence>
+   296→   296→        {!masterEnabled && (
+   297→   297→          <motion.div
+   298→   298→            initial={{ opacity: 0, height: 0 }}
+   299→   299→            animate={{ opacity: 1, height: 'auto' }}
+   300→   300→            exit={{ opacity: 0, height: 0 }}
+   301→   301→          >
+   302→   302→            <Card className="bg-yellow-500/10 border-yellow-500/30">
+   303→   303→              <CardContent className="p-4 flex items-center gap-3">
+   304→   304→                <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0" />
+   305→   305→                <p className="text-sm text-yellow-300">
+   306→   306→                  El sistema de Auto Moderación está desactivado. Ninguna regla será ejecutada.
+   307→   307→                </p>
+   308→   308→              </CardContent>
+   309→   309→            </Card>
+   310→   310→          </motion.div>
+   311→   311→        )}
+   312→   312→      </AnimatePresence>
+   313→   313→
+   314→   314→      {/* Rules Grid */}
+   315→   315→      {loading ? (
+   316→   316→        <div className="flex items-center justify-center py-12">
+   317→   317→          <motion.div
+   318→   318→            animate={{ rotate: 360 }}
+   319→   319→            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+   320→   320→            className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+   321→   321→          />
+   322→   322→        </div>
+   323→   323→      ) : rules.length === 0 ? (
+   324→   324→        <motion.div
+   325→   325→          initial={{ opacity: 0 }}
+   326→   326→          animate={{ opacity: 1 }}
+   327→   327→          className="flex flex-col items-center justify-center py-16 text-muted-foreground"
+   328→   328→        >
+   329→   329→          <Bot className="w-12 h-12 mb-3 opacity-40" />
+   330→   330→          <p className="text-sm font-medium">No hay reglas configuradas</p>
+   331→   331→          <p className="text-xs mt-1">Crea una regla para empezar a proteger tu servidor</p>
+   332→   332→        </motion.div>
+   333→   333→      ) : (
+   334→   334→        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+   335→   335→          <AnimatePresence>
+   336→   336→            {rules.map((rule, i) => {
+   337→   337→              const typeInfo = getRuleTypeInfo(rule.type)
+   338→   338→              const TypeIcon = typeInfo.icon
+   339→   339→              const isExpanded = expandedRule === rule.id
+   340→   340→              const parsedWords = (() => { try { return JSON.parse(rule.words || '[]') as string[] } catch { return [] } })()
+   341→   341→              const parsedExemptions = (() => { try { return JSON.parse(rule.exemptions || '[]') as string[] } catch { return [] } })()
+   342→   342→
+   343→   343→              return (
+   344→   344→                <motion.div
+   345→   345→                  key={rule.id}
+   346→   346→                  initial={{ opacity: 0, y: 20 }}
+   347→   347→                  animate={{ opacity: 1, y: 0 }}
+   348→   348→                  exit={{ opacity: 0, scale: 0.95 }}
+   349→   349→                  transition={{ delay: i * 0.05 }}
+   350→   350→                  layout
+   351→   351→                >
+   352→   352→                  <Card className={`bg-card/80 backdrop-blur-sm border-border/50 transition-all duration-300 ${!rule.enabled ? 'opacity-60' : ''} ${isExpanded ? 'md:col-span-2' : ''}`}>
+   353→   353→                    <CardHeader className="pb-3">
+   354→   354→                      <div className="flex items-center justify-between">
+   355→   355→                        <div className="flex items-center gap-3">
+   356→   356→                          <div className={`p-2 rounded-lg bg-gradient-to-br ${typeInfo.color}`}>
+   357→   357→                            <TypeIcon className={`w-4 h-4 ${typeInfo.iconColor}`} />
+   358→   358→                          </div>
+   359→   359→                          <div>
+   360→   360→                            <CardTitle className="text-sm font-semibold">{rule.name}</CardTitle>
+   361→   361→                            <CardDescription className="text-xs">{typeInfo.label}</CardDescription>
+   362→   362→                          </div>
+   363→   363→                        </div>
+   364→   364→                        <div className="flex items-center gap-2">
+   365→   365→                          <Switch
+   366→   366→                            checked={rule.enabled}
+   367→   367→                            onCheckedChange={() => handleToggleRule(rule)}
+   368→   368→                            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   369→   369→                          />
+   370→   370→                          <Button
+   371→   371→                            variant="ghost"
+   372→   372→                            size="sm"
+   373→   373→                            className="h-7 w-7 p-0"
+   374→   374→                            onClick={() => setExpandedRule(isExpanded ? null : rule.id)}
+   375→   375→                          >
+   376→   376→                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+   377→   377→                          </Button>
+   378→   378→                        </div>
+   379→   379→                      </div>
+   380→   380→                    </CardHeader>
+   381→   381→                    <CardContent className="space-y-3">
+   382→   382→                      {/* Compact view */}
+   383→   383→                      <div className="flex items-center gap-4 flex-wrap">
+   384→   384→                        <div className="flex items-center gap-2">
+   385→   385→                          <span className="text-xs text-muted-foreground">Umbral:</span>
+   386→   386→                          <Badge variant="outline" className="text-xs bg-violet-500/10 text-violet-400 border-violet-500/30">
+   387→   387→                            {rule.threshold}
+   388→   388→                          </Badge>
+   389→   389→                        </div>
+   390→   390→                        <div className="flex items-center gap-2">
+   391→   391→                          <span className="text-xs text-muted-foreground">Acción:</span>
+   392→   392→                          <Badge variant="outline" className="text-xs">
+   393→   393→                            {actionLabels[rule.action] || rule.action}
+   394→   394→                          </Badge>
+   395→   395→                        </div>
+   396→   396→                        {rule.duration && (
+   397→   397→                          <div className="flex items-center gap-2">
+   398→   398→                            <span className="text-xs text-muted-foreground">Duración:</span>
+   399→   399→                            <span className="text-xs">{rule.duration}</span>
+   400→   400→                          </div>
+   401→   401→                        )}
+   402→   402→                      </div>
+   403→   403→
+   404→   404→                      {/* Expanded view */}
+   405→   405→                      <AnimatePresence>
+   406→   406→                        {isExpanded && (
+   407→   407→                          <motion.div
+   408→   408→                            initial={{ opacity: 0, height: 0 }}
+   409→   409→                            animate={{ opacity: 1, height: 'auto' }}
+   410→   410→                            exit={{ opacity: 0, height: 0 }}
+   411→   411→                            transition={{ duration: 0.3 }}
+   412→   412→                            className="overflow-hidden"
+   413→   413→                          >
+   414→   414→                            <div className="pt-3 border-t border-border/50 space-y-4">
+   415→   415→                              {/* Bad words */}
+   416→   416→                              {rule.type === 'words' && (
+   417→   417→                                <div className="space-y-2">
+   418→   418→                                  <Label className="text-xs font-medium text-muted-foreground">Palabras Prohibidas</Label>
+   419→   419→                                  <div className="flex flex-wrap gap-1.5">
+   420→   420→                                    {parsedWords.length === 0 ? (
+   421→   421→                                      <span className="text-xs text-muted-foreground italic">Sin palabras configuradas</span>
+   422→   422→                                    ) : (
+   423→   423→                                      parsedWords.map((w, idx) => (
+   424→   424→                                        <Badge key={idx} variant="outline" className="text-xs bg-red-500/10 text-red-400 border-red-500/30 gap-1">
+   425→   425→                                          {w}
+   426→   426→                                        </Badge>
+   427→   427→                                      ))
+   428→   428→                                    )}
+   429→   429→                                  </div>
+   430→   430→                                </div>
+   431→   431→                              )}
+   432→   432→
+   433→   433→                              {/* Exempt roles/channels */}
+   434→   434→                              <div className="space-y-2">
+   435→   435→                                <Label className="text-xs font-medium text-muted-foreground">Exenciones</Label>
+   436→   436→                                <div className="flex flex-wrap gap-1.5">
+   437→   437→                                  {parsedExemptions.length === 0 ? (
+   438→   438→                                    <span className="text-xs text-muted-foreground italic">Sin exenciones</span>
+   439→   439→                                  ) : (
+   440→   440→                                    parsedExemptions.map((e, idx) => (
+   441→   441→                                      <Badge key={idx} variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/30 gap-1">
+   442→   442→                                        {e}
+   443→   443→                                      </Badge>
+   444→   444→                                    ))
+   445→   445→                                  )}
+   446→   446→                                </div>
+   447→   447→                              </div>
+   448→   448→
+   449→   449→                              {/* Actions */}
+   450→   450→                              <div className="flex items-center gap-2 pt-2">
+   451→   451→                                <Button
+   452→   452→                                  variant="outline"
+   453→   453→                                  size="sm"
+   454→   454→                                  className="gap-1.5 text-xs"
+   455→   455→                                  onClick={() => openEdit(rule)}
+   456→   456→                                >
+   457→   457→                                  <Pencil className="w-3.5 h-3.5" />
+   458→   458→                                  Editar
+   459→   459→                                </Button>
+   460→   460→                                <Button
+   461→   461→                                  variant="outline"
+   462→   462→                                  size="sm"
+   463→   463→                                  className="gap-1.5 text-xs text-red-400 hover:text-red-300 border-red-500/30 hover:bg-red-500/10"
+   464→   464→                                  onClick={() => handleDeleteRule(rule.id)}
+   465→   465→                                >
+   466→   466→                                  <Trash2 className="w-3.5 h-3.5" />
+   467→   467→                                  Eliminar
+   468→   468→                                </Button>
+   469→   469→                              </div>
+   470→   470→                            </div>
+   471→   471→                          </motion.div>
+   472→   472→                        )}
+   473→   473→                      </AnimatePresence>
+   474→   474→                    </CardContent>
+   475→   475→                  </Card>
+   476→   476→                </motion.div>
+   477→   477→              )
+   478→   478→            })}
+   479→   479→          </AnimatePresence>
+   480→   480→        </div>
+   481→   481→      )}
+   482→   482→
+   483→   483→      {/* New Rule Dialog */}
+   484→   484→      <Dialog open={showNewRule} onOpenChange={setShowNewRule}>
+   485→   485→        <DialogContent className="max-w-lg">
+   486→   486→          <DialogHeader>
+   487→   487→            <DialogTitle className="flex items-center gap-2">
+   488→   488→              <Sparkles className="w-5 h-5 text-violet-400" />
+   489→   489→              Nueva Regla de Auto Moderación
+   490→   490→            </DialogTitle>
+   491→   491→            <DialogDescription>
+   492→   492→              Configura una nueva regla para proteger tu servidor automáticamente
+   493→   493→            </DialogDescription>
+   494→   494→          </DialogHeader>
+   495→   495→
+   496→   496→          <div className="space-y-4 py-2">
+   497→   497→            <div className="space-y-2">
+   498→   498→              <Label className="text-xs font-medium">Nombre</Label>
+   499→   499→              <Input
+   500→   500→                placeholder="Nombre de la regla"
+   501→   501→                value={newName}
+   502→   502→                onChange={(e) => setNewName(e.target.value)}
+   503→   503→                className="bg-background/50"
+   504→   504→              />
+   505→   505→            </div>
+   506→   506→
+   507→   507→            <div className="space-y-2">
+   508→   508→              <Label className="text-xs font-medium">Tipo</Label>
+   509→   509→              <div className="grid grid-cols-2 gap-2">
+   510→   510→                {ruleTypes.map(rt => (
+   511→   511→                  <motion.button
+   512→   512→                    key={rt.type}
+   513→   513→                    onClick={() => setNewType(rt.type)}
+   514→   514→                    className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left ${
+   515→   515→                      newType === rt.type
+   516→   516→                        ? 'border-violet-500/50 bg-violet-500/10'
+   517→   517→                        : 'border-border/50 bg-card/50 hover:bg-accent/30'
+   518→   518→                    }`}
+   519→   519→                    whileHover={{ scale: 1.02 }}
+   520→   520→                    whileTap={{ scale: 0.98 }}
+   521→   521→                  >
+   522→   522→                    <rt.icon className={`w-4 h-4 ${rt.iconColor}`} />
+   523→   523→                    <span className="text-xs font-medium">{rt.label}</span>
+   524→   524→                  </motion.button>
+   525→   525→                ))}
+   526→   526→              </div>
+   527→   527→            </div>
+   528→   528→
+   529→   529→            <div className="space-y-2">
+   530→   530→              <Label className="text-xs font-medium">Umbral: {newThreshold}</Label>
+   531→   531→              <Slider
+   532→   532→                value={[newThreshold]}
+   533→   533→                onValueChange={(v) => setNewThreshold(v[0])}
+   534→   534→                min={1}
+   535→   535→                max={20}
+   536→   536→                step={1}
+   537→   537→                className="py-2"
+   538→   538→              />
+   539→   539→            </div>
+   540→   540→
+   541→   541→            <div className="grid grid-cols-2 gap-3">
+   542→   542→              <div className="space-y-2">
+   543→   543→                <Label className="text-xs font-medium">Acción</Label>
+   544→   544→                <Select value={newAction} onValueChange={setNewAction}>
+   545→   545→                  <SelectTrigger className="bg-background/50">
+   546→   546→                    <SelectValue />
+   547→   547→                  </SelectTrigger>
+   548→   548→                  <SelectContent>
+   549→   549→                    {Object.entries(actionLabels).map(([k, v]) => (
+   550→   550→                      <SelectItem key={k} value={k}>{v}</SelectItem>
+   551→   551→                    ))}
+   552→   552→                  </SelectContent>
+   553→   553→                </Select>
+   554→   554→              </div>
+   555→   555→              <div className="space-y-2">
+   556→   556→                <Label className="text-xs font-medium">Duración</Label>
+   557→   557→                <Input
+   558→   558→                  placeholder="ej: 1h, 30m"
+   559→   559→                  value={newDuration}
+   560→   560→                  onChange={(e) => setNewDuration(e.target.value)}
+   561→   561→                  className="bg-background/50"
+   562→   562→                />
+   563→   563→              </div>
+   564→   564→            </div>
+   565→   565→
+   566→   566→            {newType === 'words' && (
+   567→   567→              <div className="space-y-2">
+   568→   568→                <Label className="text-xs font-medium">Palabras Prohibidas</Label>
+   569→   569→                <div className="flex gap-2">
+   570→   570→                  <Input
+   571→   571→                    placeholder="Agregar palabra..."
+   572→   572→                    value={wordInput}
+   573→   573→                    onChange={(e) => setWordInput(e.target.value)}
+   574→   574→                    onKeyDown={(e) => {
+   575→   575→                      if (e.key === 'Enter') {
+   576→   576→                        e.preventDefault()
+   577→   577→                        addWord(wordInput, 'new')
+   578→   578→                      }
+   579→   579→                    }}
+   580→   580→                    className="bg-background/50"
+   581→   581→                  />
+   582→   582→                  <Button
+   583→   583→                    variant="outline"
+   584→   584→                    size="sm"
+   585→   585→                    onClick={() => addWord(wordInput, 'new')}
+   586→   586→                  >
+   587→   587→                    <Plus className="w-4 h-4" />
+   588→   588→                  </Button>
+   589→   589→                </div>
+   590→   590→                <div className="flex flex-wrap gap-1.5">
+   591→   591→                  {newWords.map((w, i) => (
+   592→   592→                    <Badge key={i} variant="outline" className="text-xs bg-red-500/10 text-red-400 border-red-500/30 gap-1">
+   593→   593→                      {w}
+   594→   594→                      <button onClick={() => removeWord(i, 'new')}>
+   595→   595→                        <X className="w-3 h-3" />
+   596→   596→                      </button>
+   597→   597→                    </Badge>
+   598→   598→                  ))}
+   599→   599→                </div>
+   600→   600→              </div>
+   601→   601→            )}
+   602→   602→
+   603→   603→            <div className="space-y-2">
+   604→   604→              <Label className="text-xs font-medium">Exenciones (Roles/Canales)</Label>
+   605→   605→              <div className="flex gap-2">
+   606→   606→                <Input
+   607→   607→                  placeholder="Agregar exención..."
+   608→   608→                  value={exemptInput}
+   609→   609→                  onChange={(e) => setExemptInput(e.target.value)}
+   610→   610→                  onKeyDown={(e) => {
+   611→   611→                    if (e.key === 'Enter') {
+   612→   612→                      e.preventDefault()
+   613→   613→                      addExempt(exemptInput, 'new')
+   614→   614→                    }
+   615→   615→                  }}
+   616→   616→                  className="bg-background/50"
+   617→   617→                />
+   618→   618→                <Button
+   619→   619→                  variant="outline"
+   620→   620→                  size="sm"
+   621→   621→                  onClick={() => addExempt(exemptInput, 'new')}
+   622→   622→                >
+   623→   623→                  <Plus className="w-4 h-4" />
+   624→   624→                </Button>
+   625→   625→              </div>
+   626→   626→              <div className="flex flex-wrap gap-1.5">
+   627→   627→                {newExemptions.map((e, i) => (
+   628→   628→                  <Badge key={i} variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/30 gap-1">
+   629→   629→                    {e}
+   630→   630→                    <button onClick={() => removeExempt(i, 'new')}>
+   631→   631→                      <X className="w-3 h-3" />
+   632→   632→                    </button>
+   633→   633→                  </Badge>
+   634→   634→                ))}
+   635→   635→              </div>
+   636→   636→            </div>
+   637→   637→
+   638→   638→            <div className="flex items-center gap-2">
+   639→   639→              <Switch
+   640→   640→                checked={newEnabled}
+   641→   641→                onCheckedChange={setNewEnabled}
+   642→   642→                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   643→   643→              />
+   644→   644→              <Label className="text-xs">Activar regla inmediatamente</Label>
+   645→   645→            </div>
+   646→   646→          </div>
+   647→   647→
+   648→   648→          <DialogFooter>
+   649→   649→            <Button variant="ghost" onClick={() => setShowNewRule(false)}>Cancelar</Button>
+   650→   650→            <Button
+   651→   651→              onClick={handleCreateRule}
+   652→   652→              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+   653→   653→            >
+   654→   654→              Crear Regla
+   655→   655→            </Button>
+   656→   656→          </DialogFooter>
+   657→   657→        </DialogContent>
+   658→   658→      </Dialog>
+   659→   659→
+   660→   660→      {/* Edit Rule Dialog */}
+   661→   661→      <Dialog open={!!editingRule} onOpenChange={(open) => { if (!open) setEditingRule(null) }}>
+   662→   662→        <DialogContent className="max-w-lg">
+   663→   663→          <DialogHeader>
+   664→   664→            <DialogTitle className="flex items-center gap-2">
+   665→   665→              <Pencil className="w-5 h-5 text-violet-400" />
+   666→   666→              Editar Regla
+   667→   667→            </DialogTitle>
+   668→   668→            <DialogDescription>
+   669→   669→              {editingRule?.name}
+   670→   670→            </DialogDescription>
+   671→   671→          </DialogHeader>
+   672→   672→
+   673→   673→          <div className="space-y-4 py-2">
+   674→   674→            <div className="space-y-2">
+   675→   675→              <Label className="text-xs font-medium">Umbral: {editThreshold}</Label>
+   676→   676→              <Slider
+   677→   677→                value={[editThreshold]}
+   678→   678→                onValueChange={(v) => setEditThreshold(v[0])}
+   679→   679→                min={1}
+   680→   680→                max={20}
+   681→   681→                step={1}
+   682→   682→                className="py-2"
+   683→   683→              />
+   684→   684→            </div>
+   685→   685→
+   686→   686→            <div className="grid grid-cols-2 gap-3">
+   687→   687→              <div className="space-y-2">
+   688→   688→                <Label className="text-xs font-medium">Acción</Label>
+   689→   689→                <Select value={editAction} onValueChange={setEditAction}>
+   690→   690→                  <SelectTrigger className="bg-background/50">
+   691→   691→                    <SelectValue />
+   692→   692→                  </SelectTrigger>
+   693→   693→                  <SelectContent>
+   694→   694→                    {Object.entries(actionLabels).map(([k, v]) => (
+   695→   695→                      <SelectItem key={k} value={k}>{v}</SelectItem>
+   696→   696→                    ))}
+   697→   697→                  </SelectContent>
+   698→   698→                </Select>
+   699→   699→              </div>
+   700→   700→              <div className="space-y-2">
+   701→   701→                <Label className="text-xs font-medium">Duración</Label>
+   702→   702→                <Input
+   703→   703→                  placeholder="ej: 1h, 30m"
+   704→   704→                  value={editDuration}
+   705→   705→                  onChange={(e) => setEditDuration(e.target.value)}
+   706→   706→                  className="bg-background/50"
+   707→   707→                />
+   708→   708→              </div>
+   709→   709→            </div>
+   710→   710→
+   711→   711→            {editingRule?.type === 'words' && (
+   712→   712→              <div className="space-y-2">
+   713→   713→                <Label className="text-xs font-medium">Palabras Prohibidas</Label>
+   714→   714→                <div className="flex gap-2">
+   715→   715→                  <Input
+   716→   716→                    placeholder="Agregar palabra..."
+   717→   717→                    value={editWordInput}
+   718→   718→                    onChange={(e) => setEditWordInput(e.target.value)}
+   719→   719→                    onKeyDown={(e) => {
+   720→   720→                      if (e.key === 'Enter') {
+   721→   721→                        e.preventDefault()
+   722→   722→                        addWord(editWordInput, 'edit')
+   723→   723→                      }
+   724→   724→                    }}
+   725→   725→                    className="bg-background/50"
+   726→   726→                  />
+   727→   727→                  <Button
+   728→   728→                    variant="outline"
+   729→   729→                    size="sm"
+   730→   730→                    onClick={() => addWord(editWordInput, 'edit')}
+   731→   731→                  >
+   732→   732→                    <Plus className="w-4 h-4" />
+   733→   733→                  </Button>
+   734→   734→                </div>
+   735→   735→                <div className="flex flex-wrap gap-1.5">
+   736→   736→                  {editWords.map((w, i) => (
+   737→   737→                    <Badge key={i} variant="outline" className="text-xs bg-red-500/10 text-red-400 border-red-500/30 gap-1">
+   738→   738→                      {w}
+   739→   739→                      <button onClick={() => removeWord(i, 'edit')}>
+   740→   740→                        <X className="w-3 h-3" />
+   741→   741→                      </button>
+   742→   742→                    </Badge>
+   743→   743→                  ))}
+   744→   744→                </div>
+   745→   745→              </div>
+   746→   746→            )}
+   747→   747→
+   748→   748→            <div className="space-y-2">
+   749→   749→              <Label className="text-xs font-medium">Exenciones (Roles/Canales)</Label>
+   750→   750→              <div className="flex gap-2">
+   751→   751→                <Input
+   752→   752→                  placeholder="Agregar exención..."
+   753→   753→                  value={editExemptInput}
+   754→   754→                  onChange={(e) => setEditExemptInput(e.target.value)}
+   755→   755→                  onKeyDown={(e) => {
+   756→   756→                    if (e.key === 'Enter') {
+   757→   757→                      e.preventDefault()
+   758→   758→                      addExempt(editExemptInput, 'edit')
+   759→   759→                    }
+   760→   760→                  }}
+   761→   761→                  className="bg-background/50"
+   762→   762→                />
+   763→   763→                <Button
+   764→   764→                  variant="outline"
+   765→   765→                  size="sm"
+   766→   766→                  onClick={() => addExempt(editExemptInput, 'edit')}
+   767→   767→                >
+   768→   768→                  <Plus className="w-4 h-4" />
+   769→   769→                </Button>
+   770→   770→              </div>
+   771→   771→              <div className="flex flex-wrap gap-1.5">
+   772→   772→                {editExemptions.map((e, i) => (
+   773→   773→                  <Badge key={i} variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/30 gap-1">
+   774→   774→                    {e}
+   775→   775→                    <button onClick={() => removeExempt(i, 'edit')}>
+   776→   776→                      <X className="w-3 h-3" />
+   777→   777→                    </button>
+   778→   778→                  </Badge>
+   779→   779→                ))}
+   780→   780→              </div>
+   781→   781→            </div>
+   782→   782→
+   783→   783→            <div className="flex items-center gap-2">
+   784→   784→              <Switch
+   785→   785→                checked={editEnabled}
+   786→   786→                onCheckedChange={setEditEnabled}
+   787→   787→                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   788→   788→              />
+   789→   789→              <Label className="text-xs">Regla activada</Label>
+   790→   790→            </div>
+   791→   791→          </div>
+   792→   792→
+   793→   793→          <DialogFooter>
+   794→   794→            <Button variant="ghost" onClick={() => setEditingRule(null)}>Cancelar</Button>
+   795→   795→            <Button
+   796→   796→              onClick={handleSaveEdit}
+   797→   797→              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+   798→   798→            >
+   799→   799→              Guardar Cambios
+   800→   800→            </Button>
+   801→   801→          </DialogFooter>
+   802→   802→        </DialogContent>
+   803→   803→      </Dialog>
+   804→   804→    </div>
+   805→   805→  )
+   806→   806→}
+   807→   807→

@@ -1,0 +1,792 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useAppStore } from '@/lib/store'
+     6→import {
+     7→  FileText, Plus, CheckCircle2, XCircle, Clock, Eye,
+     8→  ChevronDown, ChevronUp, GripVertical, Trash2, Settings2,
+     9→  ClipboardList, Users
+    10→} from 'lucide-react'
+    11→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    12→import { Button } from '@/components/ui/button'
+    13→import { Input } from '@/components/ui/input'
+    14→import { Textarea } from '@/components/ui/textarea'
+    15→import { Badge } from '@/components/ui/badge'
+    16→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    17→import {
+    18→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    19→} from '@/components/ui/select'
+    20→import { Label } from '@/components/ui/label'
+    21→import { Switch } from '@/components/ui/switch'
+    22→import { ScrollArea } from '@/components/ui/scroll-area'
+    23→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+    24→import {
+    25→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    26→} from '@/components/ui/table'
+    27→import { toast } from 'sonner'
+    28→
+    29→interface FormField {
+    30→  id: string
+    31→  label: string
+    32→  type: 'short_text' | 'long_text' | 'select' | 'checkbox'
+    33→  required: boolean
+    34→  options?: string[]
+    35→}
+    36→
+    37→interface WhitelistFormData {
+    38→  id: string
+    39→  name: string
+    40→  description: string | null
+    41→  fields: string
+    42→  isActive: boolean
+    43→  channelId: string | null
+    44→  roleId: string | null
+    45→  createdAt: string
+    46→  _count: { applications: number }
+    47→  applications: ApplicationData[]
+    48→}
+    49→
+    50→interface ApplicationData {
+    51→  id: string
+    52→  formId: string
+    53→  userId: string
+    54→  status: string
+    55→  responses: string
+    56→  reviewedBy: string | null
+    57→  comment: string | null
+    58→  createdAt: string
+    59→  updatedAt: string
+    60→  user: { username: string; avatar: string | null; discordId: string }
+    61→}
+    62→
+    63→interface WhitelistStats {
+    64→  pending: number
+    65→  acceptedToday: number
+    66→  rejectedToday: number
+    67→}
+    68→
+    69→const statusColors: Record<string, string> = {
+    70→  pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    71→  accepted: 'bg-green-500/20 text-green-400 border-green-500/30',
+    72→  rejected: 'bg-red-500/20 text-red-400 border-red-500/30',
+    73→  reviewing: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    74→}
+    75→
+    76→const statusLabels: Record<string, string> = {
+    77→  pending: 'Pendiente',
+    78→  accepted: 'Aceptada',
+    79→  rejected: 'Rechazada',
+    80→  reviewing: 'Revisando',
+    81→}
+    82→
+    83→const fieldTypes = [
+    84→  { value: 'short_text', label: 'Texto corto' },
+    85→  { value: 'long_text', label: 'Texto largo' },
+    86→  { value: 'select', label: 'Selección' },
+    87→  { value: 'checkbox', label: 'Casilla' },
+    88→]
+    89→
+    90→export function WhitelistSystem() {
+    91→  const { currentServer } = useAppStore()
+    92→  const [forms, setForms] = useState<WhitelistFormData[]>([])
+    93→  const [stats, setStats] = useState<WhitelistStats>({ pending: 0, acceptedToday: 0, rejectedToday: 0 })
+    94→  const [loading, setLoading] = useState(true)
+    95→  const [activeTab, setActiveTab] = useState('formularios')
+    96→
+    97→  // Form builder state
+    98→  const [showBuilder, setShowBuilder] = useState(false)
+    99→  const [formName, setFormName] = useState('')
+   100→  const [formDescription, setFormDescription] = useState('')
+   101→  const [formFields, setFormFields] = useState<FormField[]>([])
+   102→  const [showPreview, setShowPreview] = useState(false)
+   103→
+   104→  // Filter state
+   105→  const [statusFilter, setStatusFilter] = useState<string>('all')
+   106→
+   107→  // Expanded application
+   108→  const [expandedApp, setExpandedApp] = useState<string | null>(null)
+   109→
+   110→  // Review comment
+   111→  const [reviewComments, setReviewComments] = useState<Record<string, string>>({})
+   112→
+   113→  const fetchData = useCallback(async () => {
+   114→    if (!currentServer) return
+   115→    setLoading(true)
+   116→    try {
+   117→      const res = await fetch(`/api/whitelist?serverId=${currentServer.id}`)
+   118→      const data = await res.json()
+   119→      if (data.forms) {
+   120→        setForms(data.forms)
+   121→        setStats(data.stats)
+   122→      }
+   123→    } catch {
+   124→      toast.error('Error al cargar formularios de whitelist')
+   125→    } finally {
+   126→      setLoading(false)
+   127→    }
+   128→  }, [currentServer])
+   129→
+   130→  useEffect(() => {
+   131→    fetchData()
+   132→  }, [fetchData])
+   133→
+   134→  const addField = () => {
+   135→    const newField: FormField = {
+   136→      id: `field_${Date.now()}`,
+   137→      label: '',
+   138→      type: 'short_text',
+   139→      required: false,
+   140→      options: [],
+   141→    }
+   142→    setFormFields([...formFields, newField])
+   143→  }
+   144→
+   145→  const updateField = (id: string, updates: Partial<FormField>) => {
+   146→    setFormFields(formFields.map(f => f.id === id ? { ...f, ...updates } : f))
+   147→  }
+   148→
+   149→  const removeField = (id: string) => {
+   150→    setFormFields(formFields.filter(f => f.id !== id))
+   151→  }
+   152→
+   153→  const handleCreateForm = async () => {
+   154→    if (!currentServer || !formName) {
+   155→      toast.error('El nombre es obligatorio')
+   156→      return
+   157→    }
+   158→    try {
+   159→      const res = await fetch('/api/whitelist', {
+   160→        method: 'POST',
+   161→        headers: { 'Content-Type': 'application/json' },
+   162→        body: JSON.stringify({
+   163→          action: 'createForm',
+   164→          serverId: currentServer.id,
+   165→          name: formName,
+   166→          description: formDescription,
+   167→          fields: formFields,
+   168→        }),
+   169→      })
+   170→      const data = await res.json()
+   171→      if (data.form) {
+   172→        toast.success('Formulario creado exitosamente')
+   173→        setShowBuilder(false)
+   174→        setFormName('')
+   175→        setFormDescription('')
+   176→        setFormFields([])
+   177→        fetchData()
+   178→      } else {
+   179→        toast.error(data.error || 'Error al crear formulario')
+   180→      }
+   181→    } catch {
+   182→      toast.error('Error de conexión')
+   183→    }
+   184→  }
+   185→
+   186→  const handleReview = async (applicationId: string, status: string) => {
+   187→    try {
+   188→      const res = await fetch('/api/whitelist', {
+   189→        method: 'POST',
+   190→        headers: { 'Content-Type': 'application/json' },
+   191→        body: JSON.stringify({
+   192→          action: 'review',
+   193→          applicationId,
+   194→          status,
+   195→          reviewedBy: 'admin',
+   196→          comment: reviewComments[applicationId] || null,
+   197→        }),
+   198→      })
+   199→      const data = await res.json()
+   200→      if (data.application) {
+   201→        toast.success(`Solicitud ${status === 'accepted' ? 'aceptada' : 'rechazada'}`)
+   202→        setReviewComments(prev => {
+   203→          const next = { ...prev }
+   204→          delete next[applicationId]
+   205→          return next
+   206→        })
+   207→        fetchData()
+   208→      }
+   209→    } catch {
+   210→      toast.error('Error al revisar solicitud')
+   211→    }
+   212→  }
+   213→
+   214→  const allApplications = forms.flatMap(f => f.applications)
+   215→  const filteredApplications = allApplications.filter(a => {
+   216→    if (statusFilter !== 'all' && a.status !== statusFilter) return false
+   217→    return true
+   218→  })
+   219→
+   220→  const pendingApps = allApplications.filter(a => a.status === 'pending')
+   221→
+   222→  const statCards = [
+   223→    { label: 'Pendientes', value: stats.pending, icon: Clock, color: 'from-yellow-500/20 to-yellow-600/10', iconColor: 'text-yellow-400' },
+   224→    { label: 'Aceptadas Hoy', value: stats.acceptedToday, icon: CheckCircle2, color: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-400' },
+   225→    { label: 'Rechazadas Hoy', value: stats.rejectedToday, icon: XCircle, color: 'from-red-500/20 to-red-600/10', iconColor: 'text-red-400' },
+   226→    { label: 'Formularios', value: forms.length, icon: FileText, color: 'from-violet-500/20 to-fuchsia-600/10', iconColor: 'text-violet-400' },
+   227→  ]
+   228→
+   229→  return (
+   230→    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+   231→      {/* Header */}
+   232→      <motion.div
+   233→        initial={{ opacity: 0, y: -10 }}
+   234→        animate={{ opacity: 1, y: 0 }}
+   235→        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+   236→      >
+   237→        <div>
+   238→          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+   239→            Sistema Whitelist
+   240→          </h2>
+   241→          <p className="text-sm text-muted-foreground mt-1">
+   242→            Gestión de whitelist FiveM
+   243→          </p>
+   244→        </div>
+   245→        <Dialog open={showBuilder} onOpenChange={setShowBuilder}>
+   246→          <DialogTrigger asChild>
+   247→            <Button className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white">
+   248→              <Plus className="w-4 h-4" />
+   249→              Crear Formulario
+   250→            </Button>
+   251→          </DialogTrigger>
+   252→          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+   253→            <DialogHeader>
+   254→              <DialogTitle className="flex items-center gap-2">
+   255→                <ClipboardList className="w-5 h-5 text-violet-400" />
+   256→                Crear Formulario de Whitelist
+   257→              </DialogTitle>
+   258→            </DialogHeader>
+   259→            <div className="space-y-4 mt-4">
+   260→              <div className="space-y-2">
+   261→                <Label className="text-xs font-medium text-muted-foreground">Nombre del formulario</Label>
+   262→                <Input
+   263→                  placeholder="Ej: Whitelist RP"
+   264→                  value={formName}
+   265→                  onChange={(e) => setFormName(e.target.value)}
+   266→                  className="bg-background/50"
+   267→                />
+   268→              </div>
+   269→              <div className="space-y-2">
+   270→                <Label className="text-xs font-medium text-muted-foreground">Descripción</Label>
+   271→                <Textarea
+   272→                  placeholder="Descripción del formulario..."
+   273→                  value={formDescription}
+   274→                  onChange={(e) => setFormDescription(e.target.value)}
+   275→                  className="bg-background/50 resize-none"
+   276→                  rows={2}
+   277→                />
+   278→              </div>
+   279→
+   280→              <div className="flex items-center justify-between">
+   281→                <Label className="text-sm font-semibold">Campos del formulario</Label>
+   282→                <div className="flex gap-2">
+   283→                  <Button
+   284→                    variant="outline"
+   285→                    size="sm"
+   286→                    onClick={() => setShowPreview(!showPreview)}
+   287→                    className="gap-1 border-violet-500/30 hover:bg-violet-500/10"
+   288→                  >
+   289→                    <Eye className="w-3.5 h-3.5" />
+   290→                    {showPreview ? 'Editor' : 'Vista previa'}
+   291→                  </Button>
+   292→                  <Button
+   293→                    variant="outline"
+   294→                    size="sm"
+   295→                    onClick={addField}
+   296→                    className="gap-1 border-violet-500/30 hover:bg-violet-500/10"
+   297→                  >
+   298→                    <Plus className="w-3.5 h-3.5" />
+   299→                    Añadir campo
+   300→                  </Button>
+   301→                </div>
+   302→              </div>
+   303→
+   304→              {showPreview ? (
+   305→                <Card className="bg-background/50 border-border/30">
+   306→                  <CardContent className="p-4 space-y-4">
+   307→                    <h3 className="font-semibold text-lg">{formName || 'Sin nombre'}</h3>
+   308→                    {formDescription && <p className="text-sm text-muted-foreground">{formDescription}</p>}
+   309→                    {formFields.length === 0 ? (
+   310→                      <p className="text-sm text-muted-foreground text-center py-4">No hay campos aún</p>
+   311→                    ) : (
+   312→                      formFields.map(field => (
+   313→                        <div key={field.id} className="space-y-1">
+   314→                          <Label className="text-xs">
+   315→                            {field.label || 'Sin etiqueta'}
+   316→                            {field.required && <span className="text-red-400 ml-1">*</span>}
+   317→                          </Label>
+   318→                          {field.type === 'short_text' && (
+   319→                            <Input disabled placeholder="Texto corto" className="bg-background/30 h-8 text-sm" />
+   320→                          )}
+   321→                          {field.type === 'long_text' && (
+   322→                            <Textarea disabled placeholder="Texto largo" className="bg-background/30 resize-none h-16 text-sm" />
+   323→                          )}
+   324→                          {field.type === 'select' && (
+   325→                            <Select disabled>
+   326→                              <SelectTrigger className="bg-background/30 h-8 text-sm">
+   327→                                <SelectValue placeholder="Seleccionar..." />
+   328→                              </SelectTrigger>
+   329→                            </Select>
+   330→                          )}
+   331→                          {field.type === 'checkbox' && (
+   332→                            <div className="flex items-center gap-2">
+   333→                              <div className="w-4 h-4 rounded border border-border/50" />
+   334→                              <span className="text-sm text-muted-foreground">Opción</span>
+   335→                            </div>
+   336→                          )}
+   337→                        </div>
+   338→                      ))
+   339→                    )}
+   340→                  </CardContent>
+   341→                </Card>
+   342→              ) : (
+   343→                <div className="space-y-2">
+   344→                  {formFields.length === 0 ? (
+   345→                    <div className="text-center py-6 text-muted-foreground text-sm border border-dashed border-border/50 rounded-lg">
+   346→                      Haz clic en &quot;Añadir campo&quot; para empezar
+   347→                    </div>
+   348→                  ) : (
+   349→                    formFields.map((field, idx) => (
+   350→                      <motion.div
+   351→                        key={field.id}
+   352→                        initial={{ opacity: 0, y: -10 }}
+   353→                        animate={{ opacity: 1, y: 0 }}
+   354→                        className="flex items-start gap-2 p-3 rounded-lg bg-background/50 border border-border/30"
+   355→                      >
+   356→                        <div className="flex items-center gap-1 pt-2 text-muted-foreground">
+   357→                          <GripVertical className="w-4 h-4" />
+   358→                          <span className="text-xs font-mono">{idx + 1}</span>
+   359→                        </div>
+   360→                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+   361→                          <Input
+   362→                            placeholder="Etiqueta del campo"
+   363→                            value={field.label}
+   364→                            onChange={(e) => updateField(field.id, { label: e.target.value })}
+   365→                            className="bg-background/50 h-8 text-sm"
+   366→                          />
+   367→                          <div className="flex gap-2">
+   368→                            <Select value={field.type} onValueChange={(v) => updateField(field.id, { type: v as FormField['type'] })}>
+   369→                              <SelectTrigger className="bg-background/50 h-8 text-sm flex-1">
+   370→                                <SelectValue />
+   371→                              </SelectTrigger>
+   372→                              <SelectContent>
+   373→                                {fieldTypes.map(ft => (
+   374→                                  <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>
+   375→                                ))}
+   376→                              </SelectContent>
+   377→                            </Select>
+   378→                            <div className="flex items-center gap-1">
+   379→                              <Switch
+   380→                                checked={field.required}
+   381→                                onCheckedChange={(checked) => updateField(field.id, { required: checked })}
+   382→                                className="scale-75"
+   383→                              />
+   384→                              <span className="text-xs text-muted-foreground">Req</span>
+   385→                            </div>
+   386→                          </div>
+   387→                          {field.type === 'select' && (
+   388→                            <div className="col-span-full">
+   389→                              <Input
+   390→                                placeholder="Opciones separadas por coma"
+   391→                                value={field.options?.join(', ') || ''}
+   392→                                onChange={(e) => updateField(field.id, { options: e.target.value.split(',').map(o => o.trim()).filter(Boolean) })}
+   393→                                className="bg-background/50 h-8 text-sm"
+   394→                              />
+   395→                            </div>
+   396→                          )}
+   397→                        </div>
+   398→                        <Button
+   399→                          variant="ghost"
+   400→                          size="sm"
+   401→                          className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+   402→                          onClick={() => removeField(field.id)}
+   403→                        >
+   404→                          <Trash2 className="w-4 h-4" />
+   405→                        </Button>
+   406→                      </motion.div>
+   407→                    ))
+   408→                  )}
+   409→                </div>
+   410→              )}
+   411→
+   412→              <div className="flex justify-end gap-2 pt-2">
+   413→                <Button variant="outline" onClick={() => setShowBuilder(false)}>
+   414→                  Cancelar
+   415→                </Button>
+   416→                <Button
+   417→                  onClick={handleCreateForm}
+   418→                  disabled={!formName || formFields.length === 0}
+   419→                  className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+   420→                >
+   421→                  Crear Formulario
+   422→                </Button>
+   423→              </div>
+   424→            </div>
+   425→          </DialogContent>
+   426→        </Dialog>
+   427→      </motion.div>
+   428→
+   429→      {/* Stats */}
+   430→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+   431→        {statCards.map((stat, i) => (
+   432→          <motion.div
+   433→            key={stat.label}
+   434→            initial={{ opacity: 0, y: 20 }}
+   435→            animate={{ opacity: 1, y: 0 }}
+   436→            transition={{ delay: i * 0.1 }}
+   437→          >
+   438→            <Card className={`bg-gradient-to-br ${stat.color} border-0`}>
+   439→              <CardContent className="p-4 flex items-center gap-3">
+   440→                <div className={`p-2 rounded-lg bg-black/20 ${stat.iconColor}`}>
+   441→                  <stat.icon className="w-5 h-5" />
+   442→                </div>
+   443→                <div>
+   444→                  <p className="text-2xl font-bold">{stat.value}</p>
+   445→                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+   446→                </div>
+   447→              </CardContent>
+   448→            </Card>
+   449→          </motion.div>
+   450→        ))}
+   451→      </div>
+   452→
+   453→      {/* Tabs */}
+   454→      <Tabs value={activeTab} onValueChange={setActiveTab}>
+   455→        <TabsList className="bg-card/50 border border-border/30">
+   456→          <TabsTrigger value="formularios" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+   457→            <FileText className="w-3.5 h-3.5" />
+   458→            Formularios
+   459→          </TabsTrigger>
+   460→          <TabsTrigger value="solicitudes" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+   461→            <ClipboardList className="w-3.5 h-3.5" />
+   462→            Solicitudes
+   463→          </TabsTrigger>
+   464→          <TabsTrigger value="staff" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+   465→            <Settings2 className="w-3.5 h-3.5" />
+   466→            Panel Staff
+   467→          </TabsTrigger>
+   468→        </TabsList>
+   469→
+   470→        {/* Formularios Tab */}
+   471→        <TabsContent value="formularios">
+   472→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 mt-4">
+   473→            {loading ? (
+   474→              <div className="flex items-center justify-center py-12">
+   475→                <motion.div
+   476→                  animate={{ rotate: 360 }}
+   477→                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+   478→                  className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+   479→                />
+   480→              </div>
+   481→            ) : forms.length === 0 ? (
+   482→              <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   483→                <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+   484→                  <FileText className="w-10 h-10 mb-2 opacity-50" />
+   485→                  <p className="text-sm">No hay formularios de whitelist</p>
+   486→                  <p className="text-xs mt-1">Crea uno con el botón de arriba</p>
+   487→                </CardContent>
+   488→              </Card>
+   489→            ) : (
+   490→              forms.map((form, i) => {
+   491→                const fields: FormField[] = JSON.parse(form.fields || '[]')
+   492→                return (
+   493→                  <motion.div
+   494→                    key={form.id}
+   495→                    initial={{ opacity: 0, y: 20 }}
+   496→                    animate={{ opacity: 1, y: 0 }}
+   497→                    transition={{ delay: i * 0.05 }}
+   498→                  >
+   499→                    <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-violet-500/30 transition-colors">
+   500→                      <CardContent className="p-4">
+   501→                        <div className="flex items-start justify-between gap-3">
+   502→                          <div className="flex-1 min-w-0">
+   503→                            <div className="flex items-center gap-2">
+   504→                              <h3 className="font-semibold truncate">{form.name}</h3>
+   505→                              <Badge
+   506→                                variant="outline"
+   507→                                className={form.isActive
+   508→                                  ? 'bg-green-500/15 text-green-400 border-green-500/30 text-xs'
+   509→                                  : 'bg-gray-500/15 text-gray-400 border-gray-500/30 text-xs'
+   510→                                }
+   511→                              >
+   512→                                {form.isActive ? 'Activo' : 'Inactivo'}
+   513→                              </Badge>
+   514→                            </div>
+   515→                            {form.description && (
+   516→                              <p className="text-sm text-muted-foreground mt-1">{form.description}</p>
+   517→                            )}
+   518→                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+   519→                              <span>{fields.length} campos</span>
+   520→                              <span>•</span>
+   521→                              <span>{form._count.applications} solicitudes</span>
+   522→                              <span>•</span>
+   523→                              <span>{new Date(form.createdAt).toLocaleDateString('es-ES')}</span>
+   524→                            </div>
+   525→                          </div>
+   526→                          <div className="flex gap-1">
+   527→                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-violet-400 hover:bg-violet-500/10">
+   528→                              <Eye className="w-4 h-4" />
+   529→                            </Button>
+   530→                          </div>
+   531→                        </div>
+   532→                      </CardContent>
+   533→                    </Card>
+   534→                  </motion.div>
+   535→                )
+   536→              })
+   537→            )}
+   538→          </motion.div>
+   539→        </TabsContent>
+   540→
+   541→        {/* Solicitudes Tab */}
+   542→        <TabsContent value="solicitudes">
+   543→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
+   544→            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   545→              <CardHeader className="pb-3">
+   546→                <div className="flex items-center justify-between">
+   547→                  <CardTitle className="text-lg flex items-center gap-2">
+   548→                    <ClipboardList className="w-5 h-5 text-violet-400" />
+   549→                    Solicitudes
+   550→                  </CardTitle>
+   551→                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+   552→                    <SelectTrigger className="bg-background/50 h-8 text-sm w-36">
+   553→                      <SelectValue />
+   554→                    </SelectTrigger>
+   555→                    <SelectContent>
+   556→                      <SelectItem value="all">Todos</SelectItem>
+   557→                      <SelectItem value="pending">Pendiente</SelectItem>
+   558→                      <SelectItem value="accepted">Aceptada</SelectItem>
+   559→                      <SelectItem value="rejected">Rechazada</SelectItem>
+   560→                      <SelectItem value="reviewing">Revisando</SelectItem>
+   561→                    </SelectContent>
+   562→                  </Select>
+   563→                </div>
+   564→              </CardHeader>
+   565→              <CardContent className="p-0">
+   566→                {loading ? (
+   567→                  <div className="flex items-center justify-center py-12">
+   568→                    <motion.div
+   569→                      animate={{ rotate: 360 }}
+   570→                      transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+   571→                      className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+   572→                    />
+   573→                  </div>
+   574→                ) : filteredApplications.length === 0 ? (
+   575→                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+   576→                    <Users className="w-10 h-10 mb-2 opacity-50" />
+   577→                    <p className="text-sm">No hay solicitudes</p>
+   578→                  </div>
+   579→                ) : (
+   580→                  <ScrollArea className="max-h-[500px]">
+   581→                    <Table>
+   582→                      <TableHeader>
+   583→                        <TableRow className="hover:bg-transparent border-border/50">
+   584→                          <TableHead className="text-xs font-semibold">Solicitante</TableHead>
+   585→                          <TableHead className="text-xs font-semibold">Estado</TableHead>
+   586→                          <TableHead className="text-xs font-semibold hidden md:table-cell">Fecha</TableHead>
+   587→                          <TableHead className="text-xs font-semibold w-10"></TableHead>
+   588→                        </TableRow>
+   589→                      </TableHeader>
+   590→                      <TableBody>
+   591→                        <AnimatePresence>
+   592→                          {filteredApplications.map((app, i) => (
+   593→                            <motion.tr
+   594→                              key={app.id}
+   595→                              initial={{ opacity: 0, x: -10 }}
+   596→                              animate={{ opacity: 1, x: 0 }}
+   597→                              transition={{ delay: i * 0.03 }}
+   598→                              className="border-b border-border/30 hover:bg-accent/30 transition-colors cursor-pointer"
+   599→                              onClick={() => setExpandedApp(expandedApp === app.id ? null : app.id)}
+   600→                            >
+   601→                              <TableCell>
+   602→                                <span className="text-sm font-medium">{app.user.username}</span>
+   603→                              </TableCell>
+   604→                              <TableCell>
+   605→                                <Badge
+   606→                                  variant="outline"
+   607→                                  className={`text-xs ${statusColors[app.status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}
+   608→                                >
+   609→                                  {statusLabels[app.status] || app.status}
+   610→                                </Badge>
+   611→                              </TableCell>
+   612→                              <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+   613→                                {new Date(app.createdAt).toLocaleDateString('es-ES', {
+   614→                                  day: '2-digit', month: 'short', year: 'numeric',
+   615→                                })}
+   616→                              </TableCell>
+   617→                              <TableCell>
+   618→                                {expandedApp === app.id ? (
+   619→                                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+   620→                                ) : (
+   621→                                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+   622→                                )}
+   623→                              </TableCell>
+   624→                            </motion.tr>
+   625→                          ))}
+   626→                        </AnimatePresence>
+   627→                      </TableBody>
+   628→                    </Table>
+   629→                  </ScrollArea>
+   630→                )}
+   631→
+   632→                {/* Expanded Application Detail */}
+   633→                <AnimatePresence>
+   634→                  {expandedApp && (() => {
+   635→                    const app = filteredApplications.find(a => a.id === expandedApp)
+   636→                    if (!app) return null
+   637→                    const responses: Record<string, string> = JSON.parse(app.responses || '{}')
+   638→                    const form = forms.find(f => f.id === app.formId)
+   639→                    const formFields: FormField[] = form ? JSON.parse(form.fields || '[]') : []
+   640→                    return (
+   641→                      <motion.div
+   642→                        initial={{ opacity: 0, height: 0 }}
+   643→                        animate={{ opacity: 1, height: 'auto' }}
+   644→                        exit={{ opacity: 0, height: 0 }}
+   645→                        className="border-t border-border/30 p-4 bg-accent/10"
+   646→                      >
+   647→                        <div className="space-y-3">
+   648→                          <h4 className="font-semibold text-sm">
+   649→                            Respuestas de {app.user.username}
+   650→                          </h4>
+   651→                          {formFields.map(field => (
+   652→                            <div key={field.id} className="flex flex-col gap-1">
+   653→                              <span className="text-xs text-muted-foreground">
+   654→                                {field.label}
+   655→                                {field.required && <span className="text-red-400 ml-1">*</span>}
+   656→                              </span>
+   657→                              <span className="text-sm bg-background/50 rounded px-3 py-1.5">
+   658→                                {responses[field.id] || '—'}
+   659→                              </span>
+   660→                            </div>
+   661→                          ))}
+   662→                          {app.comment && (
+   663→                            <div className="flex flex-col gap-1">
+   664→                              <span className="text-xs text-muted-foreground">Comentario del revisor</span>
+   665→                              <span className="text-sm bg-background/50 rounded px-3 py-1.5">{app.comment}</span>
+   666→                            </div>
+   667→                          )}
+   668→                        </div>
+   669→                      </motion.div>
+   670→                    )
+   671→                  })()}
+   672→                </AnimatePresence>
+   673→              </CardContent>
+   674→            </Card>
+   675→          </motion.div>
+   676→        </TabsContent>
+   677→
+   678→        {/* Panel Staff Tab */}
+   679→        <TabsContent value="staff">
+   680→          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 mt-4">
+   681→            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+   682→              <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 border-0">
+   683→                <CardContent className="p-3 text-center">
+   684→                  <p className="text-2xl font-bold text-yellow-400">{pendingApps.length}</p>
+   685→                  <p className="text-xs text-muted-foreground">Pendientes</p>
+   686→                </CardContent>
+   687→              </Card>
+   688→              <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-0">
+   689→                <CardContent className="p-3 text-center">
+   690→                  <p className="text-2xl font-bold text-green-400">{stats.acceptedToday}</p>
+   691→                  <p className="text-xs text-muted-foreground">Aceptadas hoy</p>
+   692→                </CardContent>
+   693→              </Card>
+   694→              <Card className="bg-gradient-to-br from-red-500/10 to-red-600/5 border-0">
+   695→                <CardContent className="p-3 text-center">
+   696→                  <p className="text-2xl font-bold text-red-400">{stats.rejectedToday}</p>
+   697→                  <p className="text-xs text-muted-foreground">Rechazadas hoy</p>
+   698→                </CardContent>
+   699→              </Card>
+   700→            </div>
+   701→
+   702→            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   703→              <CardHeader className="pb-3">
+   704→                <CardTitle className="text-lg flex items-center gap-2">
+   705→                  <Users className="w-5 h-5 text-violet-400" />
+   706→                  Cola de Revisión
+   707→                </CardTitle>
+   708→              </CardHeader>
+   709→              <CardContent>
+   710→                {pendingApps.length === 0 ? (
+   711→                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+   712→                    <CheckCircle2 className="w-10 h-10 mb-2 opacity-50" />
+   713→                    <p className="text-sm">No hay solicitudes pendientes</p>
+   714→                  </div>
+   715→                ) : (
+   716→                  <div className="space-y-3">
+   717→                    {pendingApps.map((app, i) => {
+   718→                      const responses: Record<string, string> = JSON.parse(app.responses || '{}')
+   719→                      const form = forms.find(f => f.id === app.formId)
+   720→                      const formFields: FormField[] = form ? JSON.parse(form.fields || '[]') : []
+   721→                      return (
+   722→                        <motion.div
+   723→                          key={app.id}
+   724→                          initial={{ opacity: 0, y: 10 }}
+   725→                          animate={{ opacity: 1, y: 0 }}
+   726→                          transition={{ delay: i * 0.05 }}
+   727→                          className="p-4 rounded-lg bg-background/50 border border-border/30 space-y-3"
+   728→                        >
+   729→                          <div className="flex items-center justify-between">
+   730→                            <div>
+   731→                              <span className="font-semibold text-sm">{app.user.username}</span>
+   732→                              <span className="text-xs text-muted-foreground ml-2">
+   733→                                {form?.name || 'Formulario'} • {new Date(app.createdAt).toLocaleDateString('es-ES')}
+   734→                              </span>
+   735→                            </div>
+   736→                            <Badge variant="outline" className="text-xs bg-yellow-500/15 text-yellow-400 border-yellow-500/30">
+   737→                              Pendiente
+   738→                            </Badge>
+   739→                          </div>
+   740→
+   741→                          {formFields.length > 0 && (
+   742→                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+   743→                              {formFields.map(field => (
+   744→                                <div key={field.id} className="text-xs">
+   745→                                  <span className="text-muted-foreground">{field.label}: </span>
+   746→                                  <span className="font-medium">{responses[field.id] || '—'}</span>
+   747→                                </div>
+   748→                              ))}
+   749→                            </div>
+   750→                          )}
+   751→
+   752→                          <div className="space-y-2">
+   753→                            <Input
+   754→                              placeholder="Comentario (opcional)..."
+   755→                              value={reviewComments[app.id] || ''}
+   756→                              onChange={(e) => setReviewComments(prev => ({ ...prev, [app.id]: e.target.value }))}
+   757→                              className="bg-background/50 h-8 text-sm"
+   758→                            />
+   759→                            <div className="flex gap-2">
+   760→                              <Button
+   761→                                size="sm"
+   762→                                onClick={() => handleReview(app.id, 'accepted')}
+   763→                                className="gap-1 bg-green-600 hover:bg-green-700 text-white"
+   764→                              >
+   765→                                <CheckCircle2 className="w-3.5 h-3.5" />
+   766→                                Aceptar
+   767→                              </Button>
+   768→                              <Button
+   769→                                size="sm"
+   770→                                variant="destructive"
+   771→                                onClick={() => handleReview(app.id, 'rejected')}
+   772→                                className="gap-1"
+   773→                              >
+   774→                                <XCircle className="w-3.5 h-3.5" />
+   775→                                Rechazar
+   776→                              </Button>
+   777→                            </div>
+   778→                          </div>
+   779→                        </motion.div>
+   780→                      )
+   781→                    })}
+   782→                  </div>
+   783→                )}
+   784→              </CardContent>
+   785→            </Card>
+   786→          </motion.div>
+   787→        </TabsContent>
+   788→      </Tabs>
+   789→    </div>
+   790→  )
+   791→}
+   792→

@@ -6,7 +6,7 @@ import { useAppStore } from '@/lib/store'
 import {
   FileText, Plus, CheckCircle2, XCircle, Clock, Eye,
   ChevronDown, ChevronUp, GripVertical, Trash2, Settings2,
-  ClipboardList, Users
+  ClipboardList, Users, Palette
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { toast } from 'sonner'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
+import { EmbedConfig, EmbedPreview, defaultEmbedConfig, type EmbedConfigData } from '@/components/shared/EmbedConfig'
 
 interface FormField {
   id: string
@@ -100,6 +102,8 @@ export function WhitelistSystem() {
   const [formDescription, setFormDescription] = useState('')
   const [formFields, setFormFields] = useState<FormField[]>([])
   const [showPreview, setShowPreview] = useState(false)
+  const [channelId, setChannelId] = useState<string | null>(null)
+  const [embedConfig, setEmbedConfig] = useState<EmbedConfigData>(defaultEmbedConfig)
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -165,6 +169,8 @@ export function WhitelistSystem() {
           name: formName,
           description: formDescription,
           fields: formFields,
+          channelId,
+          embedConfig: { ...embedConfig, channelId },
         }),
       })
       const data = await res.json()
@@ -174,6 +180,8 @@ export function WhitelistSystem() {
         setFormName('')
         setFormDescription('')
         setFormFields([])
+        setChannelId(null)
+        setEmbedConfig(defaultEmbedConfig)
         fetchData()
       } else {
         toast.error(data.error || 'Error al crear formulario')
@@ -275,6 +283,39 @@ export function WhitelistSystem() {
                   className="bg-background/50 resize-none"
                   rows={2}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Canal de destino</Label>
+                <ChannelSelector
+                  value={channelId}
+                  onValueChange={setChannelId}
+                  placeholder="Selecciona el canal donde se enviará el formulario..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold flex items-center gap-1.5">
+                  <Palette className="w-4 h-4 text-violet-400" />
+                  Configuración del Embed
+                </Label>
+                <EmbedConfig
+                  config={embedConfig}
+                  onChange={setEmbedConfig}
+                  showChannelSelector={false}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold flex items-center gap-1.5">
+                  <Eye className="w-4 h-4 text-violet-400" />
+                  Vista Previa
+                </Label>
+                <Card className="bg-[#313338] border-border/30 overflow-hidden">
+                  <CardContent className="p-4">
+                    <EmbedPreview config={{ ...embedConfig, channelId }} />
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="flex items-center justify-between">

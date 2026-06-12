@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -279,11 +280,10 @@ export function SettingsPanel() {
                   <MessageSquare className="w-3 h-3" />
                   Canal de Logs
                 </Label>
-                <Input
-                  placeholder="ID del canal"
-                  value={logChannelId}
-                  onChange={(e) => setLogChannelId(e.target.value)}
-                  className="bg-background/50"
+                <ChannelSelector
+                  value={logChannelId || null}
+                  onValueChange={setLogChannelId}
+                  placeholder="Seleccionar canal de logs..."
                 />
               </div>
               <div className="space-y-2">
@@ -291,11 +291,10 @@ export function SettingsPanel() {
                   <Shield className="w-3 h-3" />
                   Canal de Mod Logs
                 </Label>
-                <Input
-                  placeholder="ID del canal"
-                  value={modLogChannelId}
-                  onChange={(e) => setModLogChannelId(e.target.value)}
-                  className="bg-background/50"
+                <ChannelSelector
+                  value={modLogChannelId || null}
+                  onValueChange={setModLogChannelId}
+                  placeholder="Seleccionar canal de mod logs..."
                 />
               </div>
               <div className="space-y-2">
@@ -303,11 +302,10 @@ export function SettingsPanel() {
                   <MessageSquare className="w-3 h-3" />
                   Canal de Bienvenida
                 </Label>
-                <Input
-                  placeholder="ID del canal"
-                  value={welcomeChannelId}
-                  onChange={(e) => setWelcomeChannelId(e.target.value)}
-                  className="bg-background/50"
+                <ChannelSelector
+                  value={welcomeChannelId || null}
+                  onValueChange={setWelcomeChannelId}
+                  placeholder="Seleccionar canal de bienvenida..."
                 />
               </div>
               <div className="space-y-2">
@@ -315,11 +313,10 @@ export function SettingsPanel() {
                   <Ticket className="w-3 h-3" />
                   Canal de Ticket Logs
                 </Label>
-                <Input
-                  placeholder="ID del canal"
-                  value={ticketLogChannelId}
-                  onChange={(e) => setTicketLogChannelId(e.target.value)}
-                  className="bg-background/50"
+                <ChannelSelector
+                  value={ticketLogChannelId || null}
+                  onValueChange={setTicketLogChannelId}
+                  placeholder="Seleccionar canal de ticket logs..."
                 />
               </div>
             </div>

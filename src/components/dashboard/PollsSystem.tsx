@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '@/lib/store'
 import {
   BarChart3, Plus, Vote, CheckCircle2, X, Calendar,
-  ToggleLeft, BarChartHorizontal, PieChart as PieChartIcon, TrendingUp
+  ToggleLeft, BarChartHorizontal, PieChart as PieChartIcon, TrendingUp, Settings2, Eye
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,8 +18,11 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
+import { EmbedConfig, EmbedPreview, defaultEmbedConfig, type EmbedConfigData } from '@/components/shared/EmbedConfig'
 
 interface PollData {
   id: string
@@ -69,6 +72,8 @@ export function PollsSystem() {
   const [options, setOptions] = useState<string[]>(['Sí', 'No'])
   const [allowMultiple, setAllowMultiple] = useState(false)
   const [endDate, setEndDate] = useState('')
+  const [channelId, setChannelId] = useState<string | null>(null)
+  const [embedConfig, setEmbedConfig] = useState<EmbedConfigData>(defaultEmbedConfig)
 
   // Results dialog
   const [showResults, setShowResults] = useState(false)
@@ -112,6 +117,8 @@ export function PollsSystem() {
           type: pollType,
           allowMultiple,
           endsAt: endDate || null,
+          channelId,
+          embedConfig,
         }),
       })
       const data = await res.json()
@@ -123,6 +130,8 @@ export function PollsSystem() {
         setOptions(['Sí', 'No'])
         setAllowMultiple(false)
         setEndDate('')
+        setChannelId(null)
+        setEmbedConfig(defaultEmbedConfig)
         fetchData()
       } else {
         toast.error(data.error || 'Error al crear encuesta')
@@ -232,7 +241,7 @@ export function PollsSystem() {
               Crear Encuesta
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Vote className="w-5 h-5 text-violet-400" />
@@ -240,6 +249,7 @@ export function PollsSystem() {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 mt-4">
+              {/* Basic Poll Config */}
               <div className="space-y-2">
                 <Label className="text-xs font-medium text-muted-foreground">Pregunta</Label>
                 <Input
@@ -247,6 +257,15 @@ export function PollsSystem() {
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   className="bg-background/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground">Canal de destino</Label>
+                <ChannelSelector
+                  value={channelId}
+                  onValueChange={setChannelId}
+                  placeholder="Selecciona el canal donde se enviará la encuesta..."
                 />
               </div>
 
@@ -265,59 +284,144 @@ export function PollsSystem() {
                 </Select>
               </div>
 
-              {pollType !== 'yesno' && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium text-muted-foreground">Opciones</Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={addOption}
-                      className="h-7 text-xs gap-1 text-violet-400 hover:text-violet-300"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Añadir
-                    </Button>
-                  </div>
-                  <div className="space-y-1.5">
-                    {options.map((opt, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <Input
-                          value={opt}
-                          onChange={(e) => updateOption(idx, e.target.value)}
-                          className="bg-background/50 h-8 text-sm"
-                        />
+              {/* Tabs: Config & Preview */}
+              <Tabs defaultValue="config" className="w-full">
+                <TabsList className="w-full">
+                  <TabsTrigger value="config" className="flex-1 gap-1.5">
+                    <Settings2 className="w-3.5 h-3.5" />
+                    Config
+                  </TabsTrigger>
+                  <TabsTrigger value="preview" className="flex-1 gap-1.5">
+                    <Eye className="w-3.5 h-3.5" />
+                    Vista Previa
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="config" className="space-y-4 mt-4">
+                  {pollType !== 'yesno' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium text-muted-foreground">Opciones</Label>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                          onClick={() => removeOption(idx)}
+                          onClick={addOption}
+                          className="h-7 text-xs gap-1 text-violet-400 hover:text-violet-300"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <Plus className="w-3 h-3" />
+                          Añadir
                         </Button>
                       </div>
-                    ))}
+                      <div className="space-y-1.5">
+                        {options.map((opt, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <Input
+                              value={opt}
+                              onChange={(e) => updateOption(idx, e.target.value)}
+                              className="bg-background/50 h-8 text-sm"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                              onClick={() => removeOption(idx)}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={allowMultiple}
+                      onCheckedChange={setAllowMultiple}
+                    />
+                    <Label className="text-sm">Permitir votos múltiples</Label>
                   </div>
-                </div>
-              )}
 
-              <div className="flex items-center gap-3">
-                <Switch
-                  checked={allowMultiple}
-                  onCheckedChange={setAllowMultiple}
-                />
-                <Label className="text-sm">Permitir votos múltiples</Label>
-              </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">Fecha de fin (opcional)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="bg-background/50"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground">Fecha de fin (opcional)</Label>
-                <Input
-                  type="datetime-local"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="bg-background/50"
-                />
-              </div>
+                  {/* Embed Configuration */}
+                  <div className="space-y-3 pt-2 border-t border-border/50">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Configuración del Embed
+                    </Label>
+                    <EmbedConfig
+                      config={embedConfig}
+                      onChange={setEmbedConfig}
+                      showChannelSelector={false}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="preview" className="mt-4">
+                  <div className="space-y-3">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Vista Previa del Embed
+                    </Label>
+                    <div className="rounded-lg border border-border/50 p-4 bg-background/30">
+                      <EmbedPreview config={embedConfig} />
+                    </div>
+                    {question && (
+                      <div className="rounded-lg border border-border/50 p-4 bg-background/30 space-y-2">
+                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Vista Previa de la Encuesta
+                        </Label>
+                        <div className="flex gap-0 max-w-lg">
+                          <div
+                            className="w-1 rounded-l-md shrink-0"
+                            style={{ backgroundColor: embedConfig.color || '#8b5cf6' }}
+                          />
+                          <div className="flex-1 bg-[#2b2d31] rounded-r-md p-3 space-y-2">
+                            {embedConfig.authorName && (
+                              <div className="flex items-center gap-2">
+                                {embedConfig.authorIconUrl && (
+                                  <img src={embedConfig.authorIconUrl} alt="" className="w-5 h-5 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                                )}
+                                <span className="font-semibold text-xs text-white">{embedConfig.authorName}</span>
+                              </div>
+                            )}
+                            <h3 className="font-bold text-white">{embedConfig.title || question}</h3>
+                            {embedConfig.description && (
+                              <p className="text-[#dbdee1] text-sm whitespace-pre-wrap">{embedConfig.description}</p>
+                            )}
+                            <div className="space-y-1.5 pt-1">
+                              {(pollType === 'yesno' ? ['Sí', 'No'] : options).map((opt, i) => (
+                                <div key={i} className="bg-[#1e1f22] rounded-md px-3 py-1.5 text-sm text-[#dbdee1] border border-white/5">
+                                  {opt}
+                                </div>
+                              ))}
+                            </div>
+                            {(embedConfig.footerText || embedConfig.showTimestamp) && (
+                              <div className="flex items-center gap-2 mt-2 pt-1 border-t border-white/5">
+                                {embedConfig.footerIconUrl && (
+                                  <img src={embedConfig.footerIconUrl} alt="" className="w-4 h-4 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                                )}
+                                <span className="text-[10px] text-[#dbdee1]">
+                                  {embedConfig.footerText}
+                                  {embedConfig.footerText && embedConfig.showTimestamp && ' • '}
+                                  {embedConfig.showTimestamp && 'Hoy a las ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setShowCreate(false)}>

@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
+import { EmbedConfig, EmbedPreview, defaultEmbedConfig, type EmbedConfigData } from '@/components/shared/EmbedConfig'
 
 interface ReactionRole {
   id: string
@@ -35,6 +37,7 @@ interface ReactionRole {
   autoRemove: boolean
   channelId: string | null
   messageId: string | null
+  embedConfig: string | null
   createdAt: string
 }
 
@@ -66,6 +69,8 @@ export function ReactionRoles() {
   const [formMode, setFormMode] = useState('single')
   const [formAutoRemove, setFormAutoRemove] = useState(false)
   const [formExclusive, setFormExclusive] = useState(false)
+  const [formChannelId, setFormChannelId] = useState<string | null>(null)
+  const [formEmbedConfig, setFormEmbedConfig] = useState<EmbedConfigData>(defaultEmbedConfig)
 
   // Edit form
   const [editEmoji, setEditEmoji] = useState('')
@@ -75,6 +80,8 @@ export function ReactionRoles() {
   const [editAutoRemove, setEditAutoRemove] = useState(false)
   const [editExclusive, setEditExclusive] = useState(false)
   const [editType, setEditType] = useState('reaction')
+  const [editChannelId, setEditChannelId] = useState<string | null>(null)
+  const [editEmbedConfig, setEditEmbedConfig] = useState<EmbedConfigData>(defaultEmbedConfig)
 
   const fetchReactionRoles = useCallback(async () => {
     if (!currentServer) return
@@ -104,6 +111,8 @@ export function ReactionRoles() {
     setFormMode('single')
     setFormAutoRemove(false)
     setFormExclusive(false)
+    setFormChannelId(null)
+    setFormEmbedConfig(defaultEmbedConfig)
   }
 
   const handleCreate = async () => {
@@ -122,6 +131,8 @@ export function ReactionRoles() {
           mode: formMode,
           exclusive: formExclusive,
           autoRemove: formAutoRemove,
+          channelId: formChannelId,
+          embedConfig: JSON.stringify(formEmbedConfig),
         }),
       })
       const data = await res.json()
@@ -162,6 +173,13 @@ export function ReactionRoles() {
     setEditMode(rr.mode)
     setEditAutoRemove(rr.autoRemove)
     setEditExclusive(rr.exclusive)
+    setEditChannelId(rr.channelId)
+    try {
+      const parsedEmbed = JSON.parse(rr.embedConfig || 'null') as EmbedConfigData | null
+      setEditEmbedConfig(parsedEmbed || defaultEmbedConfig)
+    } catch {
+      setEditEmbedConfig(defaultEmbedConfig)
+    }
   }
 
   const handleSaveEdit = async () => {
@@ -180,6 +198,8 @@ export function ReactionRoles() {
           mode: editMode,
           autoRemove: editAutoRemove,
           exclusive: editExclusive,
+          channelId: editChannelId,
+          embedConfig: JSON.stringify(editEmbedConfig),
         }),
       })
       toast.success('Reaction role actualizado')
@@ -434,7 +454,7 @@ export function ReactionRoles() {
 
       {/* Create Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-violet-400" />
@@ -521,6 +541,19 @@ export function ReactionRoles() {
               </RadioGroup>
             </div>
 
+            {/* Channel Selector */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <Hash className="w-3 h-3" />
+                Canal de destino
+              </Label>
+              <ChannelSelector
+                value={formChannelId}
+                onValueChange={setFormChannelId}
+                placeholder="Selecciona el canal donde se enviará..."
+              />
+            </div>
+
             {/* Toggles */}
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
@@ -541,7 +574,21 @@ export function ReactionRoles() {
               </div>
             </div>
 
-            {/* Preview */}
+            {/* Embed Configuration */}
+            <div className="space-y-3">
+              <Separator />
+              <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3" />
+                Configuración del Embed
+              </Label>
+              <EmbedConfig
+                config={formEmbedConfig}
+                onChange={setFormEmbedConfig}
+                showChannelSelector={false}
+              />
+            </div>
+
+            {/* Embed Preview */}
             <div className="space-y-2">
               <Label className="text-xs font-medium">Vista Previa</Label>
               <div className="bg-[#313338] rounded-lg p-3">
@@ -596,6 +643,17 @@ export function ReactionRoles() {
                 </AnimatePresence>
               </div>
             </div>
+
+            {/* Embed Vista Previa */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <Eye className="w-3 h-3" />
+                Vista Previa del Embed
+              </Label>
+              <div className="bg-[#313338] rounded-lg p-3">
+                <EmbedPreview config={formEmbedConfig} />
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
@@ -612,7 +670,7 @@ export function ReactionRoles() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editingId} onOpenChange={(open) => { if (!open) setEditingId(null) }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Pencil className="w-5 h-5 text-violet-400" />
@@ -693,6 +751,19 @@ export function ReactionRoles() {
               </RadioGroup>
             </div>
 
+            {/* Channel Selector */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <Hash className="w-3 h-3" />
+                Canal de destino
+              </Label>
+              <ChannelSelector
+                value={editChannelId}
+                onValueChange={setEditChannelId}
+                placeholder="Selecciona el canal donde se enviará..."
+              />
+            </div>
+
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Switch
@@ -709,6 +780,31 @@ export function ReactionRoles() {
                   className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
                 />
                 <Label className="text-xs">Exclusivo</Label>
+              </div>
+            </div>
+
+            {/* Embed Configuration */}
+            <div className="space-y-3">
+              <Separator />
+              <Label className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3" />
+                Configuración del Embed
+              </Label>
+              <EmbedConfig
+                config={editEmbedConfig}
+                onChange={setEditEmbedConfig}
+                showChannelSelector={false}
+              />
+            </div>
+
+            {/* Embed Vista Previa */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium flex items-center gap-1.5">
+                <Eye className="w-3 h-3" />
+                Vista Previa del Embed
+              </Label>
+              <div className="bg-[#313338] rounded-lg p-3">
+                <EmbedPreview config={editEmbedConfig} />
               </div>
             </div>
           </div>

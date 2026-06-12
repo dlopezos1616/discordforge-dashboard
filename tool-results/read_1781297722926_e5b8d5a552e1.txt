@@ -1,0 +1,598 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { useAppStore } from '@/lib/store'
+     6→     6→import {
+     7→     7→  HandMetal, Eye, Palette, Type, Image as ImageIcon, FileText, MessageSquare,
+     8→     8→  Hash, Users, ChevronDown, Sparkles, Info, Copy, RotateCcw,
+     9→     9→  Check, X, Wand2, Settings2
+    10→    10→} from 'lucide-react'
+    11→    11→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    12→    12→import { Button } from '@/components/ui/button'
+    13→    13→import { Input } from '@/components/ui/input'
+    14→    14→import { Textarea } from '@/components/ui/textarea'
+    15→    15→import { Badge } from '@/components/ui/badge'
+    16→    16→import { Switch } from '@/components/ui/switch'
+    17→    17→import { Label } from '@/components/ui/label'
+    18→    18→import { Separator } from '@/components/ui/separator'
+    19→    19→import { ScrollArea } from '@/components/ui/scroll-area'
+    20→    20→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    21→    21→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    22→    22→import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+    23→    23→import { toast } from 'sonner'
+    24→    24→
+    25→    25→const defaultConfig = {
+    26→    26→  enabled: true,
+    27→    27→  type: 'embed' as 'image' | 'gif' | 'embed' | 'simple',
+    28→    28→  title: '¡Bienvenido/a a {server}!',
+    29→    29→  description: '¡Hola {user}! Eres el miembro #{membercount}.',
+    30→    30→  footer: '{server} • {date}',
+    31→    31→  color: '#5865F2',
+    32→    32→  useAvatar: true,
+    33→    33→  bannerUrl: '',
+    34→    34→  autoRoleIds: [] as string[],
+    35→    35→}
+    36→    36→
+    37→    37→const variables = [
+    38→    38→  { key: '{user}', value: 'AdminDemo', description: 'Nombre del usuario' },
+    39→    39→  { key: '{server}', value: 'Server Name', description: 'Nombre del servidor' },
+    40→    40→  { key: '{membercount}', value: '15,420', description: 'Número de miembros' },
+    41→    41→  { key: '{date}', value: new Date().toLocaleDateString('es-ES'), description: 'Fecha actual' },
+    42→    42→  { key: '{user.mention}', value: '@AdminDemo', description: 'Mención del usuario' },
+    43→    43→  { key: '{user.avatar}', value: 'Avatar URL', description: 'Avatar del usuario' },
+    44→    44→  { key: '{server.icon}', value: 'Server Icon', description: 'Icono del servidor' },
+    45→    45→]
+    46→    46→
+    47→    47→const mockRoles = [
+    48→    48→  { id: 'rol_1', name: 'Miembro', color: '#5865F2' },
+    49→    49→  { id: 'rol_2', name: 'Verificado', color: '#10B981' },
+    50→    50→  { id: 'rol_3', name: 'VIP', color: '#F59E0B' },
+    51→    51→  { id: 'rol_4', name: 'Staff', color: '#EF4444' },
+    52→    52→  { id: 'rol_5', name: 'Streamer', color: '#8B5CF6' },
+    53→    53→]
+    54→    54→
+    55→    55→const mockChannels = [
+    56→    56→  { id: 'ch_1', name: 'bienvenidas' },
+    57→    57→  { id: 'ch_2', name: 'general' },
+    58→    58→  { id: 'ch_3', name: 'anuncios' },
+    59→    59→  { id: 'ch_4', name: 'presentaciones' },
+    60→    60→]
+    61→    61→
+    62→    62→const container = {
+    63→    63→  hidden: { opacity: 0 },
+    64→    64→  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+    65→    65→}
+    66→    66→
+    67→    67→const item = {
+    68→    68→  hidden: { opacity: 0, y: 20 },
+    69→    69→  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    70→    70→}
+    71→    71→
+    72→    72→export function WelcomeSystem() {
+    73→    73→  const { currentServer } = useAppStore()
+    74→    74→  const [config, setConfig] = useState(defaultConfig)
+    75→    75→  const [welcomeChannel, setWelcomeChannel] = useState('ch_1')
+    76→    76→  const [activeType, setActiveType] = useState<string>('embed')
+    77→    77→
+    78→    78→  const processText = (text: string) => {
+    79→    79→    let result = text
+    80→    80→    variables.forEach(v => {
+    81→    81→      result = result.replace(new RegExp(v.key.replace(/[{}]/g, '\\$&'), 'g'), v.value)
+    82→    82→    })
+    83→    83→    if (currentServer) {
+    84→    84→      result = result.replace(/\{server\}/g, currentServer.name)
+    85→    85→    }
+    86→    86→    return result
+    87→    87→  }
+    88→    88→
+    89→    89→  const processedTitle = processText(config.title)
+    90→    90→  const processedDescription = processText(config.description)
+    91→    91→  const processedFooter = processText(config.footer)
+    92→    92→
+    93→    93→  const toggleRole = (roleId: string) => {
+    94→    94→    setConfig(prev => ({
+    95→    95→      ...prev,
+    96→    96→      autoRoleIds: prev.autoRoleIds.includes(roleId)
+    97→    97→        ? prev.autoRoleIds.filter(id => id !== roleId)
+    98→    98→        : [...prev.autoRoleIds, roleId],
+    99→    99→    }))
+   100→   100→  }
+   101→   101→
+   102→   102→  const handleSave = () => {
+   103→   103→    toast.success('Configuración de bienvenida guardada')
+   104→   104→  }
+   105→   105→
+   106→   106→  const handleReset = () => {
+   107→   107→    setConfig(defaultConfig)
+   108→   108→    setActiveType('embed')
+   109→   109→    setWelcomeChannel('ch_1')
+   110→   110→    toast.info('Configuración restablecida')
+   111→   111→  }
+   112→   112→
+   113→   113→  const typeOptions = [
+   114→   114→    { value: 'image', label: 'Imagen', icon: ImageIcon },
+   115→   115→    { value: 'gif', label: 'GIF', icon: FileText },
+   116→   116→    { value: 'embed', label: 'Embed', icon: Palette },
+   117→   117→    { value: 'simple', label: 'Mensaje Simple', icon: MessageSquare },
+   118→   118→  ]
+   119→   119→
+   120→   120→  return (
+   121→   121→    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-4 md:p-6">
+   122→   122→      {/* Header */}
+   123→   123→      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+   124→   124→        <div>
+   125→   125→          <h2 className="text-xl font-bold flex items-center gap-2">
+   126→   126→            <HandMetal className="w-5 h-5 text-violet-400" />
+   127→   127→            Sistema de Bienvenidas
+   128→   128→          </h2>
+   129→   129→          <p className="text-sm text-muted-foreground mt-1">Configura mensajes de bienvenida automáticos</p>
+   130→   130→        </div>
+   131→   131→        <div className="flex items-center gap-3">
+   132→   132→          <div className="flex items-center gap-2 bg-card/50 border border-border rounded-lg px-3 py-1.5">
+   133→   133→            <Label className="text-xs text-muted-foreground">Sistema</Label>
+   134→   134→            <Switch
+   135→   135→              checked={config.enabled}
+   136→   136→              onCheckedChange={v => setConfig(c => ({ ...c, enabled: v }))}
+   137→   137→            />
+   138→   138→            <Badge variant="secondary" className={`text-[9px] ${config.enabled ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
+   139→   139→              {config.enabled ? 'Activo' : 'Inactivo'}
+   140→   140→            </Badge>
+   141→   141→          </div>
+   142→   142→        </div>
+   143→   143→      </motion.div>
+   144→   144→
+   145→   145→      {/* Main Content */}
+   146→   146→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   147→   147→        {/* Left: Configuration */}
+   148→   148→        <motion.div variants={item} className="lg:col-span-2 space-y-4">
+   149→   149→          {/* Type Selector */}
+   150→   150→          <Card>
+   151→   151→            <CardHeader className="pb-3">
+   152→   152→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   153→   153→                <Settings2 className="w-4 h-4 text-violet-400" />
+   154→   154→                Tipo de Mensaje
+   155→   155→              </CardTitle>
+   156→   156→            </CardHeader>
+   157→   157→            <CardContent>
+   158→   158→              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+   159→   159→                {typeOptions.map(option => (
+   160→   160→                  <motion.button
+   161→   161→                    key={option.value}
+   162→   162→                    whileHover={{ scale: 1.02 }}
+   163→   163→                    whileTap={{ scale: 0.98 }}
+   164→   164→                    onClick={() => {
+   165→   165→                      setActiveType(option.value)
+   166→   166→                      setConfig(c => ({ ...c, type: option.value as typeof c.type }))
+   167→   167→                    }}
+   168→   168→                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200 ${
+   169→   169→                      activeType === option.value
+   170→   170→                        ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+   171→   171→                        : 'border-border/50 bg-card/30 text-muted-foreground hover:border-border hover:bg-card/50'
+   172→   172→                    }`}
+   173→   173→                  >
+   174→   174→                    <option.icon className="w-5 h-5" />
+   175→   175→                    <span className="text-[11px] font-medium">{option.label}</span>
+   176→   176→                  </motion.button>
+   177→   177→                ))}
+   178→   178→              </div>
+   179→   179→            </CardContent>
+   180→   180→          </Card>
+   181→   181→
+   182→   182→          {/* Embed Configuration (visible for embed type) */}
+   183→   183→          {(activeType === 'embed' || activeType === 'simple') && (
+   184→   184→            <motion.div
+   185→   185→              initial={{ opacity: 0, height: 0 }}
+   186→   186→              animate={{ opacity: 1, height: 'auto' }}
+   187→   187→              exit={{ opacity: 0, height: 0 }}
+   188→   188→              transition={{ duration: 0.3 }}
+   189→   189→            >
+   190→   190→              <Card>
+   191→   191→                <CardHeader className="pb-3">
+   192→   192→                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   193→   193→                    <Type className="w-4 h-4 text-fuchsia-400" />
+   194→   194→                    Contenido del Mensaje
+   195→   195→                  </CardTitle>
+   196→   196→                  <CardDescription className="text-xs">
+   197→   197→                    Usa variables como {'{user}'}, {'{server}'}, {'{membercount}'}, {'{date}'}
+   198→   198→                  </CardDescription>
+   199→   199→                </CardHeader>
+   200→   200→                <CardContent className="space-y-4">
+   201→   201→                  <div>
+   202→   202→                    <Label className="text-xs mb-1.5 block">Título</Label>
+   203→   203→                    <Input
+   204→   204→                      value={config.title}
+   205→   205→                      onChange={e => setConfig(c => ({ ...c, title: e.target.value }))}
+   206→   206→                      placeholder="¡Bienvenido/a a {server}!"
+   207→   207→                      className="h-9 text-xs"
+   208→   208→                    />
+   209→   209→                  </div>
+   210→   210→                  <div>
+   211→   211→                    <Label className="text-xs mb-1.5 block">Descripción</Label>
+   212→   212→                    <Textarea
+   213→   213→                      value={config.description}
+   214→   214→                      onChange={e => setConfig(c => ({ ...c, description: e.target.value }))}
+   215→   215→                      placeholder="¡Hola {user}! Eres el miembro #{membercount}."
+   216→   216→                      className="min-h-[80px] text-xs resize-none"
+   217→   217→                    />
+   218→   218→                  </div>
+   219→   219→                  <div>
+   220→   220→                    <Label className="text-xs mb-1.5 block">Footer</Label>
+   221→   221→                    <Input
+   222→   222→                      value={config.footer}
+   223→   223→                      onChange={e => setConfig(c => ({ ...c, footer: e.target.value }))}
+   224→   224→                      placeholder="{server} • {date}"
+   225→   225→                      className="h-9 text-xs"
+   226→   226→                    />
+   227→   227→                  </div>
+   228→   228→
+   229→   229→                  <div className="grid grid-cols-2 gap-4">
+   230→   230→                    <div>
+   231→   231→                      <Label className="text-xs mb-1.5 block">Color del Embed</Label>
+   232→   232→                      <div className="flex items-center gap-2">
+   233→   233→                        <input
+   234→   234→                          type="color"
+   235→   235→                          value={config.color}
+   236→   236→                          onChange={e => setConfig(c => ({ ...c, color: e.target.value }))}
+   237→   237→                          className="w-9 h-9 rounded-lg border border-border cursor-pointer"
+   238→   238→                        />
+   239→   239→                        <Input
+   240→   240→                          value={config.color}
+   241→   241→                          onChange={e => setConfig(c => ({ ...c, color: e.target.value }))}
+   242→   242→                          className="h-9 font-mono text-xs"
+   243→   243→                          maxLength={7}
+   244→   244→                        />
+   245→   245→                      </div>
+   246→   246→                    </div>
+   247→   247→                    <div>
+   248→   248→                      <Label className="text-xs mb-1.5 block">Canal de Bienvenida</Label>
+   249→   249→                      <Select value={welcomeChannel} onValueChange={setWelcomeChannel}>
+   250→   250→                        <SelectTrigger className="h-9">
+   251→   251→                          <Hash className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+   252→   252→                          <SelectValue />
+   253→   253→                        </SelectTrigger>
+   254→   254→                        <SelectContent>
+   255→   255→                          {mockChannels.map(ch => (
+   256→   256→                            <SelectItem key={ch.id} value={ch.id}>
+   257→   257→                              #{ch.name}
+   258→   258→                            </SelectItem>
+   259→   259→                          ))}
+   260→   260→                        </SelectContent>
+   261→   261→                      </Select>
+   262→   262→                    </div>
+   263→   263→                  </div>
+   264→   264→
+   265→   265→                  <Separator />
+   266→   266→
+   267→   267→                  <div>
+   268→   268→                    <Label className="text-xs mb-1.5 block">Banner URL</Label>
+   269→   269→                    <Input
+   270→   270→                      value={config.bannerUrl}
+   271→   271→                      onChange={e => setConfig(c => ({ ...c, bannerUrl: e.target.value }))}
+   272→   272→                      placeholder="https://ejemplo.com/banner.png"
+   273→   273→                      className="h-9 text-xs"
+   274→   274→                    />
+   275→   275→                  </div>
+   276→   276→
+   277→   277→                  <div className="flex items-center justify-between">
+   278→   278→                    <div className="flex items-center gap-2">
+   279→   279→                      <Switch
+   280→   280→                        checked={config.useAvatar}
+   281→   281→                        onCheckedChange={v => setConfig(c => ({ ...c, useAvatar: v }))}
+   282→   282→                      />
+   283→   283→                      <Label className="text-xs">Mostrar Avatar del Usuario</Label>
+   284→   284→                    </div>
+   285→   285→                  </div>
+   286→   286→                </CardContent>
+   287→   287→              </Card>
+   288→   288→            </motion.div>
+   289→   289→          )}
+   290→   290→
+   291→   291→          {/* Image/GIF Configuration */}
+   292→   292→          {(activeType === 'image' || activeType === 'gif') && (
+   293→   293→            <motion.div
+   294→   294→              initial={{ opacity: 0, height: 0 }}
+   295→   295→              animate={{ opacity: 1, height: 'auto' }}
+   296→   296→              exit={{ opacity: 0, height: 0 }}
+   297→   297→              transition={{ duration: 0.3 }}
+   298→   298→            >
+   299→   299→              <Card>
+   300→   300→                <CardHeader className="pb-3">
+   301→   301→                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   302→   302→                    <ImageIcon className="w-4 h-4 text-emerald-400" />
+   303→   303→                    {activeType === 'image' ? 'Imagen de Bienvenida' : 'GIF de Bienvenida'}
+   304→   304→                  </CardTitle>
+   305→   305→                  <CardDescription className="text-xs">
+   306→   306→                    Configura la imagen/GIF que se enviará al canal de bienvenidas
+   307→   307→                  </CardDescription>
+   308→   308→                </CardHeader>
+   309→   309→                <CardContent className="space-y-4">
+   310→   310→                  <div>
+   311→   311→                    <Label className="text-xs mb-1.5 block">URL de la Imagen/GIF</Label>
+   312→   312→                    <Input
+   313→   313→                      value={config.bannerUrl}
+   314→   314→                      onChange={e => setConfig(c => ({ ...c, bannerUrl: e.target.value }))}
+   315→   315→                      placeholder="https://ejemplo.com/welcome.gif"
+   316→   316→                      className="h-9 text-xs"
+   317→   317→                    />
+   318→   318→                  </div>
+   319→   319→                  <div>
+   320→   320→                    <Label className="text-xs mb-1.5 block">Texto Alternativo</Label>
+   321→   321→                    <Input
+   322→   322→                      value={config.title}
+   323→   323→                      onChange={e => setConfig(c => ({ ...c, title: e.target.value }))}
+   324→   324→                      placeholder="¡Bienvenido/a {user}!"
+   325→   325→                      className="h-9 text-xs"
+   326→   326→                    />
+   327→   327→                  </div>
+   328→   328→                  <div>
+   329→   329→                    <Label className="text-xs mb-1.5 block">Canal de Bienvenida</Label>
+   330→   330→                    <Select value={welcomeChannel} onValueChange={setWelcomeChannel}>
+   331→   331→                      <SelectTrigger className="h-9">
+   332→   332→                        <Hash className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+   333→   333→                        <SelectValue />
+   334→   334→                      </SelectTrigger>
+   335→   335→                      <SelectContent>
+   336→   336→                        {mockChannels.map(ch => (
+   337→   337→                          <SelectItem key={ch.id} value={ch.id}>
+   338→   338→                            #{ch.name}
+   339→   339→                          </SelectItem>
+   340→   340→                        ))}
+   341→   341→                      </SelectContent>
+   342→   342→                    </Select>
+   343→   343→                  </div>
+   344→   344→                </CardContent>
+   345→   345→              </Card>
+   346→   346→            </motion.div>
+   347→   347→          )}
+   348→   348→
+   349→   349→          {/* Auto-Role */}
+   350→   350→          <Card>
+   351→   351→            <CardHeader className="pb-3">
+   352→   352→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   353→   353→                <Users className="w-4 h-4 text-amber-400" />
+   354→   354→                Auto-Rol al Unirse
+   355→   355→              </CardTitle>
+   356→   356→              <CardDescription className="text-xs">
+   357→   357→                Roles que se asignarán automáticamente a los nuevos miembros
+   358→   358→              </CardDescription>
+   359→   359→            </CardHeader>
+   360→   360→            <CardContent>
+   361→   361→              <div className="flex flex-wrap gap-2">
+   362→   362→                {mockRoles.map(role => {
+   363→   363→                  const isSelected = config.autoRoleIds.includes(role.id)
+   364→   364→                  return (
+   365→   365→                    <motion.button
+   366→   366→                      key={role.id}
+   367→   367→                      whileHover={{ scale: 1.05 }}
+   368→   368→                      whileTap={{ scale: 0.95 }}
+   369→   369→                      onClick={() => toggleRole(role.id)}
+   370→   370→                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-200 ${
+   371→   371→                        isSelected
+   372→   372→                          ? 'border-violet-500/50 bg-violet-500/15 text-violet-300'
+   373→   373→                          : 'border-border/50 bg-card/30 text-muted-foreground hover:border-border'
+   374→   374→                      }`}
+   375→   375→                    >
+   376→   376→                      <div
+   377→   377→                        className="w-2 h-2 rounded-full"
+   378→   378→                        style={{ backgroundColor: isSelected ? role.color : undefined, border: isSelected ? 'none' : '1px solid hsl(var(--muted-foreground))' }}
+   379→   379→                      />
+   380→   380→                      {role.name}
+   381→   381→                      {isSelected && <Check className="w-3 h-3 ml-0.5" />}
+   382→   382→                    </motion.button>
+   383→   383→                  )
+   384→   384→                })}
+   385→   385→              </div>
+   386→   386→            </CardContent>
+   387→   387→          </Card>
+   388→   388→
+   389→   389→          {/* Action Buttons */}
+   390→   390→          <div className="flex items-center gap-2">
+   391→   391→            <Button
+   392→   392→              onClick={handleSave}
+   393→   393→              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0 gap-1.5"
+   394→   394→            >
+   395→   395→              <Check className="w-4 h-4" /> Guardar Configuración
+   396→   396→            </Button>
+   397→   397→            <Button variant="outline" onClick={handleReset} className="gap-1.5">
+   398→   398→              <RotateCcw className="w-4 h-4" /> Restablecer
+   399→   399→            </Button>
+   400→   400→          </div>
+   401→   401→        </motion.div>
+   402→   402→
+   403→   403→        {/* Right: Preview + Variables */}
+   404→   404→        <motion.div variants={item} className="space-y-4">
+   405→   405→          {/* Live Preview */}
+   406→   406→          <Card className="overflow-hidden">
+   407→   407→            <CardHeader className="pb-3">
+   408→   408→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   409→   409→                <Eye className="w-4 h-4 text-emerald-400" />
+   410→   410→                Vista Previa
+   411→   411→              </CardTitle>
+   412→   412→              <CardDescription className="text-[10px]">
+   413→   413→                Así se verá el mensaje en Discord
+   414→   414→              </CardDescription>
+   415→   415→            </CardHeader>
+   416→   416→            <CardContent>
+   417→   417→              <div className="bg-[#313338] rounded-lg overflow-hidden">
+   418→   418→                {/* Channel header */}
+   419→   419→                <div className="flex items-center gap-2 px-3 py-2 border-b border-[#3F4147]">
+   420→   420→                  <Hash className="w-4 h-4 text-[#80848E]" />
+   421→   421→                  <span className="text-xs font-semibold text-white">bienvenidas</span>
+   422→   422→                </div>
+   423→   423→
+   424→   424→                {/* Message area */}
+   425→   425→                <div className="p-3 space-y-3">
+   426→   426→                  {/* Bot message */}
+   427→   427→                  <div className="flex items-start gap-2.5">
+   428→   428→                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0">
+   429→   429→                      <Sparkles className="w-4 h-4 text-white" />
+   430→   430→                    </div>
+   431→   431→                    <div className="flex-1 min-w-0">
+   432→   432→                      <div className="flex items-center gap-1.5 mb-1">
+   433→   433→                        <span className="text-xs font-semibold text-white">DiscordForge Bot</span>
+   434→   434→                        <span className="text-[9px] bg-[#5865F2] text-white px-1 py-0.5 rounded font-medium">BOT</span>
+   435→   435→                        <span className="text-[9px] text-[#949BA4]">Hoy a las {new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+   436→   436→                      </div>
+   437→   437→
+   438→   438→                      {/* Embed preview */}
+   439→   439→                      {activeType === 'embed' && (
+   440→   440→                        <motion.div
+   441→   441→                          key={`${config.title}-${config.color}`}
+   442→   442→                          initial={{ opacity: 0, scale: 0.95 }}
+   443→   443→                          animate={{ opacity: 1, scale: 1 }}
+   444→   444→                          transition={{ duration: 0.3 }}
+   445→   445→                          className="max-w-[320px]"
+   446→   446→                        >
+   447→   447→                          <div className="bg-[#2B2D31] rounded-l-lg flex overflow-hidden">
+   448→   448→                            {/* Color bar */}
+   449→   449→                            <div
+   450→   450→                              className="w-1 shrink-0"
+   451→   451→                              style={{ backgroundColor: config.color }}
+   452→   452→                            />
+   453→   453→                            <div className="p-2.5 flex-1 min-w-0">
+   454→   454→                              {config.useAvatar && (
+   455→   455→                                <div className="flex items-center gap-2 mb-2">
+   456→   456→                                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center text-[7px] font-bold text-white">
+   457→   457→                                    A
+   458→   458→                                  </div>
+   459→   459→                                  <span className="text-[10px] text-white font-medium">AdminDemo</span>
+   460→   460→                                </div>
+   461→   461→                              )}
+   462→   462→                              {processedTitle && (
+   463→   463→                                <p className="text-[11px] font-semibold text-white mb-1">{processedTitle}</p>
+   464→   464→                              )}
+   465→   465→                              {processedDescription && (
+   466→   466→                                <p className="text-[10px] text-[#DBDEE1] mb-2 whitespace-pre-wrap">{processedDescription}</p>
+   467→   467→                              )}
+   468→   468→                              {config.bannerUrl && (
+   469→   469→                                <div className="rounded overflow-hidden mb-2">
+   470→   470→                                  <div className="h-20 bg-[#1E1F22] flex items-center justify-center">
+   471→   471→                                    <ImageIcon className="w-5 h-5 text-[#949BA4]" />
+   472→   472→                                  </div>
+   473→   473→                                </div>
+   474→   474→                              )}
+   475→   475→                              {processedFooter && (
+   476→   476→                                <p className="text-[9px] text-[#949BA4] mt-1">{processedFooter}</p>
+   477→   477→                              )}
+   478→   478→                            </div>
+   479→   479→                          </div>
+   480→   480→                        </motion.div>
+   481→   481→                      )}
+   482→   482→
+   483→   483→                      {/* Simple message preview */}
+   484→   484→                      {activeType === 'simple' && (
+   485→   485→                        <motion.div
+   486→   486→                          key={config.description}
+   487→   487→                          initial={{ opacity: 0, scale: 0.95 }}
+   488→   488→                          animate={{ opacity: 1, scale: 1 }}
+   489→   489→                          transition={{ duration: 0.3 }}
+   490→   490→                        >
+   491→   491→                          <p className="text-[11px] text-[#DBDEE1]">{processedDescription}</p>
+   492→   492→                        </motion.div>
+   493→   493→                      )}
+   494→   494→
+   495→   495→                      {/* Image/GIF preview */}
+   496→   496→                      {(activeType === 'image' || activeType === 'gif') && (
+   497→   497→                        <motion.div
+   498→   498→                          key={config.bannerUrl}
+   499→   499→                          initial={{ opacity: 0, scale: 0.95 }}
+   500→   500→                          animate={{ opacity: 1, scale: 1 }}
+   501→   501→                          transition={{ duration: 0.3 }}
+   502→   502→                        >
+   503→   503→                          <div className="rounded-lg overflow-hidden border border-[#3F4147]">
+   504→   504→                            <div className="h-32 bg-[#1E1F22] flex flex-col items-center justify-center gap-2">
+   505→   505→                              {config.bannerUrl ? (
+   506→   506→                                <ImageIcon className="w-8 h-8 text-[#949BA4]" />
+   507→   507→                              ) : (
+   508→   508→                                <>
+   509→   509→                                  <ImageIcon className="w-8 h-8 text-[#949BA4]/30" />
+   510→   510→                                  <p className="text-[9px] text-[#949BA4]/50">Sin imagen configurada</p>
+   511→   511→                                </>
+   512→   512→                              )}
+   513→   513→                            </div>
+   514→   514→                          </div>
+   515→   515→                          {config.title && (
+   516→   516→                            <p className="text-[11px] text-[#DBDEE1] mt-1.5">{processText(config.title)}</p>
+   517→   517→                          )}
+   518→   518→                        </motion.div>
+   519→   519→                      )}
+   520→   520→                    </div>
+   521→   521→                  </div>
+   522→   522→                </div>
+   523→   523→              </div>
+   524→   524→            </CardContent>
+   525→   525→          </Card>
+   526→   526→
+   527→   527→          {/* Variables Reference */}
+   528→   528→          <Card>
+   529→   529→            <CardHeader className="pb-3">
+   530→   530→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   531→   531→                <Info className="w-4 h-4 text-cyan-400" />
+   532→   532→                Variables Disponibles
+   533→   533→              </CardTitle>
+   534→   534→              <CardDescription className="text-[10px]">
+   535→   535→                Haz clic para copiar una variable
+   536→   536→              </CardDescription>
+   537→   537→            </CardHeader>
+   538→   538→            <CardContent>
+   539→   539→              <ScrollArea className="max-h-64">
+   540→   540→                <div className="space-y-1.5">
+   541→   541→                  {variables.map(v => (
+   542→   542→                    <TooltipProvider key={v.key}>
+   543→   543→                      <Tooltip>
+   544→   544→                        <TooltipTrigger asChild>
+   545→   545→                          <motion.button
+   546→   546→                            whileHover={{ x: 3 }}
+   547→   547→                            whileTap={{ scale: 0.98 }}
+   548→   548→                            onClick={() => {
+   549→   549→                              navigator.clipboard.writeText(v.key)
+   550→   550→                              toast.success(`Variable ${v.key} copiada`)
+   551→   551→                            }}
+   552→   552→                            className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent/30 transition-colors group"
+   553→   553→                          >
+   554→   554→                            <div className="flex items-center gap-2">
+   555→   555→                              <code className="text-[10px] font-mono bg-violet-500/15 text-violet-400 px-1.5 py-0.5 rounded">
+   556→   556→                                {v.key}
+   557→   557→                              </code>
+   558→   558→                              <span className="text-[10px] text-muted-foreground">{v.description}</span>
+   559→   559→                            </div>
+   560→   560→                            <Copy className="w-3 h-3 text-muted-foreground/0 group-hover:text-muted-foreground transition-colors" />
+   561→   561→                          </motion.button>
+   562→   562→                        </TooltipTrigger>
+   563→   563→                        <TooltipContent side="left" className="text-[10px]">
+   564→   564→                          <p>Resultado: <strong>{v.value}</strong></p>
+   565→   565→                        </TooltipContent>
+   566→   566→                      </Tooltip>
+   567→   567→                    </TooltipProvider>
+   568→   568→                  ))}
+   569→   569→                </div>
+   570→   570→              </ScrollArea>
+   571→   571→            </CardContent>
+   572→   572→          </Card>
+   573→   573→
+   574→   574→          {/* Quick Preview Values */}
+   575→   575→          <Card>
+   576→   576→            <CardHeader className="pb-3">
+   577→   577→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   578→   578→                <Wand2 className="w-4 h-4 text-fuchsia-400" />
+   579→   579→                Vista de Variables
+   580→   580→              </CardTitle>
+   581→   581→            </CardHeader>
+   582→   582→            <CardContent>
+   583→   583→              <div className="space-y-2">
+   584→   584→                {variables.map(v => (
+   585→   585→                  <div key={v.key} className="flex items-center justify-between text-[10px]">
+   586→   586→                    <span className="text-muted-foreground">{v.key}</span>
+   587→   587→                    <span className="font-medium text-foreground">{v.value}</span>
+   588→   588→                  </div>
+   589→   589→                ))}
+   590→   590→              </div>
+   591→   591→            </CardContent>
+   592→   592→          </Card>
+   593→   593→        </motion.div>
+   594→   594→      </div>
+   595→   595→    </motion.div>
+   596→   596→  )
+   597→   597→}
+   598→   598→

@@ -27,6 +27,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
+import { EmbedConfig, EmbedPreview, defaultEmbedConfig, type EmbedConfigData } from '@/components/shared/EmbedConfig'
 
 // Types
 interface TicketCategory {
@@ -37,6 +39,8 @@ interface TicketCategory {
   description: string | null
   staffRoleId: string | null
   customMessage: string | null
+  channelId: string | null
+  embedConfig: EmbedConfigData | null
   position: number
   isActive: boolean
   _count: { tickets: number }
@@ -69,6 +73,16 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   closed: { label: 'Cerrado', color: 'text-zinc-400', icon: CheckCircle2, bg: 'bg-zinc-500/15 border-zinc-500/30' },
 }
 
+const defaultCatForm = {
+  name: '',
+  emoji: '🎫',
+  color: '#5865F2',
+  description: '',
+  customMessage: '',
+  channelId: '' as string,
+  embedConfig: defaultEmbedConfig as EmbedConfigData,
+}
+
 export function TicketSystem() {
   const { currentServer } = useAppStore()
   const [categories, setCategories] = useState<TicketCategory[]>([])
@@ -86,8 +100,11 @@ export function TicketSystem() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'category' | 'ticket'; id: string } | null>(null)
 
+  // Category dialog tab
+  const [categoryDialogTab, setCategoryDialogTab] = useState('general')
+
   // Form state
-  const [catForm, setCatForm] = useState({ name: '', emoji: '🎫', color: '#5865F2', description: '', customMessage: '' })
+  const [catForm, setCatForm] = useState(defaultCatForm)
   const [ticketForm, setTicketForm] = useState({ subject: '', categoryId: '', description: '' })
 
   const fetchData = useCallback(async () => {
@@ -126,13 +143,16 @@ export function TicketSystem() {
           color: catForm.color,
           description: catForm.description,
           customMessage: catForm.customMessage,
+          channelId: catForm.channelId || null,
+          embedConfig: catForm.embedConfig,
         }),
       })
       if (res.ok) {
         toast.success('Categoría creada exitosamente')
         setCategoryDialogOpen(false)
-        setCatForm({ name: '', emoji: '🎫', color: '#5865F2', description: '', customMessage: '' })
+        setCatForm(defaultCatForm)
         setEditCategory(null)
+        setCategoryDialogTab('general')
         fetchData()
       }
     } catch {
@@ -203,7 +223,10 @@ export function TicketSystem() {
       color: cat.color,
       description: cat.description || '',
       customMessage: cat.customMessage || '',
+      channelId: cat.channelId || '',
+      embedConfig: cat.embedConfig || defaultEmbedConfig,
     })
+    setCategoryDialogTab('general')
     setCategoryDialogOpen(true)
   }
 
@@ -289,7 +312,8 @@ export function TicketSystem() {
                   size="sm"
                   onClick={() => {
                     setEditCategory(null)
-                    setCatForm({ name: '', emoji: '🎫', color: '#5865F2', description: '', customMessage: '' })
+                    setCatForm(defaultCatForm)
+                    setCategoryDialogTab('general')
                     setCategoryDialogOpen(true)
                   }}
                   className="gap-1.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0"
@@ -375,6 +399,12 @@ export function TicketSystem() {
                             <p className="text-[10px] text-muted-foreground/60 mb-3 line-clamp-1 italic">
                               &quot;{cat.customMessage}&quot;
                             </p>
+                          )}
+                          {cat.channelId && (
+                            <div className="flex items-center gap-1 mb-2">
+                              <Hash className="w-3 h-3 text-muted-foreground" />
+                              <span className="text-[10px] text-muted-foreground">Canal configurado</span>
+                            </div>
                           )}
                           <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
                             <Badge variant="secondary" className={`text-[9px] ${cat.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
@@ -599,7 +629,7 @@ export function TicketSystem() {
 
       {/* Create/Edit Category Dialog */}
       <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editCategory ? <Pencil className="w-4 h-4 text-violet-400" /> : <Plus className="w-4 h-4 text-violet-400" />}
@@ -609,64 +639,153 @@ export function TicketSystem() {
               {editCategory ? 'Modifica los detalles de la categoría' : 'Configura una nueva categoría de tickets'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-1">
-                <Label className="text-xs">Emoji</Label>
-                <Input
-                  value={catForm.emoji}
-                  onChange={e => setCatForm(f => ({ ...f, emoji: e.target.value }))}
-                  className="h-9 text-center text-lg"
-                  maxLength={4}
+
+          <Tabs value={categoryDialogTab} onValueChange={setCategoryDialogTab} className="w-full">
+            <TabsList className="w-full bg-card/50 border border-border mb-2">
+              <TabsTrigger value="general" className="flex-1 text-xs gap-1.5">
+                <FolderOpen className="w-3 h-3" /> General
+              </TabsTrigger>
+              <TabsTrigger value="embed" className="flex-1 text-xs gap-1.5">
+                <MessageSquare className="w-3 h-3" /> Embed
+              </TabsTrigger>
+              <TabsTrigger value="preview" className="flex-1 text-xs gap-1.5">
+                <Eye className="w-3 h-3" /> Vista Previa
+              </TabsTrigger>
+            </TabsList>
+
+            {/* General Tab */}
+            <TabsContent value="general" className="mt-0">
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-1">
+                    <Label className="text-xs">Emoji</Label>
+                    <Input
+                      value={catForm.emoji}
+                      onChange={e => setCatForm(f => ({ ...f, emoji: e.target.value }))}
+                      className="h-9 text-center text-lg"
+                      maxLength={4}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs">Nombre</Label>
+                    <Input
+                      value={catForm.name}
+                      onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="Nombre de la categoría"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Color</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={catForm.color}
+                      onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))}
+                      className="w-9 h-9 rounded-lg border border-border cursor-pointer"
+                    />
+                    <Input
+                      value={catForm.color}
+                      onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))}
+                      className="h-9 font-mono text-xs"
+                      maxLength={7}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Hash className="w-3 h-3" />
+                    Canal del Panel de Tickets
+                  </Label>
+                  <ChannelSelector
+                    value={catForm.channelId || null}
+                    onValueChange={(channelId) => setCatForm(f => ({ ...f, channelId }))}
+                    placeholder="Selecciona el canal donde se enviará el panel..."
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    El bot enviará el mensaje del panel de tickets a este canal
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs">Descripción</Label>
+                  <Textarea
+                    value={catForm.description}
+                    onChange={e => setCatForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Descripción breve de la categoría..."
+                    className="min-h-[60px] text-xs resize-none"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Mensaje Personalizado</Label>
+                  <Textarea
+                    value={catForm.customMessage}
+                    onChange={e => setCatForm(f => ({ ...f, customMessage: e.target.value }))}
+                    placeholder="Mensaje que se envía al abrir un ticket..."
+                    className="min-h-[60px] text-xs resize-none"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Embed Configuration Tab */}
+            <TabsContent value="embed" className="mt-0">
+              <div className="py-2">
+                <p className="text-xs text-muted-foreground mb-4">
+                  Configura cómo se verá el embed del panel de tickets enviado por el bot.
+                  El canal de destino se configura en la pestaña General.
+                </p>
+                <EmbedConfig
+                  config={catForm.embedConfig}
+                  onChange={(embedConfig) => setCatForm(f => ({ ...f, embedConfig }))}
+                  showChannelSelector={false}
                 />
               </div>
-              <div className="col-span-2">
-                <Label className="text-xs">Nombre</Label>
-                <Input
-                  value={catForm.name}
-                  onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="Nombre de la categoría"
-                  className="h-9"
-                />
+            </TabsContent>
+
+            {/* Preview Tab */}
+            <TabsContent value="preview" className="mt-0">
+              <div className="py-2 space-y-4">
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-3 block">Vista previa del Embed</Label>
+                  <div className="rounded-lg bg-[#313338] p-4">
+                    <EmbedPreview config={catForm.embedConfig} />
+                  </div>
+                </div>
+                <Separator className="opacity-50" />
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-2 block">Resumen de Configuración</Label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Canal</span>
+                      <span className="font-medium">{catForm.channelId ? 'Configurado' : 'No seleccionado'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Título del Embed</span>
+                      <span className="font-medium">{catForm.embedConfig.title || 'Sin título'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Color</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: catForm.embedConfig.color }} />
+                        <span className="font-mono text-[10px]">{catForm.embedConfig.color}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Campos</span>
+                      <span className="font-medium">{catForm.embedConfig.fields.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Imagen</span>
+                      <span className="font-medium">{catForm.embedConfig.imageUrl ? 'Configurada' : 'Sin imagen'}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <Label className="text-xs">Color</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={catForm.color}
-                  onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))}
-                  className="w-9 h-9 rounded-lg border border-border cursor-pointer"
-                />
-                <Input
-                  value={catForm.color}
-                  onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))}
-                  className="h-9 font-mono text-xs"
-                  maxLength={7}
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs">Descripción</Label>
-              <Textarea
-                value={catForm.description}
-                onChange={e => setCatForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Descripción breve de la categoría..."
-                className="min-h-[60px] text-xs resize-none"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Mensaje Personalizado</Label>
-              <Textarea
-                value={catForm.customMessage}
-                onChange={e => setCatForm(f => ({ ...f, customMessage: e.target.value }))}
-                placeholder="Mensaje que se envía al abrir un ticket..."
-                className="min-h-[60px] text-xs resize-none"
-              />
-            </div>
-          </div>
-          <DialogFooter>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="mt-4">
             <Button variant="outline" size="sm" onClick={() => setCategoryDialogOpen(false)}>
               Cancelar
             </Button>

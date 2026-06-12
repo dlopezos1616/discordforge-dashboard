@@ -1,0 +1,622 @@
+     1→'use client'
+     2→
+     3→import { useState } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useAppStore } from '@/lib/store'
+     6→import {
+     7→  ShieldCheck, MousePointer, SmilePlus, Calculator,
+     8→  Image as ImageIcon, ToggleLeft, ToggleRight, Hash, Users,
+     9→  Info, Sparkles, Eye, CheckCircle2, MessageSquare,
+    10→  KeyRound
+    11→} from 'lucide-react'
+    12→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    13→import { Button } from '@/components/ui/button'
+    14→import { Input } from '@/components/ui/input'
+    15→import { Badge } from '@/components/ui/badge'
+    16→import { Switch } from '@/components/ui/switch'
+    17→import { Label } from '@/components/ui/label'
+    18→import { Checkbox } from '@/components/ui/checkbox'
+    19→import {
+    20→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    21→} from '@/components/ui/select'
+    22→import { Separator } from '@/components/ui/separator'
+    23→import { toast } from 'sonner'
+    24→
+    25→type VerificationType = 'button' | 'reaction' | 'captcha_math' | 'captcha_visual'
+    26→
+    27→interface VerificationConfig {
+    28→  enabled: boolean
+    29→  type: VerificationType
+    30→  channelId: string
+    31→  roleId: string
+    32→  message: string
+    33→  acceptRules: boolean
+    34→  autoRole: boolean
+    35→  captchaDifficulty: string
+    36→  emoji: string
+    37→  buttonText: string
+    38→  numQuestions: number
+    39→  imageProvider: string
+    40→}
+    41→
+    42→const verificationTypes = [
+    43→  {
+    44→    id: 'button' as VerificationType,
+    45→    label: 'Botón',
+    46→    icon: MousePointer,
+    47→    description: 'Verificación con un simple clic en un botón',
+    48→    color: 'from-violet-500/20 to-violet-600/10',
+    49→    iconColor: 'text-violet-400',
+    50→  },
+    51→  {
+    52→    id: 'reaction' as VerificationType,
+    53→    label: 'Reacción',
+    54→    icon: SmilePlus,
+    55→    description: 'Verificación reaccionando a un mensaje',
+    56→    color: 'from-fuchsia-500/20 to-fuchsia-600/10',
+    57→    iconColor: 'text-fuchsia-400',
+    58→  },
+    59→  {
+    60→    id: 'captcha_math' as VerificationType,
+    61→    label: 'Captcha Matemático',
+    62→    icon: Calculator,
+    63→    description: 'Resuelve operaciones matemáticas para verificar',
+    64→    color: 'from-cyan-500/20 to-cyan-600/10',
+    65→    iconColor: 'text-cyan-400',
+    66→  },
+    67→  {
+    68→    id: 'captcha_visual' as VerificationType,
+    69→    label: 'Captcha Visual',
+    70→    icon: ImageIcon,
+    71→    description: 'Resuelve un captcha visual tipo imagen',
+    72→    color: 'from-emerald-500/20 to-emerald-600/10',
+    73→    iconColor: 'text-emerald-400',
+    74→  },
+    75→]
+    76→
+    77→const variables = [
+    78→  { name: '{user}', desc: 'Mención del usuario' },
+    79→  { name: '{username}', desc: 'Nombre del usuario' },
+    80→  { name: '{server}', desc: 'Nombre del servidor' },
+    81→  { name: '{memberCount}', desc: 'Número de miembros' },
+    82→]
+    83→
+    84→const tips = [
+    85→  'Usa un canal dedicado para la verificación',
+    86→  'Activa auto-rol para asignar el rol automáticamente',
+    87→  'El captcha matemático es ideal contra bots',
+    88→  'Combina con Auto Mod para máxima protección',
+    89→]
+    90→
+    91→export function VerificationSystem() {
+    92→  const { currentServer } = useAppStore()
+    93→  const [config, setConfig] = useState<VerificationConfig>({
+    94→    enabled: false,
+    95→    type: 'button',
+    96→    channelId: '',
+    97→    roleId: '',
+    98→    message: '¡Haz clic en el botón para verificar tu cuenta!',
+    99→    acceptRules: false,
+   100→    autoRole: true,
+   101→    captchaDifficulty: 'easy',
+   102→    emoji: '✅',
+   103→    buttonText: 'Verificarme',
+   104→    numQuestions: 3,
+   105→    imageProvider: 'default',
+   106→  })
+   107→  const [saving, setSaving] = useState(false)
+   108→
+   109→  const handleSave = async () => {
+   110→    if (!currentServer) return
+   111→    setSaving(true)
+   112→    try {
+   113→      // In a real app, this would POST to an API
+   114→      await new Promise(resolve => setTimeout(resolve, 800))
+   115→      toast.success('Configuración de verificación guardada')
+   116→    } catch {
+   117→      toast.error('Error al guardar configuración')
+   118→    } finally {
+   119→      setSaving(false)
+   120→    }
+   121→  }
+   122→
+   123→  const updateConfig = (key: keyof VerificationConfig, value: unknown) => {
+   124→    setConfig(prev => ({ ...prev, [key]: value }))
+   125→  }
+   126→
+   127→  // Preview helpers
+   128→  const getPreviewContent = () => {
+   129→    switch (config.type) {
+   130→      case 'button':
+   131→        return (
+   132→          <div className="space-y-3">
+   133→            <div className="flex items-center gap-2">
+   134→              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xs font-bold text-white">
+   135→                B
+   136→              </div>
+   137→              <div>
+   138→                <p className="text-xs font-semibold text-violet-400">Bot de Verificación</p>
+   139→                <p className="text-[10px] text-muted-foreground">Hoy a las 12:00</p>
+   140→              </div>
+   141→            </div>
+   142→            <div className="bg-[#2b2d31] rounded-lg p-3 space-y-3">
+   143→              <p className="text-sm text-gray-200">{config.message || '¡Haz clic en el botón para verificar tu cuenta!'}</p>
+   144→              {config.acceptRules && (
+   145→                <p className="text-xs text-gray-400">✅ Al verificar, aceptas las reglas del servidor</p>
+   146→              )}
+   147→              <button className="px-4 py-1.5 rounded-md bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium">
+   148→                {config.buttonText || 'Verificarme'}
+   149→              </button>
+   150→            </div>
+   151→          </div>
+   152→        )
+   153→      case 'reaction':
+   154→        return (
+   155→          <div className="space-y-3">
+   156→            <div className="flex items-center gap-2">
+   157→              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xs font-bold text-white">
+   158→                B
+   159→              </div>
+   160→              <div>
+   161→                <p className="text-xs font-semibold text-violet-400">Bot de Verificación</p>
+   162→                <p className="text-[10px] text-muted-foreground">Hoy a las 12:00</p>
+   163→              </div>
+   164→            </div>
+   165→            <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   166→              <p className="text-sm text-gray-200">{config.message || '¡Reacciona para verificar tu cuenta!'}</p>
+   167→              <div className="flex items-center gap-2 pt-1">
+   168→                <span className="text-lg">{config.emoji || '✅'}</span>
+   169→                <span className="text-xs text-gray-400">Reacciona con {config.emoji || '✅'}</span>
+   170→              </div>
+   171→            </div>
+   172→          </div>
+   173→        )
+   174→      case 'captcha_math':
+   175→        return (
+   176→          <div className="space-y-3">
+   177→            <div className="flex items-center gap-2">
+   178→              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
+   179→                B
+   180→              </div>
+   181→              <div>
+   182→                <p className="text-xs font-semibold text-cyan-400">Bot de Verificación</p>
+   183→                <p className="text-[10px] text-muted-foreground">Hoy a las 12:00</p>
+   184→              </div>
+   185→            </div>
+   186→            <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   187→              <p className="text-sm text-gray-200">Resuelve el captcha para verificar tu cuenta</p>
+   188→              <div className="bg-[#1e1f22] rounded p-3 text-center">
+   189→                <p className="text-2xl font-mono font-bold text-cyan-400">
+   190→                  {config.captchaDifficulty === 'easy' ? '7 + 3 = ?' :
+   191→                   config.captchaDifficulty === 'medium' ? '24 × 3 = ?' :
+   192→                   '147 ÷ 7 + 12 = ?'}
+   193→                </p>
+   194→              </div>
+   195→              <div className="flex gap-2">
+   196→                <div className="flex-1 bg-[#1e1f22] rounded px-3 py-1.5 text-xs text-gray-400">
+   197→                  Escribe tu respuesta...
+   198→                </div>
+   199→                <button className="px-3 py-1.5 rounded bg-cyan-500 text-white text-xs font-medium">
+   200→                  Enviar
+   201→                </button>
+   202→              </div>
+   203→            </div>
+   204→          </div>
+   205→        )
+   206→      case 'captcha_visual':
+   207→        return (
+   208→          <div className="space-y-3">
+   209→            <div className="flex items-center gap-2">
+   210→              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center text-xs font-bold text-white">
+   211→                B
+   212→              </div>
+   213→              <div>
+   214→                <p className="text-xs font-semibold text-emerald-400">Bot de Verificación</p>
+   215→                <p className="text-[10px] text-muted-foreground">Hoy a las 12:00</p>
+   216→              </div>
+   217→            </div>
+   218→            <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   219→              <p className="text-sm text-gray-200">Selecciona las imágenes con semáforos</p>
+   220→              <div className="grid grid-cols-3 gap-1">
+   221→                {Array.from({ length: 9 }).map((_, i) => (
+   222→                  <div
+   223→                    key={i}
+   224→                    className={`aspect-square rounded ${
+   225→                      i === 2 || i === 4 || i === 7
+   226→                        ? 'bg-emerald-500/30 border-2 border-emerald-500/50'
+   227→                        : 'bg-[#1e1f22] border border-gray-700/50'
+   228→                    } flex items-center justify-center`}
+   229→                  >
+   230→                    {(i === 2 || i === 4 || i === 7) && (
+   231→                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+   232→                    )}
+   233→                  </div>
+   234→                ))}
+   235→              </div>
+   236→              <button className="w-full py-1.5 rounded bg-emerald-500 text-white text-xs font-medium">
+   237→                Verificar
+   238→              </button>
+   239→            </div>
+   240→          </div>
+   241→        )
+   242→    }
+   243→  }
+   244→
+   245→  return (
+   246→    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+   247→      {/* Header */}
+   248→      <motion.div
+   249→        initial={{ opacity: 0, y: -10 }}
+   250→        animate={{ opacity: 1, y: 0 }}
+   251→        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+   252→      >
+   253→        <div>
+   254→          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+   255→            Sistema de Verificación
+   256→          </h2>
+   257→          <p className="text-sm text-muted-foreground mt-1">
+   258→            Configura la verificación de nuevos miembros
+   259→          </p>
+   260→        </div>
+   261→        <div className="flex items-center gap-3">
+   262→          <span className="text-xs text-muted-foreground">
+   263→            {config.enabled ? 'Activado' : 'Desactivado'}
+   264→          </span>
+   265→          <Switch
+   266→            checked={config.enabled}
+   267→            onCheckedChange={(v) => updateConfig('enabled', v)}
+   268→            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   269→          />
+   270→        </div>
+   271→      </motion.div>
+   272→
+   273→      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+   274→        {/* Left side - Configuration */}
+   275→        <div className="lg:col-span-3 space-y-6">
+   276→          {/* Type Selector */}
+   277→          <motion.div
+   278→            initial={{ opacity: 0, y: 20 }}
+   279→            animate={{ opacity: 1, y: 0 }}
+   280→            transition={{ delay: 0.1 }}
+   281→          >
+   282→            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   283→              <CardHeader className="pb-4">
+   284→                <CardTitle className="text-lg flex items-center gap-2">
+   285→                  <KeyRound className="w-5 h-5 text-violet-400" />
+   286→                  Tipo de Verificación
+   287→                </CardTitle>
+   288→                <CardDescription>Selecciona el método de verificación</CardDescription>
+   289→              </CardHeader>
+   290→              <CardContent>
+   291→                <div className="grid grid-cols-2 gap-3">
+   292→                  {verificationTypes.map((vt) => (
+   293→                    <motion.button
+   294→                      key={vt.id}
+   295→                      onClick={() => updateConfig('type', vt.id)}
+   296→                      className={`relative p-4 rounded-xl border-2 transition-all text-left ${
+   297→                        config.type === vt.id
+   298→                          ? 'border-violet-500/60 bg-violet-500/10 shadow-lg shadow-violet-500/10'
+   299→                          : 'border-border/50 bg-card/50 hover:bg-accent/30 hover:border-border'
+   300→                      }`}
+   301→                      whileHover={{ scale: 1.02 }}
+   302→                      whileTap={{ scale: 0.98 }}
+   303→                    >
+   304→                      {config.type === vt.id && (
+   305→                        <motion.div
+   306→                          layoutId="verification-type-glow"
+   307→                          className="absolute inset-0 rounded-xl bg-gradient-to-r from-violet-500/5 to-fuchsia-500/5"
+   308→                          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+   309→                        />
+   310→                      )}
+   311→                      <div className="relative space-y-2">
+   312→                        <div className={`p-2 rounded-lg bg-gradient-to-br ${vt.color} inline-flex`}>
+   313→                          <vt.icon className={`w-5 h-5 ${vt.iconColor}`} />
+   314→                        </div>
+   315→                        <p className="text-sm font-semibold">{vt.label}</p>
+   316→                        <p className="text-xs text-muted-foreground leading-relaxed">{vt.description}</p>
+   317→                      </div>
+   318→                    </motion.button>
+   319→                  ))}
+   320→                </div>
+   321→              </CardContent>
+   322→            </Card>
+   323→          </motion.div>
+   324→
+   325→          {/* Configuration Form */}
+   326→          <motion.div
+   327→            initial={{ opacity: 0, y: 20 }}
+   328→            animate={{ opacity: 1, y: 0 }}
+   329→            transition={{ delay: 0.2 }}
+   330→          >
+   331→            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   332→              <CardHeader className="pb-4">
+   333→                <CardTitle className="text-lg flex items-center gap-2">
+   334→                  <Sparkles className="w-5 h-5 text-violet-400" />
+   335→                  Configuración
+   336→                </CardTitle>
+   337→              </CardHeader>
+   338→              <CardContent className="space-y-4">
+   339→                {/* Message */}
+   340→                <div className="space-y-2">
+   341→                  <Label className="text-xs font-medium text-muted-foreground">Mensaje de Verificación</Label>
+   342→                  <Input
+   343→                    placeholder="Mensaje que verán los usuarios..."
+   344→                    value={config.message}
+   345→                    onChange={(e) => updateConfig('message', e.target.value)}
+   346→                    className="bg-background/50"
+   347→                  />
+   348→                </div>
+   349→
+   350→                {/* Type-specific config */}
+   351→                <AnimatePresence mode="wait">
+   352→                  {config.type === 'button' && (
+   353→                    <motion.div
+   354→                      key="button-config"
+   355→                      initial={{ opacity: 0, height: 0 }}
+   356→                      animate={{ opacity: 1, height: 'auto' }}
+   357→                      exit={{ opacity: 0, height: 0 }}
+   358→                      className="space-y-4 overflow-hidden"
+   359→                    >
+   360→                      <div className="grid grid-cols-2 gap-3">
+   361→                        <div className="space-y-2">
+   362→                          <Label className="text-xs font-medium text-muted-foreground">Texto del Botón</Label>
+   363→                          <Input
+   364→                            placeholder="Verificarme"
+   365→                            value={config.buttonText}
+   366→                            onChange={(e) => updateConfig('buttonText', e.target.value)}
+   367→                            className="bg-background/50"
+   368→                          />
+   369→                        </div>
+   370→                        <div className="space-y-2">
+   371→                          <Label className="text-xs font-medium text-muted-foreground">Emoji</Label>
+   372→                          <Input
+   373→                            placeholder="✅"
+   374→                            value={config.emoji}
+   375→                            onChange={(e) => updateConfig('emoji', e.target.value)}
+   376→                            className="bg-background/50"
+   377→                          />
+   378→                        </div>
+   379→                      </div>
+   380→                      <div className="flex items-center gap-3">
+   381→                        <Checkbox
+   382→                          id="accept-rules"
+   383→                          checked={config.acceptRules}
+   384→                          onCheckedChange={(v) => updateConfig('acceptRules', v)}
+   385→                        />
+   386→                        <Label htmlFor="accept-rules" className="text-xs">
+   387→                          Al verificar, acepta las reglas del servidor
+   388→                        </Label>
+   389→                      </div>
+   390→                    </motion.div>
+   391→                  )}
+   392→
+   393→                  {config.type === 'reaction' && (
+   394→                    <motion.div
+   395→                      key="reaction-config"
+   396→                      initial={{ opacity: 0, height: 0 }}
+   397→                      animate={{ opacity: 1, height: 'auto' }}
+   398→                      exit={{ opacity: 0, height: 0 }}
+   399→                      className="space-y-4 overflow-hidden"
+   400→                    >
+   401→                      <div className="space-y-2">
+   402→                        <Label className="text-xs font-medium text-muted-foreground">Emoji de Reacción</Label>
+   403→                        <Input
+   404→                          placeholder="✅"
+   405→                          value={config.emoji}
+   406→                          onChange={(e) => updateConfig('emoji', e.target.value)}
+   407→                          className="bg-background/50 max-w-48"
+   408→                        />
+   409→                      </div>
+   410→                    </motion.div>
+   411→                  )}
+   412→
+   413→                  {config.type === 'captcha_math' && (
+   414→                    <motion.div
+   415→                      key="captcha-math-config"
+   416→                      initial={{ opacity: 0, height: 0 }}
+   417→                      animate={{ opacity: 1, height: 'auto' }}
+   418→                      exit={{ opacity: 0, height: 0 }}
+   419→                      className="space-y-4 overflow-hidden"
+   420→                    >
+   421→                      <div className="grid grid-cols-2 gap-3">
+   422→                        <div className="space-y-2">
+   423→                          <Label className="text-xs font-medium text-muted-foreground">Dificultad</Label>
+   424→                          <Select
+   425→                            value={config.captchaDifficulty}
+   426→                            onValueChange={(v) => updateConfig('captchaDifficulty', v)}
+   427→                          >
+   428→                            <SelectTrigger className="bg-background/50">
+   429→                              <SelectValue />
+   430→                            </SelectTrigger>
+   431→                            <SelectContent>
+   432→                              <SelectItem value="easy">Fácil (suma/resta)</SelectItem>
+   433→                              <SelectItem value="medium">Medio (multiplicación)</SelectItem>
+   434→                              <SelectItem value="hard">Difícil (operaciones mixtas)</SelectItem>
+   435→                            </SelectContent>
+   436→                          </Select>
+   437→                        </div>
+   438→                        <div className="space-y-2">
+   439→                          <Label className="text-xs font-medium text-muted-foreground">Nº de Preguntas</Label>
+   440→                          <Input
+   441→                            type="number"
+   442→                            min={1}
+   443→                            max={10}
+   444→                            value={config.numQuestions}
+   445→                            onChange={(e) => updateConfig('numQuestions', parseInt(e.target.value) || 1)}
+   446→                            className="bg-background/50"
+   447→                          />
+   448→                        </div>
+   449→                      </div>
+   450→                    </motion.div>
+   451→                  )}
+   452→
+   453→                  {config.type === 'captcha_visual' && (
+   454→                    <motion.div
+   455→                      key="captcha-visual-config"
+   456→                      initial={{ opacity: 0, height: 0 }}
+   457→                      animate={{ opacity: 1, height: 'auto' }}
+   458→                      exit={{ opacity: 0, height: 0 }}
+   459→                      className="space-y-4 overflow-hidden"
+   460→                    >
+   461→                      <div className="space-y-2">
+   462→                        <Label className="text-xs font-medium text-muted-foreground">Proveedor de Imágenes</Label>
+   463→                        <Select
+   464→                          value={config.imageProvider}
+   465→                          onValueChange={(v) => updateConfig('imageProvider', v)}
+   466→                        >
+   467→                          <SelectTrigger className="bg-background/50">
+   468→                            <SelectValue />
+   469→                          </SelectTrigger>
+   470→                          <SelectContent>
+   471→                            <SelectItem value="default">Predeterminado</SelectItem>
+   472→                            <SelectItem value="hcaptcha">hCaptcha</SelectItem>
+   473→                            <SelectItem value="recaptcha">reCAPTCHA</SelectItem>
+   474→                          </SelectContent>
+   475→                        </Select>
+   476→                      </div>
+   477→                    </motion.div>
+   478→                  )}
+   479→                </AnimatePresence>
+   480→
+   481→                <Separator className="opacity-50" />
+   482→
+   483→                {/* Common settings */}
+   484→                <div className="grid grid-cols-2 gap-3">
+   485→                  <div className="space-y-2">
+   486→                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+   487→                      <Hash className="w-3 h-3" /> Canal
+   488→                    </Label>
+   489→                    <Input
+   490→                      placeholder="ID del canal"
+   491→                      value={config.channelId}
+   492→                      onChange={(e) => updateConfig('channelId', e.target.value)}
+   493→                      className="bg-background/50"
+   494→                    />
+   495→                  </div>
+   496→                  <div className="space-y-2">
+   497→                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+   498→                      <Users className="w-3 h-3" /> Rol Verificado
+   499→                    </Label>
+   500→                    <Input
+   501→                      placeholder="ID del rol"
+   502→                      value={config.roleId}
+   503→                      onChange={(e) => updateConfig('roleId', e.target.value)}
+   504→                      className="bg-background/50"
+   505→                    />
+   506→                  </div>
+   507→                </div>
+   508→
+   509→                <div className="flex items-center gap-3">
+   510→                  <Switch
+   511→                    checked={config.autoRole}
+   512→                    onCheckedChange={(v) => updateConfig('autoRole', v)}
+   513→                    className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   514→                  />
+   515→                  <Label className="text-xs">Auto-asignar rol al verificar</Label>
+   516→                </div>
+   517→
+   518→                <Button
+   519→                  onClick={handleSave}
+   520→                  disabled={saving}
+   521→                  className="w-full bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+   522→                >
+   523→                  {saving ? 'Guardando...' : 'Guardar Configuración'}
+   524→                </Button>
+   525→              </CardContent>
+   526→            </Card>
+   527→          </motion.div>
+   528→        </div>
+   529→
+   530→        {/* Right side - Preview & Tips */}
+   531→        <div className="lg:col-span-2 space-y-6">
+   532→          {/* Live Preview */}
+   533→          <motion.div
+   534→            initial={{ opacity: 0, y: 20 }}
+   535→            animate={{ opacity: 1, y: 0 }}
+   536→            transition={{ delay: 0.3 }}
+   537→          >
+   538→            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   539→              <CardHeader className="pb-4">
+   540→                <CardTitle className="text-lg flex items-center gap-2">
+   541→                  <Eye className="w-5 h-5 text-violet-400" />
+   542→                  Vista Previa
+   543→                </CardTitle>
+   544→                <CardDescription>Así se verá en Discord</CardDescription>
+   545→              </CardHeader>
+   546→              <CardContent>
+   547→                <div className="bg-[#313338] rounded-lg p-4 min-h-[200px]">
+   548→                  <AnimatePresence mode="wait">
+   549→                    <motion.div
+   550→                      key={config.type}
+   551→                      initial={{ opacity: 0, y: 10 }}
+   552→                      animate={{ opacity: 1, y: 0 }}
+   553→                      exit={{ opacity: 0, y: -10 }}
+   554→                      transition={{ duration: 0.2 }}
+   555→                    >
+   556→                      {getPreviewContent()}
+   557→                    </motion.div>
+   558→                  </AnimatePresence>
+   559→                </div>
+   560→              </CardContent>
+   561→            </Card>
+   562→          </motion.div>
+   563→
+   564→          {/* Variables */}
+   565→          <motion.div
+   566→            initial={{ opacity: 0, y: 20 }}
+   567→            animate={{ opacity: 1, y: 0 }}
+   568→            transition={{ delay: 0.4 }}
+   569→          >
+   570→            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   571→              <CardHeader className="pb-3">
+   572→                <CardTitle className="text-sm flex items-center gap-2">
+   573→                  <MessageSquare className="w-4 h-4 text-violet-400" />
+   574→                  Variables Disponibles
+   575→                </CardTitle>
+   576→              </CardHeader>
+   577→              <CardContent>
+   578→                <div className="space-y-2">
+   579→                  {variables.map((v) => (
+   580→                    <div key={v.name} className="flex items-center justify-between py-1">
+   581→                      <code className="text-xs bg-violet-500/10 text-violet-400 px-2 py-0.5 rounded font-mono">
+   582→                        {v.name}
+   583→                      </code>
+   584→                      <span className="text-xs text-muted-foreground">{v.desc}</span>
+   585→                    </div>
+   586→                  ))}
+   587→                </div>
+   588→              </CardContent>
+   589→            </Card>
+   590→          </motion.div>
+   591→
+   592→          {/* Tips */}
+   593→          <motion.div
+   594→            initial={{ opacity: 0, y: 20 }}
+   595→            animate={{ opacity: 1, y: 0 }}
+   596→            transition={{ delay: 0.5 }}
+   597→          >
+   598→            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   599→              <CardHeader className="pb-3">
+   600→                <CardTitle className="text-sm flex items-center gap-2">
+   601→                  <Info className="w-4 h-4 text-violet-400" />
+   602→                  Consejos
+   603→                </CardTitle>
+   604→              </CardHeader>
+   605→              <CardContent>
+   606→                <div className="space-y-2">
+   607→                  {tips.map((tip, i) => (
+   608→                    <div key={i} className="flex items-start gap-2">
+   609→                      <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 mt-1.5 shrink-0" />
+   610→                      <p className="text-xs text-muted-foreground">{tip}</p>
+   611→                    </div>
+   612→                  ))}
+   613→                </div>
+   614→              </CardContent>
+   615→            </Card>
+   616→          </motion.div>
+   617→        </div>
+   618→      </div>
+   619→    </div>
+   620→  )
+   621→}
+   622→

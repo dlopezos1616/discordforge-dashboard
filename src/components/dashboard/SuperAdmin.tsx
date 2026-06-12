@@ -116,13 +116,43 @@ export function SuperAdmin() {
     toast.success('Bot reiniciado exitosamente (simulado)')
   }
 
-  // Only visible to admins
-  if (!user?.isAdmin) {
+  // Only visible to super admin (bot owner)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [checkingAdmin, setCheckingAdmin] = useState(true)
+
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      try {
+        const res = await fetch('/api/auth/superadmin')
+        const data = await res.json()
+        setIsSuperAdmin(data.isSuperAdmin)
+      } catch {
+        setIsSuperAdmin(false)
+      } finally {
+        setCheckingAdmin(false)
+      }
+    }
+    checkSuperAdmin()
+  }, [])
+
+  if (checkingAdmin) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+          className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+        />
+      </div>
+    )
+  }
+
+  if (!isSuperAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <Lock className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-          <p className="text-muted-foreground">Acceso restringido a administradores</p>
+          <p className="text-muted-foreground">Acceso restringido exclusivamente al propietario del bot</p>
         </div>
       </div>
     )

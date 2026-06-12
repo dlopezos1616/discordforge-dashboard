@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore, type Section } from '@/lib/store'
 import {
@@ -44,12 +45,33 @@ const sectionLabels: Record<string, string> = {
 export function Sidebar() {
   const { currentSection, setCurrentSection, sidebarCollapsed, toggleSidebar, user } = useAppStore()
   const { theme, setTheme } = useTheme()
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
-  const sections = ['general', 'systems', 'moderation', 'engagement', 'admin']
+  useEffect(() => {
+    const checkSuperAdmin = async () => {
+      try {
+        const res = await fetch('/api/auth/superadmin')
+        const data = await res.json()
+        setIsSuperAdmin(data.isSuperAdmin)
+      } catch {
+        setIsSuperAdmin(false)
+      }
+    }
+    checkSuperAdmin()
+  }, [])
+
+  const visibleNavItems = navItems.filter(item => {
+    if (item.id === 'superadmin' && !isSuperAdmin) return false
+    return true
+  })
+
+  const sections = isSuperAdmin
+    ? ['general', 'systems', 'moderation', 'engagement', 'admin']
+    : ['general', 'systems', 'moderation', 'engagement']
   const groupedItems = sections.map(section => ({
     section,
     label: sectionLabels[section],
-    items: navItems.filter(item => item.section === section),
+    items: visibleNavItems.filter(item => item.section === section),
   }))
 
   return (

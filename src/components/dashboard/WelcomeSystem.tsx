@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { ChannelSelector } from '@/components/shared/ChannelSelector'
 import { toast } from 'sonner'
 
 const defaultConfig = {
@@ -50,13 +51,6 @@ const mockRoles = [
   { id: 'rol_3', name: 'VIP', color: '#F59E0B' },
   { id: 'rol_4', name: 'Staff', color: '#EF4444' },
   { id: 'rol_5', name: 'Streamer', color: '#8B5CF6' },
-]
-
-const mockChannels = [
-  { id: 'ch_1', name: 'bienvenidas' },
-  { id: 'ch_2', name: 'general' },
-  { id: 'ch_3', name: 'anuncios' },
-  { id: 'ch_4', name: 'presentaciones' },
 ]
 
 const container = {
@@ -246,19 +240,7 @@ export function WelcomeSystem() {
                     </div>
                     <div>
                       <Label className="text-xs mb-1.5 block">Canal de Bienvenida</Label>
-                      <Select value={welcomeChannel} onValueChange={setWelcomeChannel}>
-                        <SelectTrigger className="h-9">
-                          <Hash className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {mockChannels.map(ch => (
-                            <SelectItem key={ch.id} value={ch.id}>
-                              #{ch.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <ChannelSelector value={welcomeChannel} onValueChange={setWelcomeChannel} placeholder="Seleccionar canal..." />
                     </div>
                   </div>
 
@@ -327,19 +309,7 @@ export function WelcomeSystem() {
                   </div>
                   <div>
                     <Label className="text-xs mb-1.5 block">Canal de Bienvenida</Label>
-                    <Select value={welcomeChannel} onValueChange={setWelcomeChannel}>
-                      <SelectTrigger className="h-9">
-                        <Hash className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockChannels.map(ch => (
-                          <SelectItem key={ch.id} value={ch.id}>
-                            #{ch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ChannelSelector value={welcomeChannel} onValueChange={setWelcomeChannel} placeholder="Seleccionar canal..." />
                   </div>
                 </CardContent>
               </Card>

@@ -1,0 +1,730 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useAppStore } from '@/lib/store'
+     6→import {
+     7→  SmilePlus, Plus, Pencil, Trash2, MousePointer,
+     8→  List, ToggleLeft, Eye, X, Sparkles, Hash,
+     9→  Shield, Users, ChevronDown
+    10→} from 'lucide-react'
+    11→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    12→import { Button } from '@/components/ui/button'
+    13→import { Input } from '@/components/ui/input'
+    14→import { Badge } from '@/components/ui/badge'
+    15→import { Switch } from '@/components/ui/switch'
+    16→import { Label } from '@/components/ui/label'
+    17→import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+    18→import {
+    19→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    20→} from '@/components/ui/select'
+    21→import {
+    22→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+    23→} from '@/components/ui/dialog'
+    24→import { Separator } from '@/components/ui/separator'
+    25→import { toast } from 'sonner'
+    26→
+    27→interface ReactionRole {
+    28→  id: string
+    29→  type: string
+    30→  emoji: string | null
+    31→  label: string | null
+    32→  roleIds: string
+    33→  mode: string
+    34→  exclusive: boolean
+    35→  autoRemove: boolean
+    36→  channelId: string | null
+    37→  messageId: string | null
+    38→  createdAt: string
+    39→}
+    40→
+    41→const typeConfig: Record<string, { label: string; icon: React.ElementType; color: string; iconColor: string }> = {
+    42→  reaction: { label: 'Reacción', icon: SmilePlus, color: 'bg-violet-500/15 text-violet-400 border-violet-500/30', iconColor: 'text-violet-400' },
+    43→  button: { label: 'Botón', icon: MousePointer, color: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30', iconColor: 'text-fuchsia-400' },
+    44→  select: { label: 'Select Menu', icon: List, color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30', iconColor: 'text-cyan-400' },
+    45→}
+    46→
+    47→const modeConfig: Record<string, { label: string; color: string }> = {
+    48→  single: { label: 'Simple', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
+    49→  multiple: { label: 'Múltiple', color: 'bg-green-500/15 text-green-400 border-green-500/30' },
+    50→  toggle: { label: 'Toggle', color: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+    51→}
+    52→
+    53→export function ReactionRoles() {
+    54→  const { currentServer } = useAppStore()
+    55→  const [reactionRoles, setReactionRoles] = useState<ReactionRole[]>([])
+    56→  const [loading, setLoading] = useState(true)
+    57→  const [showCreate, setShowCreate] = useState(false)
+    58→  const [editingId, setEditingId] = useState<string | null>(null)
+    59→  const [previewId, setPreviewId] = useState<string | null>(null)
+    60→
+    61→  // Create form
+    62→  const [formType, setFormType] = useState('reaction')
+    63→  const [formEmoji, setFormEmoji] = useState('✅')
+    64→  const [formLabel, setFormLabel] = useState('')
+    65→  const [formRoleIds, setFormRoleIds] = useState('')
+    66→  const [formMode, setFormMode] = useState('single')
+    67→  const [formAutoRemove, setFormAutoRemove] = useState(false)
+    68→  const [formExclusive, setFormExclusive] = useState(false)
+    69→
+    70→  // Edit form
+    71→  const [editEmoji, setEditEmoji] = useState('')
+    72→  const [editLabel, setEditLabel] = useState('')
+    73→  const [editRoleIds, setEditRoleIds] = useState('')
+    74→  const [editMode, setEditMode] = useState('single')
+    75→  const [editAutoRemove, setEditAutoRemove] = useState(false)
+    76→  const [editExclusive, setEditExclusive] = useState(false)
+    77→  const [editType, setEditType] = useState('reaction')
+    78→
+    79→  const fetchReactionRoles = useCallback(async () => {
+    80→    if (!currentServer) return
+    81→    setLoading(true)
+    82→    try {
+    83→      const res = await fetch(`/api/reaction-roles?serverId=${currentServer.id}`)
+    84→      const data = await res.json()
+    85→      if (data.reactionRoles) {
+    86→        setReactionRoles(data.reactionRoles)
+    87→      }
+    88→    } catch {
+    89→      toast.error('Error al cargar reaction roles')
+    90→    } finally {
+    91→      setLoading(false)
+    92→    }
+    93→  }, [currentServer])
+    94→
+    95→  useEffect(() => {
+    96→    fetchReactionRoles()
+    97→  }, [fetchReactionRoles])
+    98→
+    99→  const resetForm = () => {
+   100→    setFormType('reaction')
+   101→    setFormEmoji('✅')
+   102→    setFormLabel('')
+   103→    setFormRoleIds('')
+   104→    setFormMode('single')
+   105→    setFormAutoRemove(false)
+   106→    setFormExclusive(false)
+   107→  }
+   108→
+   109→  const handleCreate = async () => {
+   110→    if (!currentServer) return
+   111→    try {
+   112→      const roleIdsArr = formRoleIds.split(',').map(s => s.trim()).filter(Boolean)
+   113→      const res = await fetch('/api/reaction-roles', {
+   114→        method: 'POST',
+   115→        headers: { 'Content-Type': 'application/json' },
+   116→        body: JSON.stringify({
+   117→          serverId: currentServer.id,
+   118→          type: formType,
+   119→          emoji: formEmoji || null,
+   120→          label: formLabel || null,
+   121→          roleIds: JSON.stringify(roleIdsArr),
+   122→          mode: formMode,
+   123→          exclusive: formExclusive,
+   124→          autoRemove: formAutoRemove,
+   125→        }),
+   126→      })
+   127→      const data = await res.json()
+   128→      if (data.reactionRole) {
+   129→        toast.success('Reaction role creado')
+   130→        setShowCreate(false)
+   131→        resetForm()
+   132→        fetchReactionRoles()
+   133→      } else {
+   134→        toast.error(data.error || 'Error al crear')
+   135→      }
+   136→    } catch {
+   137→      toast.error('Error de conexión')
+   138→    }
+   139→  }
+   140→
+   141→  const handleDelete = async (id: string) => {
+   142→    try {
+   143→      await fetch(`/api/reaction-roles?id=${id}`, { method: 'DELETE' })
+   144→      setReactionRoles(prev => prev.filter(r => r.id !== id))
+   145→      toast.success('Reaction role eliminado')
+   146→    } catch {
+   147→      toast.error('Error al eliminar')
+   148→    }
+   149→  }
+   150→
+   151→  const openEdit = (rr: ReactionRole) => {
+   152→    setEditingId(rr.id)
+   153→    setEditType(rr.type)
+   154→    setEditEmoji(rr.emoji || '')
+   155→    setEditLabel(rr.label || '')
+   156→    try {
+   157→      const parsed = JSON.parse(rr.roleIds || '[]') as string[]
+   158→      setEditRoleIds(parsed.join(', '))
+   159→    } catch {
+   160→      setEditRoleIds('')
+   161→    }
+   162→    setEditMode(rr.mode)
+   163→    setEditAutoRemove(rr.autoRemove)
+   164→    setEditExclusive(rr.exclusive)
+   165→  }
+   166→
+   167→  const handleSaveEdit = async () => {
+   168→    if (!editingId) return
+   169→    try {
+   170→      const roleIdsArr = editRoleIds.split(',').map(s => s.trim()).filter(Boolean)
+   171→      await fetch('/api/reaction-roles', {
+   172→        method: 'PATCH',
+   173→        headers: { 'Content-Type': 'application/json' },
+   174→        body: JSON.stringify({
+   175→          id: editingId,
+   176→          type: editType,
+   177→          emoji: editEmoji || null,
+   178→          label: editLabel || null,
+   179→          roleIds: JSON.stringify(roleIdsArr),
+   180→          mode: editMode,
+   181→          autoRemove: editAutoRemove,
+   182→          exclusive: editExclusive,
+   183→        }),
+   184→      })
+   185→      toast.success('Reaction role actualizado')
+   186→      setEditingId(null)
+   187→      fetchReactionRoles()
+   188→    } catch {
+   189→      toast.error('Error al actualizar')
+   190→    }
+   191→  }
+   192→
+   193→  const getPreview = (rr: ReactionRole) => {
+   194→    const parsedRoles = (() => { try { return JSON.parse(rr.roleIds || '[]') as string[] } catch { return [] } })()
+   195→
+   196→    switch (rr.type) {
+   197→      case 'reaction':
+   198→        return (
+   199→          <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   200→            <div className="flex items-center gap-2">
+   201→              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">
+   202→                B
+   203→              </div>
+   204→              <span className="text-xs font-semibold text-violet-400">Bot</span>
+   205→            </div>
+   206→            <p className="text-sm text-gray-200">Reacciona para obtener tu rol</p>
+   207→            <div className="flex items-center gap-2 pt-1 border-t border-gray-600/50">
+   208→              <span className="text-lg">{rr.emoji || '✅'}</span>
+   209→              <span className="text-xs text-gray-400">
+   210→                {parsedRoles.length > 0 ? `Rol: ${parsedRoles[0]}` : 'Sin rol configurado'}
+   211→              </span>
+   212→            </div>
+   213→          </div>
+   214→        )
+   215→      case 'button':
+   216→        return (
+   217→          <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   218→            <div className="flex items-center gap-2">
+   219→              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">
+   220→                B
+   221→              </div>
+   222→              <span className="text-xs font-semibold text-violet-400">Bot</span>
+   223→            </div>
+   224→            <p className="text-sm text-gray-200">{rr.label || 'Selecciona tu rol'}</p>
+   225→            <button className="px-3 py-1 rounded bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-medium">
+   226→              {rr.emoji || '🎯'} {rr.label || 'Obtener Rol'}
+   227→            </button>
+   228→          </div>
+   229→        )
+   230→      case 'select':
+   231→        return (
+   232→          <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   233→            <div className="flex items-center gap-2">
+   234→              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">
+   235→                B
+   236→              </div>
+   237→              <span className="text-xs font-semibold text-violet-400">Bot</span>
+   238→            </div>
+   239→            <p className="text-sm text-gray-200">{rr.label || 'Selecciona tu rol'}</p>
+   240→            <div className="bg-[#1e1f22] rounded px-3 py-1.5 flex items-center justify-between">
+   241→              <span className="text-xs text-gray-400">Elige un rol...</span>
+   242→              <ChevronDown className="w-3 h-3 text-gray-400" />
+   243→            </div>
+   244→            {parsedRoles.length > 0 && (
+   245→              <div className="space-y-0.5">
+   246→                {parsedRoles.slice(0, 3).map((r, i) => (
+   247→                  <div key={i} className="bg-[#1e1f22] rounded px-3 py-1 text-xs text-gray-300">
+   248→                    {rr.emoji || '🎯'} {r}
+   249→                  </div>
+   250→                ))}
+   251→              </div>
+   252→            )}
+   253→          </div>
+   254→        )
+   255→      default:
+   256→        return null
+   257→    }
+   258→  }
+   259→
+   260→  return (
+   261→    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+   262→      {/* Header */}
+   263→      <motion.div
+   264→        initial={{ opacity: 0, y: -10 }}
+   265→        animate={{ opacity: 1, y: 0 }}
+   266→        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+   267→      >
+   268→        <div>
+   269→          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+   270→            Reaction Roles
+   271→          </h2>
+   272→          <p className="text-sm text-muted-foreground mt-1">
+   273→            Gestiona roles por reacción, botón y menú select
+   274→          </p>
+   275→        </div>
+   276→        <Button
+   277→          onClick={() => { resetForm(); setShowCreate(true) }}
+   278→          size="sm"
+   279→          className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+   280→        >
+   281→          <Plus className="w-4 h-4" />
+   282→          Crear Reaction Role
+   283→        </Button>
+   284→      </motion.div>
+   285→
+   286→      {/* Grid of existing reaction roles */}
+   287→      {loading ? (
+   288→        <div className="flex items-center justify-center py-12">
+   289→          <motion.div
+   290→            animate={{ rotate: 360 }}
+   291→            transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+   292→            className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+   293→          />
+   294→        </div>
+   295→      ) : reactionRoles.length === 0 ? (
+   296→        <motion.div
+   297→          initial={{ opacity: 0 }}
+   298→          animate={{ opacity: 1 }}
+   299→          className="flex flex-col items-center justify-center py-16 text-muted-foreground"
+   300→        >
+   301→          <SmilePlus className="w-12 h-12 mb-3 opacity-40" />
+   302→          <p className="text-sm font-medium">No hay reaction roles configurados</p>
+   303→          <p className="text-xs mt-1">Crea uno para empezar</p>
+   304→        </motion.div>
+   305→      ) : (
+   306→        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+   307→          <AnimatePresence>
+   308→            {reactionRoles.map((rr, i) => {
+   309→              const tc = typeConfig[rr.type] || typeConfig.reaction
+   310→              const mc = modeConfig[rr.mode] || modeConfig.single
+   311→              const TypeIcon = tc.icon
+   312→              const parsedRoles = (() => { try { return JSON.parse(rr.roleIds || '[]') as string[] } catch { return [] } })()
+   313→              const isPreviewOpen = previewId === rr.id
+   314→
+   315→              return (
+   316→                <motion.div
+   317→                  key={rr.id}
+   318→                  initial={{ opacity: 0, y: 20 }}
+   319→                  animate={{ opacity: 1, y: 0 }}
+   320→                  exit={{ opacity: 0, scale: 0.95 }}
+   321→                  transition={{ delay: i * 0.05 }}
+   322→                  layout
+   323→                >
+   324→                  <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-violet-500/30 transition-all">
+   325→                    <CardHeader className="pb-3">
+   326→                      <div className="flex items-center justify-between">
+   327→                        <div className="flex items-center gap-2">
+   328→                          <span className="text-xl">{rr.emoji || '🎯'}</span>
+   329→                          <div>
+   330→                            <CardTitle className="text-sm font-semibold">
+   331→                              {rr.label || 'Sin nombre'}
+   332→                            </CardTitle>
+   333→                            <CardDescription className="text-[10px]">
+   334→                              {new Date(rr.createdAt).toLocaleDateString('es-ES')}
+   335→                            </CardDescription>
+   336→                          </div>
+   337→                        </div>
+   338→                        <div className="flex items-center gap-1">
+   339→                          <Badge variant="outline" className={`text-[10px] ${tc.color}`}>
+   340→                            <TypeIcon className="w-3 h-3 mr-1" />
+   341→                            {tc.label}
+   342→                          </Badge>
+   343→                        </div>
+   344→                      </div>
+   345→                    </CardHeader>
+   346→                    <CardContent className="space-y-3">
+   347→                      {/* Mode & Auto-remove badges */}
+   348→                      <div className="flex items-center gap-1.5 flex-wrap">
+   349→                        <Badge variant="outline" className={`text-[10px] ${mc.color}`}>
+   350→                          {mc.label}
+   351→                        </Badge>
+   352→                        {rr.autoRemove && (
+   353→                          <Badge variant="outline" className="text-[10px] bg-red-500/15 text-red-400 border-red-500/30">
+   354→                            Auto-remove
+   355→                          </Badge>
+   356→                        )}
+   357→                        {rr.exclusive && (
+   358→                          <Badge variant="outline" className="text-[10px] bg-amber-500/15 text-amber-400 border-amber-500/30">
+   359→                            Exclusivo
+   360→                          </Badge>
+   361→                        )}
+   362→                      </div>
+   363→
+   364→                      {/* Role list */}
+   365→                      <div className="space-y-1">
+   366→                        <span className="text-[10px] text-muted-foreground font-medium">Roles:</span>
+   367→                        <div className="flex flex-wrap gap-1">
+   368→                          {parsedRoles.length === 0 ? (
+   369→                            <span className="text-xs text-muted-foreground italic">Sin roles</span>
+   370→                          ) : (
+   371→                            parsedRoles.map((r, idx) => (
+   372→                              <Badge key={idx} variant="secondary" className="text-[10px]">
+   373→                                {r}
+   374→                              </Badge>
+   375→                            ))
+   376→                          )}
+   377→                        </div>
+   378→                      </div>
+   379→
+   380→                      {/* Actions */}
+   381→                      <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+   382→                        <Button
+   383→                          variant="ghost"
+   384→                          size="sm"
+   385→                          className="h-7 text-xs gap-1"
+   386→                          onClick={() => setPreviewId(isPreviewOpen ? null : rr.id)}
+   387→                        >
+   388→                          <Eye className="w-3.5 h-3.5" />
+   389→                          {isPreviewOpen ? 'Ocultar' : 'Preview'}
+   390→                        </Button>
+   391→                        <Button
+   392→                          variant="ghost"
+   393→                          size="sm"
+   394→                          className="h-7 text-xs gap-1"
+   395→                          onClick={() => openEdit(rr)}
+   396→                        >
+   397→                          <Pencil className="w-3.5 h-3.5" />
+   398→                          Editar
+   399→                        </Button>
+   400→                        <Button
+   401→                          variant="ghost"
+   402→                          size="sm"
+   403→                          className="h-7 text-xs gap-1 text-red-400 hover:text-red-300"
+   404→                          onClick={() => handleDelete(rr.id)}
+   405→                        >
+   406→                          <Trash2 className="w-3.5 h-3.5" />
+   407→                        </Button>
+   408→                      </div>
+   409→
+   410→                      {/* Preview */}
+   411→                      <AnimatePresence>
+   412→                        {isPreviewOpen && (
+   413→                          <motion.div
+   414→                            initial={{ opacity: 0, height: 0 }}
+   415→                            animate={{ opacity: 1, height: 'auto' }}
+   416→                            exit={{ opacity: 0, height: 0 }}
+   417→                            transition={{ duration: 0.3 }}
+   418→                            className="overflow-hidden"
+   419→                          >
+   420→                            <div className="bg-[#313338] rounded-lg p-3 mt-1">
+   421→                              {getPreview(rr)}
+   422→                            </div>
+   423→                          </motion.div>
+   424→                        )}
+   425→                      </AnimatePresence>
+   426→                    </CardContent>
+   427→                  </Card>
+   428→                </motion.div>
+   429→              )
+   430→            })}
+   431→          </AnimatePresence>
+   432→        </div>
+   433→      )}
+   434→
+   435→      {/* Create Dialog */}
+   436→      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+   437→        <DialogContent className="max-w-lg">
+   438→          <DialogHeader>
+   439→            <DialogTitle className="flex items-center gap-2">
+   440→              <Sparkles className="w-5 h-5 text-violet-400" />
+   441→              Crear Reaction Role
+   442→            </DialogTitle>
+   443→            <DialogDescription>
+   444→              Configura un nuevo sistema de roles por interacción
+   445→            </DialogDescription>
+   446→          </DialogHeader>
+   447→
+   448→          <div className="space-y-4 py-2">
+   449→            {/* Type selector */}
+   450→            <div className="space-y-2">
+   451→              <Label className="text-xs font-medium">Tipo</Label>
+   452→              <div className="grid grid-cols-3 gap-2">
+   453→                {Object.entries(typeConfig).map(([key, tc]) => (
+   454→                  <motion.button
+   455→                    key={key}
+   456→                    onClick={() => setFormType(key)}
+   457→                    className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
+   458→                      formType === key
+   459→                        ? 'border-violet-500/50 bg-violet-500/10'
+   460→                        : 'border-border/50 bg-card/50 hover:bg-accent/30'
+   461→                    }`}
+   462→                    whileHover={{ scale: 1.03 }}
+   463→                    whileTap={{ scale: 0.97 }}
+   464→                  >
+   465→                    <tc.icon className={`w-4 h-4 ${tc.iconColor}`} />
+   466→                    <span className="text-xs font-medium">{tc.label}</span>
+   467→                  </motion.button>
+   468→                ))}
+   469→              </div>
+   470→            </div>
+   471→
+   472→            {/* Emoji & Label */}
+   473→            <div className="grid grid-cols-2 gap-3">
+   474→              <div className="space-y-2">
+   475→                <Label className="text-xs font-medium">Emoji</Label>
+   476→                <Input
+   477→                  placeholder="✅"
+   478→                  value={formEmoji}
+   479→                  onChange={(e) => setFormEmoji(e.target.value)}
+   480→                  className="bg-background/50"
+   481→                />
+   482→              </div>
+   483→              <div className="space-y-2">
+   484→                <Label className="text-xs font-medium">Etiqueta</Label>
+   485→                <Input
+   486→                  placeholder="Nombre del reaction role"
+   487→                  value={formLabel}
+   488→                  onChange={(e) => setFormLabel(e.target.value)}
+   489→                  className="bg-background/50"
+   490→                />
+   491→              </div>
+   492→            </div>
+   493→
+   494→            {/* Role IDs */}
+   495→            <div className="space-y-2">
+   496→              <Label className="text-xs font-medium">IDs de Roles (separados por coma)</Label>
+   497→              <Input
+   498→                placeholder="role1, role2, role3"
+   499→                value={formRoleIds}
+   500→                onChange={(e) => setFormRoleIds(e.target.value)}
+   501→                className="bg-background/50"
+   502→              />
+   503→            </div>
+   504→
+   505→            {/* Mode */}
+   506→            <div className="space-y-2">
+   507→              <Label className="text-xs font-medium">Modo</Label>
+   508→              <RadioGroup value={formMode} onValueChange={setFormMode} className="flex gap-4">
+   509→                <div className="flex items-center space-x-2">
+   510→                  <RadioGroupItem value="single" id="mode-single" />
+   511→                  <Label htmlFor="mode-single" className="text-xs font-normal">Simple</Label>
+   512→                </div>
+   513→                <div className="flex items-center space-x-2">
+   514→                  <RadioGroupItem value="multiple" id="mode-multiple" />
+   515→                  <Label htmlFor="mode-multiple" className="text-xs font-normal">Múltiple</Label>
+   516→                </div>
+   517→                <div className="flex items-center space-x-2">
+   518→                  <RadioGroupItem value="toggle" id="mode-toggle" />
+   519→                  <Label htmlFor="mode-toggle" className="text-xs font-normal">Toggle</Label>
+   520→                </div>
+   521→              </RadioGroup>
+   522→            </div>
+   523→
+   524→            {/* Toggles */}
+   525→            <div className="flex items-center gap-6">
+   526→              <div className="flex items-center gap-2">
+   527→                <Switch
+   528→                  checked={formAutoRemove}
+   529→                  onCheckedChange={setFormAutoRemove}
+   530→                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   531→                />
+   532→                <Label className="text-xs">Auto-remove</Label>
+   533→              </div>
+   534→              <div className="flex items-center gap-2">
+   535→                <Switch
+   536→                  checked={formExclusive}
+   537→                  onCheckedChange={setFormExclusive}
+   538→                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   539→                />
+   540→                <Label className="text-xs">Exclusivo</Label>
+   541→              </div>
+   542→            </div>
+   543→
+   544→            {/* Preview */}
+   545→            <div className="space-y-2">
+   546→              <Label className="text-xs font-medium">Vista Previa</Label>
+   547→              <div className="bg-[#313338] rounded-lg p-3">
+   548→                <AnimatePresence mode="wait">
+   549→                  <motion.div
+   550→                    key={formType}
+   551→                    initial={{ opacity: 0 }}
+   552→                    animate={{ opacity: 1 }}
+   553→                    exit={{ opacity: 0 }}
+   554→                  >
+   555→                    {formType === 'reaction' && (
+   556→                      <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   557→                        <div className="flex items-center gap-2">
+   558→                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">B</div>
+   559→                          <span className="text-xs font-semibold text-violet-400">Bot</span>
+   560→                        </div>
+   561→                        <p className="text-sm text-gray-200">Reacciona para obtener tu rol</p>
+   562→                        <div className="flex items-center gap-2 pt-1 border-t border-gray-600/50">
+   563→                          <span className="text-lg">{formEmoji || '✅'}</span>
+   564→                          <span className="text-xs text-gray-400">
+   565→                            {formLabel || 'Reaction Role'}
+   566→                          </span>
+   567→                        </div>
+   568→                      </div>
+   569→                    )}
+   570→                    {formType === 'button' && (
+   571→                      <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   572→                        <div className="flex items-center gap-2">
+   573→                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">B</div>
+   574→                          <span className="text-xs font-semibold text-violet-400">Bot</span>
+   575→                        </div>
+   576→                        <p className="text-sm text-gray-200">{formLabel || 'Selecciona tu rol'}</p>
+   577→                        <button className="px-3 py-1 rounded bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-medium">
+   578→                          {formEmoji || '🎯'} {formLabel || 'Obtener Rol'}
+   579→                        </button>
+   580→                      </div>
+   581→                    )}
+   582→                    {formType === 'select' && (
+   583→                      <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
+   584→                        <div className="flex items-center gap-2">
+   585→                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">B</div>
+   586→                          <span className="text-xs font-semibold text-violet-400">Bot</span>
+   587→                        </div>
+   588→                        <p className="text-sm text-gray-200">{formLabel || 'Selecciona tu rol'}</p>
+   589→                        <div className="bg-[#1e1f22] rounded px-3 py-1.5 flex items-center justify-between">
+   590→                          <span className="text-xs text-gray-400">Elige un rol...</span>
+   591→                          <ChevronDown className="w-3 h-3 text-gray-400" />
+   592→                        </div>
+   593→                      </div>
+   594→                    )}
+   595→                  </motion.div>
+   596→                </AnimatePresence>
+   597→              </div>
+   598→            </div>
+   599→          </div>
+   600→
+   601→          <DialogFooter>
+   602→            <Button variant="ghost" onClick={() => setShowCreate(false)}>Cancelar</Button>
+   603→            <Button
+   604→              onClick={handleCreate}
+   605→              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+   606→            >
+   607→              Crear
+   608→            </Button>
+   609→          </DialogFooter>
+   610→        </DialogContent>
+   611→      </Dialog>
+   612→
+   613→      {/* Edit Dialog */}
+   614→      <Dialog open={!!editingId} onOpenChange={(open) => { if (!open) setEditingId(null) }}>
+   615→        <DialogContent className="max-w-lg">
+   616→          <DialogHeader>
+   617→            <DialogTitle className="flex items-center gap-2">
+   618→              <Pencil className="w-5 h-5 text-violet-400" />
+   619→              Editar Reaction Role
+   620→            </DialogTitle>
+   621→            <DialogDescription>
+   622→              Modifica la configuración del reaction role
+   623→            </DialogDescription>
+   624→          </DialogHeader>
+   625→
+   626→          <div className="space-y-4 py-2">
+   627→            {/* Type selector */}
+   628→            <div className="space-y-2">
+   629→              <Label className="text-xs font-medium">Tipo</Label>
+   630→              <div className="grid grid-cols-3 gap-2">
+   631→                {Object.entries(typeConfig).map(([key, tc]) => (
+   632→                  <motion.button
+   633→                    key={key}
+   634→                    onClick={() => setEditType(key)}
+   635→                    className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
+   636→                      editType === key
+   637→                        ? 'border-violet-500/50 bg-violet-500/10'
+   638→                        : 'border-border/50 bg-card/50 hover:bg-accent/30'
+   639→                    }`}
+   640→                    whileHover={{ scale: 1.03 }}
+   641→                    whileTap={{ scale: 0.97 }}
+   642→                  >
+   643→                    <tc.icon className={`w-4 h-4 ${tc.iconColor}`} />
+   644→                    <span className="text-xs font-medium">{tc.label}</span>
+   645→                  </motion.button>
+   646→                ))}
+   647→              </div>
+   648→            </div>
+   649→
+   650→            <div className="grid grid-cols-2 gap-3">
+   651→              <div className="space-y-2">
+   652→                <Label className="text-xs font-medium">Emoji</Label>
+   653→                <Input
+   654→                  value={editEmoji}
+   655→                  onChange={(e) => setEditEmoji(e.target.value)}
+   656→                  className="bg-background/50"
+   657→                />
+   658→              </div>
+   659→              <div className="space-y-2">
+   660→                <Label className="text-xs font-medium">Etiqueta</Label>
+   661→                <Input
+   662→                  value={editLabel}
+   663→                  onChange={(e) => setEditLabel(e.target.value)}
+   664→                  className="bg-background/50"
+   665→                />
+   666→              </div>
+   667→            </div>
+   668→
+   669→            <div className="space-y-2">
+   670→              <Label className="text-xs font-medium">IDs de Roles (separados por coma)</Label>
+   671→              <Input
+   672→                value={editRoleIds}
+   673→                onChange={(e) => setEditRoleIds(e.target.value)}
+   674→                className="bg-background/50"
+   675→              />
+   676→            </div>
+   677→
+   678→            <div className="space-y-2">
+   679→              <Label className="text-xs font-medium">Modo</Label>
+   680→              <RadioGroup value={editMode} onValueChange={setEditMode} className="flex gap-4">
+   681→                <div className="flex items-center space-x-2">
+   682→                  <RadioGroupItem value="single" id="edit-single" />
+   683→                  <Label htmlFor="edit-single" className="text-xs font-normal">Simple</Label>
+   684→                </div>
+   685→                <div className="flex items-center space-x-2">
+   686→                  <RadioGroupItem value="multiple" id="edit-multiple" />
+   687→                  <Label htmlFor="edit-multiple" className="text-xs font-normal">Múltiple</Label>
+   688→                </div>
+   689→                <div className="flex items-center space-x-2">
+   690→                  <RadioGroupItem value="toggle" id="edit-toggle" />
+   691→                  <Label htmlFor="edit-toggle" className="text-xs font-normal">Toggle</Label>
+   692→                </div>
+   693→              </RadioGroup>
+   694→            </div>
+   695→
+   696→            <div className="flex items-center gap-6">
+   697→              <div className="flex items-center gap-2">
+   698→                <Switch
+   699→                  checked={editAutoRemove}
+   700→                  onCheckedChange={setEditAutoRemove}
+   701→                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   702→                />
+   703→                <Label className="text-xs">Auto-remove</Label>
+   704→              </div>
+   705→              <div className="flex items-center gap-2">
+   706→                <Switch
+   707→                  checked={editExclusive}
+   708→                  onCheckedChange={setEditExclusive}
+   709→                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+   710→                />
+   711→                <Label className="text-xs">Exclusivo</Label>
+   712→              </div>
+   713→            </div>
+   714→          </div>
+   715→
+   716→          <DialogFooter>
+   717→            <Button variant="ghost" onClick={() => setEditingId(null)}>Cancelar</Button>
+   718→            <Button
+   719→              onClick={handleSaveEdit}
+   720→              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+   721→            >
+   722→              Guardar
+   723→            </Button>
+   724→          </DialogFooter>
+   725→        </DialogContent>
+   726→      </Dialog>
+   727→    </div>
+   728→  )
+   729→}
+   730→
