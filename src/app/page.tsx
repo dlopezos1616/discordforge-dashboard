@@ -19,12 +19,14 @@ import { GiveawaysSystem } from '@/components/dashboard/GiveawaysSystem'
 import { LogsViewer } from '@/components/dashboard/LogsViewer'
 import { SettingsPanel } from '@/components/dashboard/SettingsPanel'
 import { SuperAdmin } from '@/components/dashboard/SuperAdmin'
+import { BotStatusPanel } from '@/components/dashboard/BotStatusPanel'
 
 function SectionRenderer() {
   const { currentSection } = useAppStore()
 
   const sections: Record<string, React.ReactNode> = {
     dashboard: <DashboardHome />,
+    'bot-status': <BotStatusPanel />,
     tickets: <TicketSystem />,
     welcome: <WelcomeSystem />,
     embeds: <EmbedBuilder />,
