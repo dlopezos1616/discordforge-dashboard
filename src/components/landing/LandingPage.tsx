@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, Shield, Ticket, Bot, BarChart3,
   Users, MessageSquare, ChevronRight, Globe,
-  Lock, Star, Cog, Wrench, Heart
+  Lock, Star, Cog, Wrench, Heart, X, AlertCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -27,7 +27,12 @@ const steps = [
   { num: '3', title: 'Configura y disfruta', desc: 'Personaliza todo desde el dashboard web' },
 ]
 
-export function LandingPage() {
+interface LandingPageProps {
+  authError?: string | null
+  onClearError?: () => void
+}
+
+export function LandingPage({ authError, onClearError }: LandingPageProps) {
   const [loginLoading, setLoginLoading] = useState(false)
 
   const handleLogin = () => {
@@ -37,8 +42,30 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background overflow-auto">
+      {/* Auth Error Banner */}
+      <AnimatePresence>
+        {authError && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-0 left-0 right-0 z-[100] bg-red-500/90 backdrop-blur-sm text-white px-4 py-3"
+          >
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <span className="text-sm font-medium">{authError}</span>
+              </div>
+              <button onClick={onClearError} className="shrink-0 hover:bg-white/20 rounded p-1 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
+      <nav className={`fixed ${authError ? 'top-12' : 'top-0'} left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border transition-top duration-300`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
@@ -62,7 +89,7 @@ export function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="pt-32 pb-20 px-4 relative">
+      <section className={`pt-32 ${authError ? 'pt-44' : ''} pb-20 px-4 relative`}>
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-fuchsia-500/10 rounded-full blur-3xl" />

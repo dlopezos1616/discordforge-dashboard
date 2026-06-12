@@ -7,15 +7,22 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  const origin = new URL(request.url).origin
 
   // If user denied access
   if (error) {
-    return NextResponse.redirect(new URL('/?auth=denied', request.url))
+    return NextResponse.redirect(`${origin}/?auth=denied`)
   }
 
   // If no code, redirect to Discord OAuth
   if (!code) {
-    const redirectUri = `${new URL(request.url).origin}/api/auth/discord`
+    // Validate that we have the client secret before starting OAuth
+    if (!DISCORD_CLIENT_SECRET) {
+      console.error('DISCORD_CLIENT_SECRET is not set! OAuth will fail.')
+      return NextResponse.redirect(`${origin}/?auth=error&reason=no_secret`)
+    }
+
+    const redirectUri = `${origin}/api/auth/discord`
     const discordAuthUrl = new URL('https://discord.com/api/oauth2/authorize')
     discordAuthUrl.searchParams.set('client_id', DISCORD_CLIENT_ID)
     discordAuthUrl.searchParams.set('redirect_uri', redirectUri)
@@ -28,7 +35,13 @@ export async function GET(request: NextRequest) {
 
   // Exchange code for token
   try {
-    const redirectUri = `${new URL(request.url).origin}/api/auth/discord`
+    const redirectUri = `${origin}/api/auth/discord`
+
+    if (!DISCORD_CLIENT_SECRET) {
+      console.error('DISCORD_CLIENT_SECRET is not set! Cannot exchange code.')
+      return NextResponse.redirect(`${origin}/?auth=error&reason=no_secret`)
+    }
+
     const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -44,7 +57,7 @@ export async function GET(request: NextRequest) {
     if (!tokenResponse.ok) {
       const errText = await tokenResponse.text()
       console.error('Discord token exchange error:', errText)
-      return NextResponse.redirect(new URL('/?auth=error', request.url))
+      return NextResponse.redirect(`${origin}/?auth=error&reason=token_exchange`)
     }
 
     const tokenData = await tokenResponse.json()
@@ -56,8 +69,8 @@ export async function GET(request: NextRequest) {
     })
 
     if (!userResponse.ok) {
-      console.error('Discord user fetch error')
-      return NextResponse.redirect(new URL('/?auth=error', request.url))
+      console.error('Discord user fetch error:', userResponse.status)
+      return NextResponse.redirect(`${origin}/?auth=error&reason=user_fetch`)
     }
 
     const discordUser = await userResponse.json()
@@ -73,7 +86,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Create session cookie with user data + guilds
-    // Store minimal data in cookie, guilds in a separate approach
     const sessionData = {
       user: {
         id: discordUser.id,
@@ -96,10 +108,12 @@ export async function GET(request: NextRequest) {
     // Encode session data as base64 for cookie
     const encoded = Buffer.from(JSON.stringify(sessionData)).toString('base64')
 
-    const response = NextResponse.redirect(new URL('/?auth=success', request.url))
+    const isSecure = origin.startsWith('https')
+
+    const response = NextResponse.redirect(`${origin}/?auth=success`)
     response.cookies.set('discord_session', encoded, {
       httpOnly: true,
-      secure: true,
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
@@ -108,16 +122,18 @@ export async function GET(request: NextRequest) {
     return response
   } catch (err) {
     console.error('Discord OAuth error:', err)
-    return NextResponse.redirect(new URL('/?auth=error', request.url))
+    return NextResponse.redirect(`${origin}/?auth=error&reason=exception`)
   }
 }
 
 // DELETE = Logout
 export async function DELETE(request: NextRequest) {
+  const origin = new URL(request.url).origin
+  const isSecure = origin.startsWith('https')
   const response = NextResponse.json({ success: true })
   response.cookies.set('discord_session', '', {
     httpOnly: true,
-    secure: true,
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: 0,
     path: '/',
