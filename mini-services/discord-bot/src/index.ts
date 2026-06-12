@@ -89,11 +89,12 @@ class DiscordForgeClient extends Client {
     console.log(`🔌 Conectando al dashboard en ${url}...`)
 
     this.dashboardSocket = io(url, {
-      transports: ['websocket', 'polling'],
+      path: '/socket.io',
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 50,
-      timeout: 10000,
+      timeout: 20000,
     })
 
     this.dashboardSocket.on('connect', () => {
@@ -389,6 +390,36 @@ function parseDuration(str: string): number {
 }
 
 // ============================================
+// PRISMA HELPER - Safe database access
+// ============================================
+async function getPrisma() {
+  try {
+    const mod = await import('@prisma/client')
+    if (mod.PrismaClient) {
+      return new mod.PrismaClient()
+    }
+    return null
+  } catch {
+    console.log('  ⚠️ Prisma Client no disponible')
+    return null
+  }
+}
+
+async function safeDbOperation(operation: (prisma: any) => Promise<any>) {
+  const prisma = await getPrisma()
+  if (!prisma) return null
+  try {
+    const result = await operation(prisma)
+    await prisma.$disconnect()
+    return result
+  } catch (err) {
+    console.error('  ⚠️ Error DB:', (err as Error).message)
+    try { await prisma.$disconnect() } catch {}
+    return null
+  }
+}
+
+// ============================================
 // INICIALIZACIÓN DEL BOT
 // ============================================
 
@@ -464,22 +495,27 @@ client.on('ready', async () => {
 
       // Sincronizar con la base de datos
       try {
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
-        await prisma.server.upsert({
-          where: { discordId: guild.id },
-          update: { name: guild.name, icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null },
-          create: {
-            discordId: guild.id,
-            name: guild.name,
-            icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
-            ownerId: guild.owner_id || 'unknown',
-            memberCount: guild.approximate_member_count || 0,
-          },
-        })
-        await prisma.$disconnect()
+        const prismaModule = await import('@prisma/client').catch(() => null)
+        if (prismaModule?.PrismaClient) {
+          const prisma = new prismaModule.PrismaClient()
+          await prisma.server.upsert({
+            where: { discordId: guild.id },
+            update: { name: guild.name, icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null },
+            create: {
+              discordId: guild.id,
+              name: guild.name,
+              icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
+              ownerId: guild.owner_id || 'unknown',
+              memberCount: guild.approximate_member_count || 0,
+            },
+          })
+          await prisma.$disconnect()
+          console.log(`  ✅ Servidor ${guild.name} sincronizado en la DB`)
+        } else {
+          console.log(`  ⚠️ Prisma Client no disponible, omitiendo sincronización DB`)
+        }
       } catch (dbErr) {
-        console.error(`  ⚠️ Error DB para ${guild.name}:`, dbErr)
+        console.error(`  ⚠️ Error DB para ${guild.name}:`, (dbErr as Error).message)
       }
     }
 
@@ -540,8 +576,8 @@ client.on('guildMemberAdd', async (member) => {
   // ============================================
   try {
     // Buscar config de bienvenida para este servidor
-    const { PrismaClient } = await import('@prisma/client')
-    const prisma = new PrismaClient()
+    const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+    const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
 
     const server = await prisma.server.findUnique({
       where: { discordId: member.guild.id },
@@ -605,8 +641,8 @@ client.on('guildMemberAdd', async (member) => {
   // Si el servidor tiene verificación, el usuario no tiene el rol verificado
   // ============================================
   try {
-    const { PrismaClient } = await import('@prisma/client')
-    const prisma = new PrismaClient()
+    const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+    const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
 
     const server = await prisma.server.findUnique({
       where: { discordId: member.guild.id },
@@ -645,8 +681,8 @@ client.on('interactionCreate', async (interaction) => {
     console.log(`🎫 Ticket abierto para categoría: ${categoryId}`)
 
     try {
-      const { PrismaClient } = await import('@prisma/client')
-      const prisma = new PrismaClient()
+      const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+      const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
 
       const category = await prisma.ticketCategory.findUnique({ where: { id: categoryId } })
       const server = await prisma.server.findUnique({ where: { discordId: interaction.guildId! } })
@@ -756,8 +792,8 @@ client.on('interactionCreate', async (interaction) => {
   // ============================================
   if (interaction.isButton() && interaction.customId === 'ticket_claim') {
     try {
-      const { PrismaClient } = await import('@prisma/client')
-      const prisma = new PrismaClient()
+      const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+      const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
       const server = await prisma.server.findUnique({ where: { discordId: interaction.guildId! } })
 
       if (server) {
@@ -781,8 +817,8 @@ client.on('interactionCreate', async (interaction) => {
   // ============================================
   if (interaction.isButton() && interaction.customId === 'ticket_close') {
     try {
-      const { PrismaClient } = await import('@prisma/client')
-      const prisma = new PrismaClient()
+      const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+      const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
       const server = await prisma.server.findUnique({ where: { discordId: interaction.guildId! } })
 
       if (server) {
@@ -834,8 +870,8 @@ client.on('interactionCreate', async (interaction) => {
     console.log(`✅ Verificación solicitada: ${verifyType}`)
 
     try {
-      const { PrismaClient } = await import('@prisma/client')
-      const prisma = new PrismaClient()
+      const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+      const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
       const server = await prisma.server.findUnique({
         where: { discordId: interaction.guildId! },
         include: { verification: true },
@@ -892,8 +928,8 @@ client.on('interactionCreate', async (interaction) => {
 
     if (userAnswer === correctAnswer) {
       try {
-        const { PrismaClient } = await import('@prisma/client')
-        const prisma = new PrismaClient()
+        const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+        const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
         const server = await prisma.server.findUnique({
           where: { discordId: interaction.guildId! },
           include: { verification: true },
@@ -940,8 +976,8 @@ client.on('interactionCreate', async (interaction) => {
   // ============================================
   if (interaction.isButton() && interaction.customId === 'giveaway_join') {
     try {
-      const { PrismaClient } = await import('@prisma/client')
-      const prisma = new PrismaClient()
+      const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+      const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
       const server = await prisma.server.findUnique({ where: { discordId: interaction.guildId! } })
 
       if (server) {
@@ -984,8 +1020,8 @@ client.on('messageCreate', async (message) => {
   // SISTEMA DE AUTO-MODERACIÓN
   // ============================================
   try {
-    const { PrismaClient } = await import('@prisma/client')
-    const prisma = new PrismaClient()
+    const { PrismaClient } = await import('@prisma/client').catch(() => ({ PrismaClient: null })) as any
+    const prisma = PrismaClient ? new PrismaClient() : null; if (!prisma) { console.log('  ⚠️ Prisma no disponible'); return; }
 
     const server = await prisma.server.findUnique({
       where: { discordId: message.guild.id },

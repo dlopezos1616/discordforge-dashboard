@@ -58,6 +58,15 @@
 
 import { Server as SocketIOServer } from 'socket.io'
 
+// Prevent crashes from unhandled errors
+process.on('uncaughtException', (err) => {
+  console.error('🔴 Uncaught Exception:', err.message)
+})
+
+process.on('unhandledRejection', (err) => {
+  console.error('🔴 Unhandled Rejection:', err)
+})
+
 const PORT = 3003
 
 const io = new SocketIOServer(PORT, {
@@ -181,16 +190,21 @@ io.on('connection', (socket) => {
 
   for (const event of botToDashboardEvents) {
     socket.on(event, (data: any) => {
-      addEvent(event, data)
+      try {
+        addEvent(event, data)
 
-      // Actualizar estado del bot si es un evento de status
-      if (event === 'bot:status' || event === 'bot:ready') {
-        Object.assign(systemState.botStatus, data)
+        // Actualizar estado del bot si es un evento de status
+        if (event === 'bot:status' || event === 'bot:ready') {
+          Object.assign(systemState.botStatus, data)
+        }
+
+        // Retransmitir a todos los dashboards
+        socket.to('dashboards').emit(event, data)
+        const logData = data ? (typeof data === 'object' ? JSON.stringify(data).substring(0, 100) : String(data)) : '{}'
+        console.log(`📡 ${event}:`, logData)
+      } catch (err) {
+        console.error(`❌ Error processing ${event}:`, err)
       }
-
-      // Retransmitir a todos los dashboards
-      socket.to('dashboards').emit(event, data)
-      console.log(`📡 ${event}:`, JSON.stringify(data ?? {}).substring(0, 100))
     })
   }
 
@@ -213,16 +227,21 @@ io.on('connection', (socket) => {
 
   for (const event of dashboardToBotEvents) {
     socket.on(event, (data: any) => {
-      addEvent(event, data)
+      try {
+        addEvent(event, data)
 
-      // Retransmitir al bot
-      if (botSocket) {
-        botSocket.emit(event, data)
-        console.log(`📤 ${event}:`, JSON.stringify(data ?? {}).substring(0, 100))
-      } else {
-        // Si no hay bot conectado, responder con error
-        socket.emit('error:noBot', { message: 'Bot no conectado', event })
-        console.log(`⚠️ ${event}: Bot no conectado`)
+        // Retransmitir al bot
+        if (botSocket) {
+          botSocket.emit(event, data)
+          const logData = data ? (typeof data === 'object' ? JSON.stringify(data).substring(0, 100) : String(data)) : '{}'
+          console.log(`📤 ${event}:`, logData)
+        } else {
+          // Si no hay bot conectado, responder con error
+          socket.emit('error:noBot', { message: 'Bot no conectado', event })
+          console.log(`⚠️ ${event}: Bot no conectado`)
+        }
+      } catch (err) {
+        console.error(`❌ Error processing ${event}:`, err)
       }
     })
   }

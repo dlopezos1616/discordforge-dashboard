@@ -6,9 +6,9 @@
     "dev": "bun --hot src/index.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.2",
     "discord.js": "^14.16.3",
-    "socket.io-client": "^4.8.1",
-    "@prisma/client": "^6.11.1"
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@types/bun": "^1.1.14",

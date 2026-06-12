@@ -40,7 +40,9 @@ export function LoginScreen() {
           }))
           setServers(mappedServers)
           if (mappedServers.length > 0) {
-            setCurrentServer(mappedServers[0])
+            // Prioritize real servers (numeric discordId) over demo servers (srv_xxx)
+            const realServer = mappedServers.find((s: any) => /^\d+$/.test(s.discordId))
+            setCurrentServer(realServer || mappedServers[0])
           }
         }
       }

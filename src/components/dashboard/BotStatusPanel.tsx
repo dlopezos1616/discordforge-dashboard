@@ -66,17 +66,14 @@ export function BotStatusPanel() {
       try {
         // Dynamic import to avoid SSR issues
         import('socket.io-client').then(({ io }) => {
-          // Connect through the gateway using XTransformPort
-          const wsUrl = `${window.location.origin}`
+          // Connect to the WS Bridge on the same origin (custom server)
+          const wsUrl = window.location.origin
           socket = io(wsUrl, {
-            path: '/socket.io',
+            path: '/ws-socket.io',
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionDelay: 2000,
             reconnectionAttempts: 20,
-            query: {
-              XTransformPort: '3003',
-            },
           })
 
           socket.on('connect', () => {

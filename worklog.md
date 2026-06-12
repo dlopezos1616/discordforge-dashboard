@@ -105,3 +105,30 @@ Stage Summary:
 - Dashboard now shows real-time bot status via WebSocket
 - Orange alert visible when bot is online but not in any server
 - All services communicate: Dashboard ↔ WS Bridge ↔ Bot ↔ Discord
+
+---
+Task ID: 8
+Agent: Main Orchestrator
+Task: Fix bot connectivity - bot not appearing in user's server, dashboard showing demo data
+
+Work Log:
+- Identified bot had 0 guilds (not in any server) from logs
+- Fixed OAuth2 install params via Discord API: added "bot" scope and permissions=8
+- Bot was previously only configured with "applications.commands" scope, couldn't be invited as bot
+- Synced "Prestigio Rolplay" (ID: 1339188561005772852) to the database
+- Updated LoginScreen to prioritize real servers (numeric discordId) over demo servers (srv_xxx)
+- Dashboard now shows "Prestigio Rolplay" as the selected server with 6 members
+- Fixed socket.io path mismatch: bot used "/ws-socket.io" but WS Bridge uses "/socket.io"
+- Fixed DASHBOARD_WS_URL from localhost to 127.0.0.1 (IPv6 resolution issue)
+- Fixed transport order: polling first, then websocket
+- Added keepalive scripts for both WS Bridge and Bot services
+- Added crash protection (uncaughtException/unhandledRejection handlers) to WS Bridge
+- Bot successfully connects to Discord (1 guild, 5 users) and syncs with database
+- WS Bridge stability issue: Bun process crashes periodically, keepalive restarts it
+
+Stage Summary:
+- Bot is live in "Prestigio Rolplay" server with 5 members
+- Dashboard shows real server "Prestigio Rolplay" instead of demo data
+- All 3 services communicate: Dashboard ↔ WS Bridge ↔ Bot ↔ Discord
+- Known issue: WS Bridge crashes periodically under Bun, keepalive scripts auto-restart
+- Prisma client integration working in bot for guild sync
