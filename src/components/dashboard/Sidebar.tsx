@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Ticket, HandMetal, Code2, SmilePlus,
   ShieldCheck, Shield, Bot, ClipboardList, BarChart3,
   Gift, ScrollText, Settings, Crown, ChevronLeft, ChevronRight,
-  Sparkles, Cpu
+  Sparkles, Cpu, Palette, ShieldAlert
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from 'next-themes'
@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 const navItems: { id: Section; label: string; icon: React.ElementType; section: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'general' },
   { id: 'bot-status', label: 'Bot Status', icon: Bot, section: 'general' },
+  { id: 'bot-customize', label: 'Personalizar Bot', icon: Palette, section: 'general' },
   { id: 'tickets', label: 'Tickets', icon: Ticket, section: 'systems' },
   { id: 'welcome', label: 'Bienvenidas', icon: HandMetal, section: 'systems' },
   { id: 'embeds', label: 'Embeds', icon: Code2, section: 'systems' },
@@ -26,6 +27,7 @@ const navItems: { id: Section; label: string; icon: React.ElementType; section: 
   { id: 'verification', label: 'Verificación', icon: ShieldCheck, section: 'systems' },
   { id: 'moderation', label: 'Moderación', icon: Shield, section: 'moderation' },
   { id: 'automod', label: 'Auto Mod', icon: Cpu, section: 'moderation' },
+  { id: 'antiraid', label: 'AntiRaid', icon: ShieldAlert, section: 'moderation' },
   { id: 'whitelist', label: 'Whitelist', icon: ClipboardList, section: 'systems' },
   { id: 'polls', label: 'Encuestas', icon: BarChart3, section: 'engagement' },
   { id: 'giveaways', label: 'Sorteos', icon: Gift, section: 'engagement' },

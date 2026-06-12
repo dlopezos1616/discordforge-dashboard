@@ -64,6 +64,8 @@ model Server {
   polls           Poll[]
   giveaways       Giveaway[]
   logs            Log[]
+  antiRaidConfig  AntiRaidConfig?
+  raidEvents      RaidEvent[]
 
   @@map("servers")
 }
@@ -452,4 +454,58 @@ model Log {
   user        User?    @relation("LogUser", fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("logs")
+}
+
+// ============================================
+// ANTI-RAID SYSTEM
+// ============================================
+
+model AntiRaidConfig {
+  id                    String   @id @default(cuid())
+  serverId              String   @unique
+  enabled               Boolean  @default(false)
+
+  // Detection settings
+  joinRateThreshold     Int      @default(5)    // joins per minute to trigger raid alert
+  accountAgeHours       Int      @default(24)   // flag accounts newer than X hours
+  requireAvatar         Boolean  @default(false) // require avatar to pass join gate
+  similarUsernameCheck  Boolean  @default(false) // detect similar/joining usernames
+
+  // Actions on raid detection
+  raidAction            String   @default("alert") // alert, kick, ban, quarantine, verify
+  autoLockdown          Boolean  @default(false)
+  alertChannelId        String?
+  quarantineRoleId      String?
+  staffRoleId           String?
+
+  // Lockdown state
+  isLockedDown          Boolean  @default(false)
+  lockdownAt            DateTime?
+
+  // Raid stats
+  totalRaidsDetected    Int      @default(0)
+  lastRaidAt            DateTime?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  server                Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("antiraid_configs")
+}
+
+model RaidEvent {
+  id              String   @id @default(cuid())
+  serverId        String
+  type            String   @default("join_burst") // join_burst, bot_raid, similar_names, manual
+  joinsDetected   Int      @default(0)
+  action          String   @default("alert")
+  isResolved      Boolean  @default(false)
+  resolvedAt      DateTime?
+  details         String   @default("{}") // JSON
+  createdAt       DateTime @default(now())
+
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("raid_events")
 }

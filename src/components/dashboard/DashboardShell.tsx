@@ -19,6 +19,8 @@ import { LogsViewer } from '@/components/dashboard/LogsViewer'
 import { SettingsPanel } from '@/components/dashboard/SettingsPanel'
 import { SuperAdmin } from '@/components/dashboard/SuperAdmin'
 import { BotStatusPanel } from '@/components/dashboard/BotStatusPanel'
+import { BotCustomization } from '@/components/dashboard/BotCustomization'
+import { AntiRaidSystem } from '@/components/dashboard/AntiRaidSystem'
 
 function SectionRenderer() {
   const { currentSection } = useAppStore()
@@ -26,11 +28,13 @@ function SectionRenderer() {
   const sections: Record<string, React.ReactNode> = {
     dashboard: <DashboardHome />,
     'bot-status': <BotStatusPanel />,
+    'bot-customize': <BotCustomization />,
     tickets: <TicketSystem />,
     welcome: <WelcomeSystem />,
     embeds: <EmbedBuilder />,
     moderation: <ModerationPanel />,
     automod: <AutoModConfig />,
+    antiraid: <AntiRaidSystem />,
     verification: <VerificationSystem />,
     'reaction-roles': <ReactionRoles />,
     whitelist: <WhitelistSystem />,

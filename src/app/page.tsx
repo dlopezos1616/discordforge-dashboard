@@ -7,7 +7,7 @@ import { ServerSelectPage } from '@/components/landing/ServerSelectPage'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 
 export default function Home() {
-  const { view, setView, setUser } = useAppStore()
+  const { view, setView, setUser, setServers, setCurrentServer } = useAppStore()
   const [authError, setAuthError] = useState<string | null>(null)
 
   // Check for existing Discord session on mount
@@ -18,6 +18,30 @@ export default function Home() {
         const params = new URLSearchParams(window.location.search)
         const authStatus = params.get('auth')
         const authReason = params.get('reason')
+
+        // Demo mode: ?demo=1 skips OAuth and loads dashboard with seed data
+        if (params.get('demo') === '1') {
+          const loginRes = await fetch('/api/auth/login', { method: 'POST' })
+          const loginData = await loginRes.json()
+          if (loginData.user) {
+            setUser({
+              id: loginData.user.id,
+              discordId: loginData.user.discordId,
+              username: loginData.user.username,
+              avatar: loginData.user.avatar || null,
+              isAdmin: loginData.user.isAdmin,
+              email: loginData.user.email,
+            })
+            const serversRes = await fetch('/api/servers')
+            const serversData = await serversRes.json()
+            if (serversData.servers?.length > 0) {
+              setServers(serversData.servers)
+              setCurrentServer(serversData.servers[0])
+            }
+            window.history.replaceState({}, '', '/')
+            return
+          }
+        }
 
         if (authStatus === 'error') {
           // Show specific error message based on reason

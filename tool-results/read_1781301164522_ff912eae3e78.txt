@@ -1,0 +1,695 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback, useRef } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useAppStore } from '@/lib/store'
+     6→import {
+     7→  Bot, Save, Upload, Trash2, User, ImagePlus, AlertTriangle,
+     8→  Info, RefreshCw, Camera, X, Check, Loader2, Shield, Globe,
+     9→  Clock, Sparkles
+    10→} from 'lucide-react'
+    11→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    12→import { Button } from '@/components/ui/button'
+    13→import { Input } from '@/components/ui/input'
+    14→import { Badge } from '@/components/ui/badge'
+    15→import { Label } from '@/components/ui/label'
+    16→import { Separator } from '@/components/ui/separator'
+    17→import { toast } from 'sonner'
+    18→
+    19→/* ────────────── Types ────────────── */
+    20→
+    21→interface BotData {
+    22→  username: string
+    23→  avatar: string | null
+    24→  id: string
+    25→}
+    26→
+    27→/* ────────────── Animation Variants ────────────── */
+    28→
+    29→const container = {
+    30→  hidden: { opacity: 0 },
+    31→  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+    32→}
+    33→const item = {
+    34→  hidden: { opacity: 0, y: 15 },
+    35→  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+    36→}
+    37→
+    38→/* ────────────── Default Discord Avatar ────────────── */
+    39→
+    40→function DefaultAvatar({ username }: { username: string }) {
+    41→  const colorMap: Record<string, string> = {
+    42→    a: '#5865F2', b: '#57F287', c: '#FEE75C', d: '#EB459E',
+    43→    e: '#ED4245', f: '#5865F2', g: '#57F287', h: '#FEE75C',
+    44→    i: '#EB459E', j: '#ED4245', k: '#5865F2', l: '#57F287',
+    45→    m: '#FEE75C', n: '#EB459E', o: '#ED4245', p: '#5865F2',
+    46→    q: '#57F287', r: '#FEE75C', s: '#EB459E', t: '#ED4245',
+    47→    u: '#5865F2', v: '#57F287', w: '#FEE75C', x: '#EB459E',
+    48→    y: '#ED4245', z: '#5865F2',
+    49→  }
+    50→  const firstChar = username.charAt(0).toLowerCase()
+    51→  const bgColor = colorMap[firstChar] || '#5865F2'
+    52→
+    53→  return (
+    54→    <div
+    55→      className="w-full h-full rounded-full flex items-center justify-center"
+    56→      style={{ backgroundColor: bgColor }}
+    57→    >
+    58→      <svg width="60%" height="60%" viewBox="0 0 24 24" fill="white">
+    59→        <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286z" />
+    60→      </svg>
+    61→    </div>
+    62→  )
+    63→}
+    64→
+    65→/* ────────────── Main Component ────────────── */
+    66→
+    67→export function BotCustomization() {
+    68→  const { currentServer } = useAppStore()
+    69→
+    70→  /* ── State ── */
+    71→  const [bot, setBot] = useState<BotData | null>(null)
+    72→  const [loading, setLoading] = useState(true)
+    73→  const [savingUsername, setSavingUsername] = useState(false)
+    74→  const [savingAvatar, setSavingAvatar] = useState(false)
+    75→
+    76→  const [newUsername, setNewUsername] = useState('')
+    77→  const [usernameError, setUsernameError] = useState('')
+    78→
+    79→  const [newAvatar, setNewAvatar] = useState<string | null>(null) // base64 data URI for preview
+    80→  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+    81→  const [avatarError, setAvatarError] = useState('')
+    82→
+    83→  const fileInputRef = useRef<HTMLInputElement>(null)
+    84→
+    85→  /* ── Fetch Bot Data ── */
+    86→  const fetchBot = useCallback(async () => {
+    87→    if (!currentServer) return
+    88→    setLoading(true)
+    89→    try {
+    90→      const res = await fetch(`/api/bot/customize?serverId=${currentServer.id}`)
+    91→      const data = await res.json()
+    92→      if (data.bot) {
+    93→        setBot(data.bot)
+    94→        setNewUsername(data.bot.username)
+    95→      }
+    96→    } catch {
+    97→      toast.error('Error al cargar los datos del bot')
+    98→    } finally {
+    99→      setLoading(false)
+   100→    }
+   101→  }, [currentServer])
+   102→
+   103→  useEffect(() => {
+   104→    fetchBot()
+   105→  }, [fetchBot])
+   106→
+   107→  /* ── Username Validation ── */
+   108→  const validateUsername = (value: string): boolean => {
+   109→    if (value.length < 2) {
+   110→      setUsernameError('El nombre debe tener al menos 2 caracteres')
+   111→      return false
+   112→    }
+   113→    if (value.length > 32) {
+   114→      setUsernameError('El nombre no puede exceder 32 caracteres')
+   115→      return false
+   116→    }
+   117→    if (value !== value.trim()) {
+   118→      setUsernameError('El nombre no puede empezar o terminar con espacios')
+   119→      return false
+   120→    }
+   121→    setUsernameError('')
+   122→    return true
+   123→  }
+   124→
+   125→  const handleUsernameChange = (value: string) => {
+   126→    setNewUsername(value)
+   127→    if (value && value !== bot?.username) {
+   128→      validateUsername(value)
+   129→    } else {
+   130→      setUsernameError('')
+   131→    }
+   132→  }
+   133→
+   134→  /* ── Save Username ── */
+   135→  const handleSaveUsername = async () => {
+   136→    if (!currentServer || !bot) return
+   137→    if (!validateUsername(newUsername)) return
+   138→    if (newUsername === bot.username) {
+   139→      toast.error('El nombre es el mismo que el actual')
+   140→      return
+   141→    }
+   142→    setSavingUsername(true)
+   143→    try {
+   144→      const res = await fetch('/api/bot/customize', {
+   145→        method: 'PATCH',
+   146→        headers: { 'Content-Type': 'application/json' },
+   147→        body: JSON.stringify({
+   148→          serverId: currentServer.id,
+   149→          username: newUsername,
+   150→        }),
+   151→      })
+   152→      const data = await res.json()
+   153→      if (data.success) {
+   154→        setBot(data.bot)
+   155→        toast.success('Nombre del bot actualizado correctamente')
+   156→      } else {
+   157→        toast.error(data.error || 'Error al actualizar el nombre')
+   158→      }
+   159→    } catch {
+   160→      toast.error('Error de conexión al actualizar el nombre')
+   161→    } finally {
+   162→      setSavingUsername(false)
+   163→    }
+   164→  }
+   165→
+   166→  /* ── Avatar File Handling ── */
+   167→  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+   168→    const file = e.target.files?.[0]
+   169→    if (!file) return
+   170→
+   171→    // Validate file type
+   172→    const validTypes = ['image/png', 'image/jpeg', 'image/gif']
+   173→    if (!validTypes.includes(file.type)) {
+   174→      setAvatarError('Formato no soportado. Usa PNG, JPG o GIF.')
+   175→      return
+   176→    }
+   177→
+   178→    // Validate file size (256KB)
+   179→    const maxSize = 256 * 1024
+   180→    if (file.size > maxSize) {
+   181→      setAvatarError('El archivo supera el límite de 256KB')
+   182→      return
+   183→    }
+   184→
+   185→    setAvatarError('')
+   186→    setAvatarFile(file)
+   187→
+   188→    // Convert to base64 for preview and API submission
+   189→    const reader = new FileReader()
+   190→    reader.onload = (event) => {
+   191→      const base64 = event.target?.result as string
+   192→      setNewAvatar(base64)
+   193→    }
+   194→    reader.onerror = () => {
+   195→      setAvatarError('Error al leer el archivo')
+   196→    }
+   197→    reader.readAsDataURL(file)
+   198→  }
+   199→
+   200→  /* ── Save Avatar ── */
+   201→  const handleSaveAvatar = async () => {
+   202→    if (!currentServer || !bot || !newAvatar) return
+   203→    setSavingAvatar(true)
+   204→    try {
+   205→      const res = await fetch('/api/bot/customize', {
+   206→        method: 'PATCH',
+   207→        headers: { 'Content-Type': 'application/json' },
+   208→        body: JSON.stringify({
+   209→          serverId: currentServer.id,
+   210→          avatar: newAvatar,
+   211→        }),
+   212→      })
+   213→      const data = await res.json()
+   214→      if (data.success) {
+   215→        setBot(data.bot)
+   216→        setNewAvatar(null)
+   217→        setAvatarFile(null)
+   218→        toast.success('Avatar del bot actualizado correctamente')
+   219→      } else {
+   220→        toast.error(data.error || 'Error al actualizar el avatar')
+   221→      }
+   222→    } catch {
+   223→      toast.error('Error de conexión al actualizar el avatar')
+   224→    } finally {
+   225→      setSavingAvatar(false)
+   226→    }
+   227→  }
+   228→
+   229→  /* ── Reset Avatar ── */
+   230→  const handleResetAvatar = async () => {
+   231→    if (!currentServer || !bot) return
+   232→    setSavingAvatar(true)
+   233→    try {
+   234→      const res = await fetch('/api/bot/customize', {
+   235→        method: 'PATCH',
+   236→        headers: { 'Content-Type': 'application/json' },
+   237→        body: JSON.stringify({
+   238→          serverId: currentServer.id,
+   239→          avatar: null,
+   240→        }),
+   241→      })
+   242→      const data = await res.json()
+   243→      if (data.success) {
+   244→        setBot(data.bot)
+   245→        setNewAvatar(null)
+   246→        setAvatarFile(null)
+   247→        toast.success('Avatar restaurado al valor por defecto')
+   248→      } else {
+   249→        toast.error(data.error || 'Error al restaurar el avatar')
+   250→      }
+   251→    } catch {
+   252→      toast.error('Error de conexión al restaurar el avatar')
+   253→    } finally {
+   254→      setSavingAvatar(false)
+   255→    }
+   256→  }
+   257→
+   258→  /* ── Clear Avatar Preview ── */
+   259→  const handleClearAvatarPreview = () => {
+   260→    setNewAvatar(null)
+   261→    setAvatarFile(null)
+   262→    setAvatarError('')
+   263→    if (fileInputRef.current) {
+   264→      fileInputRef.current.value = ''
+   265→    }
+   266→  }
+   267→
+   268→  /* ── Derived State ── */
+   269→  const usernameChanged = newUsername !== (bot?.username ?? '') && newUsername.trim().length > 0
+   270→  const avatarChanged = newAvatar !== null
+   271→
+   272→  /* ── Loading State ── */
+   273→  if (loading) {
+   274→    return (
+   275→      <div className="flex items-center justify-center h-64">
+   276→        <motion.div
+   277→          animate={{ rotate: 360 }}
+   278→          transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+   279→          className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+   280→        />
+   281→      </div>
+   282→    )
+   283→  }
+   284→
+   285→  /* ── No Server ── */
+   286→  if (!currentServer) {
+   287→    return (
+   288→      <div className="flex items-center justify-center h-64">
+   289→        <p className="text-muted-foreground text-sm">Selecciona un servidor para continuar</p>
+   290→      </div>
+   291→    )
+   292→  }
+   293→
+   294→  /* ── Render ── */
+   295→  const displayAvatar = newAvatar || bot?.avatar
+   296→
+   297→  return (
+   298→    <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
+   299→      {/* Header */}
+   300→      <motion.div
+   301→        initial={{ opacity: 0, y: -10 }}
+   302→        animate={{ opacity: 1, y: 0 }}
+   303→        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+   304→      >
+   305→        <div>
+   306→          <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent flex items-center gap-2">
+   307→            🤖 Personalización del Bot
+   308→          </h2>
+   309→          <p className="text-sm text-muted-foreground mt-1">
+   310→            Personaliza el nombre y la imagen de perfil de tu bot en Discord
+   311→          </p>
+   312→        </div>
+   313→        <Badge
+   314→          variant="outline"
+   315→          className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs gap-1.5"
+   316→        >
+   317→          <Sparkles className="w-3 h-3" />
+   318→          {currentServer.name}
+   319→        </Badge>
+   320→      </motion.div>
+   321→
+   322→      <motion.div
+   323→        variants={container}
+   324→        initial="hidden"
+   325→        animate="show"
+   326→        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+   327→      >
+   328→        {/* ─── Column 1: Bot Preview ─── */}
+   329→        <motion.div variants={item} className="lg:col-span-1">
+   330→          <Card className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden">
+   331→            <CardHeader className="pb-3">
+   332→              <CardTitle className="text-base flex items-center gap-2">
+   333→                <Bot className="w-4 h-4 text-emerald-400" />
+   334→                Vista Previa
+   335→              </CardTitle>
+   336→              <CardDescription className="text-xs">
+   337→                Así se verá tu bot en Discord
+   338→              </CardDescription>
+   339→            </CardHeader>
+   340→            <CardContent>
+   341→              {/* Discord-style profile popup */}
+   342→              <div className="bg-[#2B2D31] rounded-lg overflow-hidden shadow-xl">
+   343→                {/* Banner gradient */}
+   344→                <div className="h-16 bg-gradient-to-r from-emerald-600/60 to-teal-600/60 relative">
+   345→                  {avatarChanged && (
+   346→                    <div className="absolute top-1 right-1">
+   347→                      <Badge className="bg-amber-500/90 text-white text-[9px] px-1.5 py-0 border-0">
+   348→                        Vista previa
+   349→                      </Badge>
+   350→                    </div>
+   351→                  )}
+   352→                </div>
+   353→
+   354→                {/* Avatar */}
+   355→                <div className="px-4 -mt-10 relative z-10">
+   356→                  <div className="w-[80px] h-[80px] rounded-full border-4 border-[#2B2D31] overflow-hidden bg-[#1E1F22] relative group">
+   357→                    {displayAvatar ? (
+   358→                      <img
+   359→                        src={displayAvatar}
+   360→                        alt="Bot avatar"
+   361→                        className="w-full h-full object-cover"
+   362→                      />
+   363→                    ) : (
+   364→                      <DefaultAvatar username={bot?.username || 'Bot'} />
+   365→                    )}
+   366→                  </div>
+   367→                </div>
+   368→
+   369→                {/* User info */}
+   370→                <div className="px-4 pt-2 pb-4 space-y-2">
+   371→                  <div className="flex items-center gap-1.5">
+   372→                    <span className="text-white font-semibold text-base truncate">
+   373→                      {newUsername || bot?.username || 'Bot'}
+   374→                    </span>
+   375→                    <Badge className="bg-[#5865F2] text-white text-[9px] px-1 py-0 border-0 rounded-sm font-medium">
+   376→                      BOT
+   377→                    </Badge>
+   378→                  </div>
+   379→                  <div className="border-t border-[#3F4147] pt-2 mt-2">
+   380→                    <p className="text-[#B5BAC1] text-xs font-semibold uppercase mb-1">Miembro desde</p>
+   381→                    <p className="text-[#DBDEE1] text-xs">Hoy</p>
+   382→                  </div>
+   383→                  {bot?.id && (
+   384→                    <div className="border-t border-[#3F4147] pt-2 mt-2">
+   385→                      <p className="text-[#B5BAC1] text-[10px] font-mono select-all">
+   386→                        ID: {bot.id}
+   387→                      </p>
+   388→                    </div>
+   389→                  )}
+   390→                </div>
+   391→              </div>
+   392→            </CardContent>
+   393→          </Card>
+   394→        </motion.div>
+   395→
+   396→        {/* ─── Column 2-3: Settings ─── */}
+   397→        <motion.div variants={item} className="lg:col-span-2 space-y-6">
+   398→          {/* ─── Username Card ─── */}
+   399→          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   400→            <CardHeader className="pb-4">
+   401→              <CardTitle className="text-lg flex items-center gap-2">
+   402→                <User className="w-5 h-5 text-emerald-400" />
+   403→                Nombre del Bot
+   404→              </CardTitle>
+   405→              <CardDescription className="text-xs">
+   406→                Cambia el nombre de usuario de tu bot. Este cambio es global y afecta todos los servidores.
+   407→              </CardDescription>
+   408→            </CardHeader>
+   409→            <CardContent className="space-y-4">
+   410→              {/* Current username */}
+   411→              <div className="space-y-2">
+   412→                <Label className="text-xs font-medium text-muted-foreground">Nombre actual</Label>
+   413→                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 border border-border/50">
+   414→                  <Bot className="w-4 h-4 text-muted-foreground" />
+   415→                  <span className="text-sm font-medium">{bot?.username || '—'}</span>
+   416→                </div>
+   417→              </div>
+   418→
+   419→              {/* New username input */}
+   420→              <div className="space-y-2">
+   421→                <Label className="text-xs font-medium text-muted-foreground">Nuevo nombre</Label>
+   422→                <div className="flex gap-2">
+   423→                  <div className="flex-1 relative">
+   424→                    <Input
+   425→                      value={newUsername}
+   426→                      onChange={(e) => handleUsernameChange(e.target.value)}
+   427→                      placeholder="Introduce el nuevo nombre..."
+   428→                      maxLength={32}
+   429→                      className={`bg-background/50 pr-10 ${
+   430→                        usernameError
+   431→                          ? 'border-red-500/50 focus-visible:ring-red-500/30'
+   432→                          : usernameChanged
+   433→                          ? 'border-emerald-500/50 focus-visible:ring-emerald-500/30'
+   434→                          : ''
+   435→                      }`}
+   436→                    />
+   437→                    {usernameChanged && !usernameError && (
+   438→                      <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+   439→                    )}
+   440→                  </div>
+   441→                  <Button
+   442→                    onClick={handleSaveUsername}
+   443→                    disabled={savingUsername || !usernameChanged || !!usernameError}
+   444→                    className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white min-w-[100px]"
+   445→                  >
+   446→                    {savingUsername ? (
+   447→                      <Loader2 className="w-4 h-4 animate-spin" />
+   448→                    ) : (
+   449→                      <Save className="w-4 h-4" />
+   450→                    )}
+   451→                    Guardar
+   452→                  </Button>
+   453→                </div>
+   454→                {/* Validation feedback */}
+   455→                <div className="flex items-center justify-between">
+   456→                  <div className="flex-1">
+   457→                    {usernameError && (
+   458→                      <motion.p
+   459→                        initial={{ opacity: 0, y: -5 }}
+   460→                        animate={{ opacity: 1, y: 0 }}
+   461→                        className="text-xs text-red-400 flex items-center gap-1"
+   462→                      >
+   463→                        <AlertTriangle className="w-3 h-3" />
+   464→                        {usernameError}
+   465→                      </motion.p>
+   466→                    )}
+   467→                  </div>
+   468→                  <span className={`text-xs ${
+   469→                    (newUsername?.length || 0) > 28
+   470→                      ? 'text-amber-400'
+   471→                      : 'text-muted-foreground'
+   472→                  }`}>
+   473→                    {newUsername?.length || 0}/32
+   474→                  </span>
+   475→                </div>
+   476→              </div>
+   477→
+   478→              <Separator />
+   479→
+   480→              {/* Rate limit warning */}
+   481→              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+   482→                <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+   483→                <p className="text-xs text-amber-200/80 leading-relaxed">
+   484→                  Discord permite cambiar el nombre del bot hasta <strong>2 veces por hora</strong>. Los cambios pueden tardar unos minutos en propagarse.
+   485→                </p>
+   486→              </div>
+   487→            </CardContent>
+   488→          </Card>
+   489→
+   490→          {/* ─── Avatar Card ─── */}
+   491→          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   492→            <CardHeader className="pb-4">
+   493→              <CardTitle className="text-lg flex items-center gap-2">
+   494→                <Camera className="w-5 h-5 text-emerald-400" />
+   495→                Avatar del Bot
+   496→              </CardTitle>
+   497→              <CardDescription className="text-xs">
+   498→                Cambia la imagen de perfil de tu bot. Este cambio es global.
+   499→              </CardDescription>
+   500→            </CardHeader>
+   501→            <CardContent className="space-y-4">
+   502→              {/* Current avatar */}
+   503→              <div className="space-y-2">
+   504→                <Label className="text-xs font-medium text-muted-foreground">Avatar actual</Label>
+   505→                <div className="flex items-center gap-4">
+   506→                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-border/50 bg-muted/30">
+   507→                    {bot?.avatar ? (
+   508→                      <img
+   509→                        src={bot.avatar}
+   510→                        alt="Avatar actual del bot"
+   511→                        className="w-full h-full object-cover"
+   512→                      />
+   513→                    ) : (
+   514→                      <DefaultAvatar username={bot?.username || 'Bot'} />
+   515→                    )}
+   516→                  </div>
+   517→                  <div className="flex-1">
+   518→                    <p className="text-sm text-foreground">
+   519→                      {bot?.avatar ? 'Avatar personalizado' : 'Avatar por defecto de Discord'}
+   520→                    </p>
+   521→                    <p className="text-xs text-muted-foreground">
+   522→                      {bot?.avatar ? 'El bot tiene un avatar personalizado' : 'Se usa el avatar generado por Discord'}
+   523→                    </p>
+   524→                  </div>
+   525→                </div>
+   526→              </div>
+   527→
+   528→              <Separator />
+   529→
+   530→              {/* Upload area */}
+   531→              <div className="space-y-3">
+   532→                <Label className="text-xs font-medium text-muted-foreground">Nuevo avatar</Label>
+   533→
+   534→                {/* Drop zone / upload button */}
+   535→                <div
+   536→                  onClick={() => fileInputRef.current?.click()}
+   537→                  className="relative group cursor-pointer border-2 border-dashed border-border/60 rounded-xl p-6 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/5"
+   538→                >
+   539→                  <input
+   540→                    ref={fileInputRef}
+   541→                    type="file"
+   542→                    accept="image/png,image/jpeg,image/gif"
+   543→                    onChange={handleFileSelect}
+   544→                    className="hidden"
+   545→                  />
+   546→
+   547→                  {newAvatar ? (
+   548→                    /* Preview of selected image */
+   549→                    <div className="flex items-center gap-4">
+   550→                      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500/40 shrink-0">
+   551→                        <img
+   552→                          src={newAvatar}
+   553→                          alt="Nuevo avatar (vista previa)"
+   554→                          className="w-full h-full object-cover"
+   555→                        />
+   556→                      </div>
+   557→                      <div className="flex-1 min-w-0">
+   558→                        <p className="text-sm font-medium text-emerald-400 flex items-center gap-1.5">
+   559→                          <Check className="w-3.5 h-3.5" />
+   560→                          Imagen seleccionada
+   561→                        </p>
+   562→                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+   563→                          {avatarFile?.name}
+   564→                        </p>
+   565→                        <p className="text-xs text-muted-foreground">
+   566→                          {avatarFile ? `${(avatarFile.size / 1024).toFixed(1)} KB` : ''}
+   567→                        </p>
+   568→                      </div>
+   569→                      <Button
+   570→                        variant="ghost"
+   571→                        size="icon"
+   572→                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-red-400"
+   573→                        onClick={(e) => {
+   574→                          e.stopPropagation()
+   575→                          handleClearAvatarPreview()
+   576→                        }}
+   577→                      >
+   578→                        <X className="w-4 h-4" />
+   579→                      </Button>
+   580→                    </div>
+   581→                  ) : (
+   582→                    /* Empty state */
+   583→                    <div className="flex flex-col items-center gap-3 text-center">
+   584→                      <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors">
+   585→                        <Upload className="w-5 h-5 text-muted-foreground group-hover:text-emerald-400 transition-colors" />
+   586→                      </div>
+   587→                      <div>
+   588→                        <p className="text-sm font-medium group-hover:text-emerald-400 transition-colors">
+   589→                          Haz clic para subir una imagen
+   590→                        </p>
+   591→                        <p className="text-xs text-muted-foreground mt-0.5">
+   592→                          o arrastra y suelta aquí
+   593→                        </p>
+   594→                      </div>
+   595→                    </div>
+   596→                  )}
+   597→                </div>
+   598→
+   599→                {/* Avatar error */}
+   600→                {avatarError && (
+   601→                  <motion.p
+   602→                    initial={{ opacity: 0, y: -5 }}
+   603→                    animate={{ opacity: 1, y: 0 }}
+   604→                    className="text-xs text-red-400 flex items-center gap-1"
+   605→                  >
+   606→                    <AlertTriangle className="w-3 h-3" />
+   607→                    {avatarError}
+   608→                  </motion.p>
+   609→                )}
+   610→
+   611→                {/* Action buttons */}
+   612→                <div className="flex flex-wrap items-center gap-2">
+   613→                  <Button
+   614→                    onClick={handleSaveAvatar}
+   615→                    disabled={savingAvatar || !avatarChanged}
+   616→                    className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+   617→                  >
+   618→                    {savingAvatar ? (
+   619→                      <Loader2 className="w-4 h-4 animate-spin" />
+   620→                    ) : (
+   621→                      <Save className="w-4 h-4" />
+   622→                    )}
+   623→                    Guardar Avatar
+   624→                  </Button>
+   625→                  <Button
+   626→                    variant="outline"
+   627→                    size="sm"
+   628→                    onClick={handleResetAvatar}
+   629→                    disabled={savingAvatar || !bot?.avatar}
+   630→                    className="gap-2 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+   631→                  >
+   632→                    <Trash2 className="w-3.5 h-3.5" />
+   633→                    Restaurar por defecto
+   634→                  </Button>
+   635→                </div>
+   636→
+   637→                {/* Format info */}
+   638→                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 border border-border/30">
+   639→                  <ImagePlus className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+   640→                  <p className="text-xs text-muted-foreground leading-relaxed">
+   641→                    Formatos soportados: <strong>PNG, JPG, GIF</strong> (máximo 256KB). Se recomienda una imagen cuadrada de al menos 128×128 píxeles.
+   642→                  </p>
+   643→                </div>
+   644→              </div>
+   645→            </CardContent>
+   646→          </Card>
+   647→
+   648→          {/* ─── Info / Warning Card ─── */}
+   649→          <motion.div variants={item}>
+   650→            <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   651→              <CardHeader className="pb-3">
+   652→                <CardTitle className="text-lg flex items-center gap-2">
+   653→                  <Info className="w-5 h-5 text-emerald-400" />
+   654→                  Información Importante
+   655→                </CardTitle>
+   656→              </CardHeader>
+   657→              <CardContent className="space-y-3">
+   658→                <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+   659→                  <Globe className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+   660→                  <div>
+   661→                    <p className="text-sm font-medium text-blue-300">Cambio global</p>
+   662→                    <p className="text-xs text-muted-foreground mt-0.5">
+   663→                      Los cambios en el nombre y avatar del bot afectan a <strong>todos los servidores</strong> donde el bot está presente, no solo al servidor actual.
+   664→                    </p>
+   665→                  </div>
+   666→                </div>
+   667→
+   668→                <div className="flex items-start gap-3 p-3 rounded-lg bg-violet-500/5 border border-violet-500/20">
+   669→                  <Shield className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
+   670→                  <div>
+   671→                    <p className="text-sm font-medium text-violet-300">Permisos necesarios</p>
+   672→                    <p className="text-xs text-muted-foreground mt-0.5">
+   673→                      Solo el <strong>propietario del bot</strong> puede realizar estos cambios. Si no eres el propietario, las modificaciones serán rechazadas por la API de Discord.
+   674→                    </p>
+   675→                  </div>
+   676→                </div>
+   677→
+   678→                <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+   679→                  <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+   680→                  <div>
+   681→                    <p className="text-sm font-medium text-amber-300">Tiempo de propagación</p>
+   682→                    <p className="text-xs text-muted-foreground mt-0.5">
+   683→                      Los cambios pueden tardar <strong>unos minutos</strong> en propagarse completamente a través de los servidores de Discord. Si no ves los cambios inmediatamente, espera unos momentos.
+   684→                    </p>
+   685→                  </div>
+   686→                </div>
+   687→              </CardContent>
+   688→            </Card>
+   689→          </motion.div>
+   690→        </motion.div>
+   691→      </motion.div>
+   692→    </div>
+   693→  )
+   694→}
+   695→
