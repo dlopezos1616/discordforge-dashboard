@@ -66,10 +66,11 @@ export function BotStatusPanel() {
       try {
         // Dynamic import to avoid SSR issues
         import('socket.io-client').then(({ io }) => {
-          // Connect to the WS Bridge on the same origin (custom server)
-          const wsUrl = window.location.origin
+          // Connect to the WS Bridge
+          // In Vercel: use NEXT_PUBLIC_WS_URL env var pointing to external WS Bridge
+          // In dev: use window.location.origin (same server with Caddy proxy)
+          const wsUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin
           socket = io(wsUrl, {
-            path: '/ws-socket.io',
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionDelay: 2000,

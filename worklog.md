@@ -132,3 +132,28 @@ Stage Summary:
 - All 3 services communicate: Dashboard ↔ WS Bridge ↔ Bot ↔ Discord
 - Known issue: WS Bridge crashes periodically under Bun, keepalive scripts auto-restart
 - Prisma client integration working in bot for guild sync
+
+---
+Task ID: 9
+Agent: Main Orchestrator
+Task: Prepare project for Vercel deployment
+
+Work Log:
+- Analyzed full project structure for Vercel compatibility
+- Removed `output: "standalone"` from next.config.ts (Vercel has its own build system)
+- Updated package.json: build = "prisma generate && next build", added postinstall and db:migrate:deploy
+- Updated BotStatusPanel.tsx: WebSocket URL now configurable via NEXT_PUBLIC_WS_URL env var
+- Created build.sh: auto-detects PostgreSQL vs SQLite based on DATABASE_URL, swaps Prisma provider accordingly
+- Created vercel.json: build configuration pointing to build.sh
+- Created .vercelignore: excludes mini-services, examples, logs from Vercel build
+- Created .env.example: documents all required environment variables
+- Updated .gitignore: allows .env.example to be committed, still ignores .env and .env.local
+- Created DEPLOY_GUIDE.md: comprehensive 7-step deployment guide
+- Kept local dev working with SQLite (schema stays as "sqlite", build.sh switches to "postgresql" when DATABASE_URL points to Postgres)
+- Lint passes cleanly
+
+Stage Summary:
+- Project is Vercel-ready with auto-detection of database type
+- Architecture: Vercel (Next.js) + Railway/Render (WS Bridge + Bot) + Neon/Supabase (PostgreSQL)
+- Key files: build.sh, vercel.json, .vercelignore, .env.example, DEPLOY_GUIDE.md
+- Local dev unaffected - still uses SQLite
