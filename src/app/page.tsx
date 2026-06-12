@@ -7,12 +7,29 @@ import { ServerSelectPage } from '@/components/landing/ServerSelectPage'
 import { DashboardShell } from '@/components/dashboard/DashboardShell'
 
 export default function Home() {
-  const { view, setView, setUser, isAuthenticated } = useAppStore()
+  const { view, setView, setUser } = useAppStore()
 
   // Check for existing Discord session on mount
   useEffect(() => {
     const checkSession = async () => {
       try {
+        // Check URL params for auth callback first
+        const params = new URLSearchParams(window.location.search)
+        const authStatus = params.get('auth')
+
+        if (authStatus === 'error') {
+          // OAuth failed - show error on landing
+          console.error('Discord OAuth failed')
+          window.history.replaceState({}, '', '/')
+          return
+        }
+
+        if (authStatus === 'denied') {
+          window.history.replaceState({}, '', '/')
+          return
+        }
+
+        // Check for existing session
         const res = await fetch('/api/auth/session')
         const data = await res.json()
 
@@ -28,14 +45,10 @@ export default function Home() {
             email: data.user.email,
           })
 
-          // Check URL params for auth callback
-          const params = new URLSearchParams(window.location.search)
-          if (params.get('auth') === 'success') {
+          if (authStatus === 'success') {
             setView('server-select')
-            // Clean URL
             window.history.replaceState({}, '', '/')
           } else {
-            // Already authenticated, go to server select
             setView('server-select')
           }
         }
