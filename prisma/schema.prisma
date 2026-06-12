@@ -1,0 +1,455 @@
+// Discord Management Platform - Complete Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+model User {
+  id              String   @id @default(cuid())
+  discordId       String   @unique
+  username        String
+  discriminator   String   @default("0")
+  avatar          String?
+  email           String?
+  isAdmin         Boolean  @default(false)
+  accessToken     String?
+  refreshToken    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  serverMemberships ServerMember[]
+  moderationActions ModerationAction[] @relation("Moderator")
+  moderatedActions  ModerationAction[] @relation("Target")
+  pollVotes         PollVote[]
+  giveawayEntries   GiveawayEntry[]
+  whitelistApps     WhitelistApplication[]
+  tickets           Ticket[] @relation("TicketCreator")
+  ticketMessages    TicketMessage[]
+  logs             Log[] @relation("LogUser")
+
+  @@map("users")
+}
+
+model Server {
+  id              String   @id @default(cuid())
+  discordId       String   @unique
+  name            String
+  icon            String?
+  ownerId         String
+  memberCount     Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  config          ServerConfig?
+  members         ServerMember[]
+  ticketCategories TicketCategory[]
+  tickets         Ticket[]
+  welcomeConfig   WelcomeConfig?
+  embedPresets    EmbedPreset[]
+  reactionRoles   ReactionRole[]
+  verification    VerificationConfig?
+  autoModRules    AutoModRule[]
+  moderationActions ModerationAction[]
+  whitelistForms  WhitelistForm[]
+  polls           Poll[]
+  giveaways       Giveaway[]
+  logs            Log[]
+
+  @@map("servers")
+}
+
+model ServerMember {
+  id        String   @id @default(cuid())
+  userId    String
+  serverId  String
+  role      String   @default("member") // member, admin, owner
+  joinedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@map("server_members")
+}
+
+model ServerConfig {
+  id                    String   @id @default(cuid())
+  serverId              String   @unique
+  prefix                String   @default("!")
+  language              String   @default("es")
+  logChannelId          String?
+  modLogChannelId       String?
+  welcomeChannelId      String?
+  ticketLogChannelId    String?
+  autoModEnabled        Boolean  @default(true)
+  raidProtectionEnabled Boolean  @default(false)
+  maxTicketsPerUser     Int      @default(3)
+  ticketCategoryOpen    Boolean  @default(true)
+  darkModeDefault       Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  server                Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("server_configs")
+}
+
+// ============================================
+// TICKET SYSTEM
+// ============================================
+
+model TicketCategory {
+  id              String   @id @default(cuid())
+  serverId        String
+  name            String
+  emoji           String   @default("🎫")
+  color           String   @default("#5865F2")
+  description     String?
+  staffRoleId     String?
+  logChannelId    String?
+  customMessage   String?
+  position        Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  tickets         Ticket[]
+
+  @@map("ticket_categories")
+}
+
+model Ticket {
+  id              String   @id @default(cuid())
+  serverId        String
+  categoryId      String
+  channelId       String?
+  creatorId       String
+  subject         String?
+  status          String   @default("open") // open, closed, claimed, archived
+  claimedBy       String?
+  closedBy        String?
+  closedAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  server          Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  category        TicketCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  creator         User            @relation("TicketCreator", fields: [creatorId], references: [id])
+  messages        TicketMessage[]
+  transcript      Transcript?
+
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  content   String
+  type      String   @default("message") // message, system, embed
+  createdAt DateTime @default(now())
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_messages")
+}
+
+model Transcript {
+  id          String   @id @default(cuid())
+  ticketId    String   @unique
+  htmlContent String?
+  pdfUrl      String?
+  webUrl      String?
+  messageCount Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("transcripts")
+}
+
+// ============================================
+// WELCOME SYSTEM
+// ============================================
+
+model WelcomeConfig {
+  id                String   @id @default(cuid())
+  serverId          String   @unique
+  enabled           Boolean  @default(false)
+  channelId         String?
+  type              String   @default("embed") // image, gif, embed, simple
+  bannerUrl         String?
+  title             String?
+  description       String?
+  footer            String?
+  color             String   @default("#5865F2")
+  useAvatar         Boolean  @default(true)
+  autoRoleIds       String   @default("[]") // JSON array
+  variables         String   @default("{}") // JSON object
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  server            Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("welcome_configs")
+}
+
+// ============================================
+// EMBED BUILDER
+// ============================================
+
+model EmbedPreset {
+  id          String   @id @default(cuid())
+  serverId    String
+  name        String
+  title       String?
+  description String?
+  author      String?
+  authorIcon  String?
+  footer      String?
+  footerIcon  String?
+  thumbnail   String?
+  image       String?
+  color       String   @default("#5865F2")
+  fields      String   @default("[]") // JSON array
+  channelId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("embed_presets")
+}
+
+// ============================================
+// REACTION ROLES
+// ============================================
+
+model ReactionRole {
+  id          String   @id @default(cuid())
+  serverId    String
+  messageId   String?
+  channelId   String?
+  type        String   @default("reaction") // reaction, button, select
+  emoji       String?
+  label       String?
+  roleIds     String   @default("[]") // JSON array
+  mode        String   @default("single") // single, multiple, toggle
+  exclusive   Boolean  @default(false)
+  autoRemove  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("reaction_roles")
+}
+
+// ============================================
+// VERIFICATION SYSTEM
+// ============================================
+
+model VerificationConfig {
+  id              String   @id @default(cuid())
+  serverId        String   @unique
+  enabled         Boolean  @default(false)
+  type            String   @default("button") // button, reaction, captcha_math, captcha_visual
+  channelId       String?
+  roleId          String?
+  message         String   @default("Click to verify")
+  acceptRules     Boolean  @default(false)
+  autoRole        Boolean  @default(true)
+  captchaDifficulty String @default("easy") // easy, medium, hard
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("verification_configs")
+}
+
+// ============================================
+// MODERATION SYSTEM
+// ============================================
+
+model ModerationAction {
+  id          String   @id @default(cuid())
+  serverId    String
+  userId      String
+  moderatorId String
+  type        String   // ban, kick, timeout, warn, softban, unban
+  reason      String?
+  duration    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  moderator   User     @relation("Moderator", fields: [moderatorId], references: [id])
+  target      User     @relation("Target", fields: [userId], references: [id])
+
+  @@map("moderation_actions")
+}
+
+// ============================================
+// AUTO MOD SYSTEM
+// ============================================
+
+model AutoModRule {
+  id          String   @id @default(cuid())
+  serverId    String
+  name        String
+  type        String   // spam, flood, links, invites, words, mentions, raid
+  enabled     Boolean  @default(true)
+  threshold   Int      @default(3)
+  action      String   @default("warn") // warn, delete, mute, kick, ban
+  duration    String?
+  words       String   @default("[]") // JSON array for bad words
+  exemptions  String   @default("[]") // JSON array for exempt roles/channels
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("auto_mod_rules")
+}
+
+// ============================================
+// WHITELIST SYSTEM (FiveM)
+// ============================================
+
+model WhitelistForm {
+  id          String   @id @default(cuid())
+  serverId    String
+  name        String
+  description String?
+  fields      String   @default("[]") // JSON array of field definitions
+  isActive    Boolean  @default(true)
+  channelId   String?
+  roleId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  applications WhitelistApplication[]
+
+  @@map("whitelist_forms")
+}
+
+model WhitelistApplication {
+  id          String   @id @default(cuid())
+  formId      String
+  userId      String
+  status      String   @default("pending") // pending, accepted, rejected, reviewing
+  responses   String   @default("{}") // JSON object of field responses
+  reviewedBy  String?
+  comment     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  form        WhitelistForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("whitelist_applications")
+}
+
+// ============================================
+// POLLS SYSTEM
+// ============================================
+
+model Poll {
+  id          String   @id @default(cuid())
+  serverId    String
+  channelId   String?
+  question    String
+  options     String   @default("[]") // JSON array
+  type        String   @default("multiple") // yesno, multiple, anonymous, public
+  allowMultiple Boolean @default(false)
+  isActive    Boolean  @default(true)
+  endsAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  server      Server     @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  votes       PollVote[]
+
+  @@map("polls")
+}
+
+model PollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  userId    String
+  option    String
+  createdAt DateTime @default(now())
+
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId, option])
+  @@map("poll_votes")
+}
+
+// ============================================
+// GIVEAWAYS SYSTEM
+// ============================================
+
+model Giveaway {
+  id              String   @id @default(cuid())
+  serverId        String
+  channelId       String?
+  prize           String
+  description     String?
+  winnerCount     Int      @default(1)
+  requiredRoleIds String   @default("[]") // JSON array
+  isActive        Boolean  @default(true)
+  endsAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  server          Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  entries         GiveawayEntry[]
+
+  @@map("giveaways")
+}
+
+model GiveawayEntry {
+  id          String   @id @default(cuid())
+  giveawayId  String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  giveaway    Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([giveawayId, userId])
+  @@map("giveaway_entries")
+}
+
+// ============================================
+// LOGS SYSTEM
+// ============================================
+
+model Log {
+  id          String   @id @default(cuid())
+  serverId    String
+  userId      String?
+  type        String   // join, leave, ban, unban, role_add, role_remove, ticket_create, ticket_close, whitelist_apply, message_delete, message_edit, reaction_add
+  description String
+  metadata    String   @default("{}") // JSON object
+  createdAt   DateTime @default(now())
+
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user        User?    @relation("LogUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("logs")
+}
