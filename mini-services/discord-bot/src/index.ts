@@ -89,19 +89,26 @@ class DiscordForgeClient extends Client {
     console.log(`🔌 Conectando al dashboard en ${url}...`)
 
     this.dashboardSocket = io(url, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 50,
+      timeout: 10000,
     })
 
     this.dashboardSocket.on('connect', () => {
       console.log('✅ Conectado al dashboard via WebSocket')
+      // Identificarse como bot ante el WS Bridge
+      this.dashboardSocket?.emit('identify', 'bot')
       this.dashboardSocket?.emit('bot:status', this.getStatus())
     })
 
     this.dashboardSocket.on('disconnect', () => {
       console.log('⚠️ Desconectado del dashboard')
+    })
+
+    this.dashboardSocket.on('connect_error', (err: any) => {
+      console.error('❌ Error conectando al dashboard:', err.message)
     })
 
     // ============================================
@@ -356,7 +363,7 @@ class DiscordForgeClient extends Client {
       online: this.isReady(),
       guilds: this.guilds.cache.size,
       users: this.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0),
-      uptime: this.uptime ? Date.now() - this.uptime : 0,
+      uptime: this.uptime ?? 0,
       ping: this.ws.ping ?? 0,
       lastReady: this.botStatus.lastReady,
     }
@@ -390,7 +397,7 @@ const client = new DiscordForgeClient()
 // Configuración (leer desde variables de entorno o archivo)
 const config: BotConfig = {
   token: process.env.DISCORD_BOT_TOKEN || 'YOUR_BOT_TOKEN_HERE',
-  clientId: process.env.DISORD_CLIENT_ID || 'YOUR_CLIENT_ID_HERE',
+  clientId: process.env.DISCORD_CLIENT_ID || 'YOUR_CLIENT_ID_HERE',
   dashboardUrl: process.env.DASHBOARD_WS_URL || 'http://localhost:3003',
   dashboardPort: 3003,
   prismaDatabaseUrl: process.env.DATABASE_URL || 'file:../../db/custom.db',
@@ -405,19 +412,26 @@ client.on('ready', async () => {
   console.log(`\n🤖 DiscordForge Bot conectado como ${client.user?.tag}`)
 
   // Fetch guilds actively (needed if Guilds intent is not fully cached)
+  console.log(`📍 Cache inicial: ${client.guilds.cache.size} servidores`)
   try {
     const guilds = await client.guilds.fetch()
-    console.log(`📍 En ${guilds.size} servidores`)
+    console.log(`📍 En ${guilds.size} servidores (REST fetch)`)
 
     // Fetch full guild data for each
     for (const [id] of guilds) {
       try {
         const guild = await client.guilds.fetch(id)
         console.log(`👥 Servidor: ${guild.name} (${guild.memberCount || '?'} miembros)`)
-      } catch {}
+      } catch (fetchErr) {
+        console.error(`  ⚠️ Error fetching guild ${id}:`, fetchErr)
+      }
     }
   } catch (e) {
+    console.error('⚠️ Error fetching guilds via REST:', e)
     console.log(`📍 En ${client.guilds.cache.size} servidores (caché)`)
+    for (const [id, guild] of client.guilds.cache) {
+      console.log(`👥 Servidor (cache): ${guild.name} (${guild.memberCount || '?'} miembros)`)
+    }
   }
 
   client.botStatus.online = true
@@ -429,8 +443,10 @@ client.on('ready', async () => {
   // Conectar al dashboard
   client.connectToDashboard(config.dashboardUrl)
 
-  // Notificar al dashboard
-  client.emitToDashboard('bot:ready', client.getStatus())
+  // Notificar al dashboard (con delay para que la conexión WS se establezca)
+  setTimeout(() => {
+    client.emitToDashboard('bot:ready', client.getStatus())
+  }, 2000)
 
   // Sincronizar servidores con la base de datos usando REST API
   try {
@@ -450,7 +466,7 @@ client.on('ready', async () => {
       try {
         const { PrismaClient } = await import('@prisma/client')
         const prisma = new PrismaClient()
-        await db.server.upsert({
+        await prisma.server.upsert({
           where: { discordId: guild.id },
           update: { name: guild.name, icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null },
           create: {
@@ -475,11 +491,12 @@ client.on('ready', async () => {
     for (const [id, guild] of client.guilds.cache) {
       console.log(`  📌 Sincronizando servidor: ${guild.name} (${guild.memberCount} miembros)`)
       client.emitToDashboard('bot:guildSync', {
-      discordId: guild.id,
-      name: guild.name,
-      icon: guild.iconURL(),
-      memberCount: guild.memberCount,
-    })
+        discordId: guild.id,
+        name: guild.name,
+        icon: guild.iconURL(),
+        memberCount: guild.memberCount,
+      })
+    }
   }
 })
 

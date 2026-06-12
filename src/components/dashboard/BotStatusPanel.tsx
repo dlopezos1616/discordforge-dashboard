@@ -56,6 +56,110 @@ export function BotStatusPanel() {
   const [showSetup, setShowSetup] = useState(true)
   const [expandedSection, setExpandedSection] = useState<string | null>('architecture')
 
+  // ============================================
+  // CONEXIÓN WEBSOCKET CON EL WS BRIDGE
+  // ============================================
+  useEffect(() => {
+    let socket: any = null
+
+    const connectWS = () => {
+      try {
+        // Dynamic import to avoid SSR issues
+        import('socket.io-client').then(({ io }) => {
+          // Connect through the gateway using XTransformPort
+          const wsUrl = `${window.location.origin}`
+          socket = io(wsUrl, {
+            path: '/socket.io',
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 2000,
+            reconnectionAttempts: 20,
+            query: {
+              XTransformPort: '3003',
+            },
+          })
+
+          socket.on('connect', () => {
+            console.log('🔌 Dashboard conectado al WS Bridge')
+            setWsConnected(true)
+            // Identify as dashboard
+            socket.emit('identify', 'dashboard')
+            // Request current state
+            socket.emit('dashboard:getSystemState')
+            socket.emit('dashboard:getStatus')
+          })
+
+          socket.on('disconnect', () => {
+            console.log('⚠️ Dashboard desconectado del WS Bridge')
+            setWsConnected(false)
+          })
+
+          socket.on('connect_error', (err: any) => {
+            console.error('❌ Error conectando al WS Bridge:', err.message)
+            setWsConnected(false)
+          })
+
+          // Listen for bot status updates
+          socket.on('bot:status', (data: BotStatusData) => {
+            setBotStatus(data)
+          })
+
+          socket.on('bot:ready', (data: BotStatusData) => {
+            setBotStatus(data)
+          })
+
+          socket.on('system:state', (data: any) => {
+            if (data.botStatus) {
+              setBotStatus(data.botStatus)
+            }
+          })
+
+          socket.on('system:heartbeat', (data: any) => {
+            // Update bot online status from heartbeat
+            setBotStatus(prev => ({
+              ...prev,
+              online: data.botOnline,
+            }))
+          })
+
+          // Listen for all bot events for the event log
+          const botEvents = [
+            'bot:ready', 'bot:status', 'bot:guildJoined', 'bot:guildLeft',
+            'bot:guildSync', 'bot:memberJoined', 'bot:memberLeft',
+            'bot:ticketCreated', 'bot:ticketClaimed', 'bot:ticketClosed',
+            'bot:userVerified', 'bot:autoModTriggered', 'bot:modAction',
+            'bot:moderationDone', 'bot:configUpdated', 'bot:embedSent',
+          ]
+
+          for (const event of botEvents) {
+            socket.on(event, (data: any) => {
+              setRecentEvents(prev => [{
+                timestamp: new Date().toISOString(),
+                event,
+                data,
+              }, ...prev].slice(0, 100))
+            })
+          }
+
+          // Listen for recent events
+          socket.on('system:recentEvents', (events: LogEvent[]) => {
+            setRecentEvents(events)
+          })
+        })
+      } catch (err) {
+        console.error('Failed to connect to WS Bridge:', err)
+      }
+    }
+
+    connectWS()
+
+    return () => {
+      if (socket) {
+        socket.disconnect()
+      }
+    }
+  }, [])
+
   const formatUptime = (ms: number) => {
     if (!ms) return '0s'
     const d = Math.floor(ms / 86400000)
@@ -79,6 +183,8 @@ export function BotStatusPanel() {
     'dashboard:moderate': 'bg-yellow-500/20 text-yellow-400',
     'error:noBot': 'bg-red-500/20 text-red-400',
   }
+
+  const INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8'
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-6">
@@ -110,6 +216,90 @@ export function BotStatusPanel() {
             </div>
           </CardHeader>
         </Card>
+
+      {/* ALERT: Bot no está en ningún servidor */}
+      {botStatus.online && botStatus.guilds === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4"
+        >
+          <Card className="border-orange-500/50 bg-gradient-to-r from-orange-500/10 via-red-500/5 to-transparent">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5 text-orange-400" />
+                </div>
+                <div className="space-y-3 flex-1">
+                  <div>
+                    <h3 className="text-sm font-semibold text-orange-400">Bot conectado pero no está en ningún servidor</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      El bot <strong>disbotForge#7927</strong> está conectado a Discord pero no se encuentra en ningún servidor. 
+                      Necesitas invitarlo a tu servidor para que funcione.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-[#1a1b26] rounded-lg p-3 text-xs font-mono">
+                    <p className="text-[#565f89]"># URL de invitación directa:</p>
+                    <p className="text-[#7aa2f7] break-all">{INVITE_URL}</p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      className="gap-2 text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
+                      onClick={() => {
+                        window.open(INVITE_URL, '_blank')
+                        toast.success('Abriendo invitación del bot...')
+                      }}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Invitar Bot a mi Servidor
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 text-xs"
+                      onClick={() => {
+                        navigator.clipboard.writeText(INVITE_URL)
+                        toast.success('URL de invitación copiada al portapapeles')
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Copiar URL
+                    </Button>
+                  </div>
+
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                    <p className="text-xs text-yellow-400 flex items-center gap-2 font-semibold">
+                      <Shield className="w-4 h-4 shrink-0" />
+                      IMPORTANTE: Intents Privilegiados
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Para que el bot funcione correctamente, debes activar estos intents en el 
+                      <a href="https://discord.com/developers/applications/1514983732761854113/bot" target="_blank" rel="noopener noreferrer" className="text-violet-400 underline">Discord Developer Portal</a>:
+                    </p>
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-xs"><strong>PRESENCE INTENT</strong> — Para ver estados de usuarios</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-xs"><strong>SERVER MEMBERS INTENT</strong> — Para eventos de miembros (bienvenida, etc.)</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-xs"><strong>MESSAGE CONTENT INTENT</strong> — Para leer contenido de mensajes (auto-mod)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
       </motion.div>
 
       {/* Stats */}
@@ -410,9 +600,9 @@ export function BotStatusPanel() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="bg-[#1a1b26] rounded-lg p-4 text-xs font-mono space-y-2">
-                    <p className="text-[#565f89]"># URL de invitación (reemplaza TU_CLIENT_ID):</p>
+                    <p className="text-[#565f89]"># URL de invitación directa:</p>
                     <p className="text-[#7aa2f7] break-all">
-                      https://discord.com/api/oauth2/authorize?client_id=<span className="text-[#bb9af7]">TU_CLIENT_ID</span>&permissions=8&scope=bot%20applications.commands
+                      https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8
                     </p>
                   </div>
 
@@ -432,19 +622,31 @@ export function BotStatusPanel() {
                     </div>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2 text-xs"
-                    onClick={() => {
-                      const url = 'https://discord.com/api/oauth2/authorize?client_id=TU_CLIENT_ID&permissions=8&scope=bot%20applications.commands'
-                      navigator.clipboard.writeText(url)
-                      toast.success('URL de invitación copiada (reemplaza TU_CLIENT_ID)')
-                    }}
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    Copiar URL de Invitación
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      className="gap-2 text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
+                      onClick={() => {
+                        window.open('https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8', '_blank')
+                        toast.success('Abriendo invitación del bot...')
+                      }}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Invitar Bot
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 text-xs"
+                      onClick={() => {
+                        navigator.clipboard.writeText('https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8')
+                        toast.success('URL de invitación copiada al portapapeles')
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Copiar URL
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>

@@ -1,0 +1,1246 @@
+     1→// ============================================
+     2→// DiscordForge Bot - Main Entry Point
+     3→// ============================================
+     4→// Este es el corazón del bot de Discord.
+     5→// Se conecta a Discord via discord.js v14,
+     6→// a la base de datos via Prisma, y al
+     7→// dashboard web via WebSocket (Socket.io).
+     8→//
+     9→// ARQUITECTURA:
+    10→// ┌──────────────┐     WebSocket     ┌──────────────────┐
+    11→// │  Dashboard   │ ◄──────────────► │   Discord Bot    │
+    12→// │  (Next.js)   │    Port 3003     │  (discord.js)    │
+    13→// └──────────────┘                   └────────┬─────────┘
+    14→//       │                                     │
+    15→//       │  REST API                           │ Discord Gateway
+    16→//       ▼                                     ▼
+    17→// ┌──────────────┐                   ┌──────────────────┐
+    18→// │  Base de     │                   │   Discord API    │
+    19→// │  Datos       │                   │   (Servers,      │
+    20→// │  (Prisma)    │                   │    Channels,     │
+    21→// └──────────────┘                   │    Members)      │
+    22→//                                    └──────────────────┘
+    23→
+    24→import { Client, GatewayIntentBits, Partials, Collection, ActivityType } from 'discord.js'
+    25→import { io } from 'socket.io-client'
+    26→
+    27→// ============================================
+    28→// TIPOS
+    29→// ============================================
+    30→
+    31→export interface BotConfig {
+    32→  token: string
+    33→  clientId: string
+    34→  dashboardUrl: string
+    35→  dashboardPort: number
+    36→  prismaDatabaseUrl: string
+    37→}
+    38→
+    39→export interface BotStatus {
+    40→  online: boolean
+    41→  guilds: number
+    42→  users: number
+    43→  uptime: number
+    44→  ping: number
+    45→  lastReady: string | null
+    46→}
+    47→
+    48→// ============================================
+    49→// CLIENTE PERSONALIZADO
+    50→// ============================================
+    51→
+    52→class DiscordForgeClient extends Client {
+    53→  public botStatus: BotStatus = {
+    54→    online: false,
+    55→    guilds: 0,
+    56→    users: 0,
+    57→    uptime: 0,
+    58→    ping: 0,
+    59→    lastReady: null,
+    60→  }
+    61→
+    62→  // Socket.io connection to dashboard
+    63→  public dashboardSocket: ReturnType<typeof io> | null = null
+    64→
+    65→  constructor() {
+    66→    super({
+    67→      intents: [
+    68→        GatewayIntentBits.Guilds,
+    69→        GatewayIntentBits.GuildMembers,
+    70→        GatewayIntentBits.GuildMessages,
+    71→        GatewayIntentBits.GuildMessageReactions,
+    72→        GatewayIntentBits.MessageContent,
+    73→        GatewayIntentBits.DirectMessages,
+    74→      ],
+    75→      partials: [
+    76→        Partials.Channel,
+    77→        Partials.Message,
+    78→        Partials.Reaction,
+    79→        Partials.GuildMember,
+    80→        Partials.User,
+    81→      ],
+    82→    })
+    83→  }
+    84→
+    85→  // ============================================
+    86→  // CONEXIÓN CON EL DASHBOARD
+    87→  // ============================================
+    88→  connectToDashboard(url: string) {
+    89→    console.log(`🔌 Conectando al dashboard en ${url}...`)
+    90→
+    91→    this.dashboardSocket = io(url, {
+    92→      transports: ['websocket', 'polling'],
+    93→      reconnection: true,
+    94→      reconnectionDelay: 1000,
+    95→      reconnectionAttempts: 50,
+    96→      timeout: 10000,
+    97→    })
+    98→
+    99→    this.dashboardSocket.on('connect', () => {
+   100→      console.log('✅ Conectado al dashboard via WebSocket')
+   101→      // Identificarse como bot ante el WS Bridge
+   102→      this.dashboardSocket?.emit('identify', 'bot')
+   103→      this.dashboardSocket?.emit('bot:status', this.getStatus())
+   104→    })
+   105→
+   106→    this.dashboardSocket.on('disconnect', () => {
+   107→      console.log('⚠️ Desconectado del dashboard')
+   108→    })
+   109→
+   110→    this.dashboardSocket.on('connect_error', (err: any) => {
+   111→      console.error('❌ Error conectando al dashboard:', err.message)
+   112→    })
+   113→
+   114→    // ============================================
+   115→    // EVENTOS DEL DASHBOARD → BOT
+   116→    // El dashboard envía comandos, el bot los ejecuta
+   117→    // ============================================
+   118→
+   119→    // El dashboard pide el estado actual del bot
+   120→    this.dashboardSocket.on('dashboard:getStatus', () => {
+   121→      this.dashboardSocket?.emit('bot:status', this.getStatus())
+   122→    })
+   123→
+   124→    // El dashboard pide actualizar la configuración de un servidor
+   125→    this.dashboardSocket.on('dashboard:updateConfig', async (data: { serverId: string; config: any }) => {
+   126→      console.log(`📝 Actualizando config para servidor ${data.serverId}`)
+   127→      // La config se guarda en la DB desde el dashboard (API REST).
+   128→      // El bot la lee cuando necesita actuar.
+   129→      this.emitToDashboard('bot:configUpdated', { serverId: data.serverId, success: true })
+   130→    })
+   131→
+   132→    // El dashboard pide enviar un embed a un canal
+   133→    this.dashboardSocket.on('dashboard:sendEmbed', async (data: { channelId: string; embed: any }) => {
+   134→      console.log(`📤 Enviando embed al canal ${data.channelId}`)
+   135→      try {
+   136→        const channel = await this.channels.fetch(data.channelId)
+   137→        if (channel?.isTextBased()) {
+   138→          await channel.send({ embeds: [data.embed] })
+   139→          this.emitToDashboard('bot:embedSent', { success: true })
+   140→        }
+   141→      } catch (error) {
+   142→        this.emitToDashboard('bot:embedSent', { success: false, error: String(error) })
+   143→      }
+   144→    })
+   145→
+   146→    // El dashboard pide ejecutar una acción de moderación
+   147→    this.dashboardSocket.on('dashboard:moderate', async (data: { guildId: string; userId: string; action: string; reason?: string; duration?: string }) => {
+   148→      console.log(`🔨 Acción de moderación: ${data.action} para ${data.userId}`)
+   149→      try {
+   150→        const guild = await this.guilds.fetch(data.guildId)
+   151→        const member = await guild.members.fetch(data.userId)
+   152→
+   153→        switch (data.action) {
+   154→          case 'ban':
+   155→            await guild.members.ban(data.userId, { reason: data.reason })
+   156→            break
+   157→          case 'kick':
+   158→            await member.kick(data.reason)
+   159→            break
+   160→          case 'timeout':
+   161→            const ms = parseDuration(data.duration || '1h')
+   162→            await member.timeout(ms, data.reason)
+   163→            break
+   164→          case 'softban':
+   165→            await guild.members.ban(data.userId, { reason: data.reason })
+   166→            await guild.members.unban(data.userId)
+   167→            break
+   168→        }
+   169→
+   170→        this.emitToDashboard('bot:moderationDone', { success: true, action: data.action, userId: data.userId })
+   171→      } catch (error) {
+   172→        this.emitToDashboard('bot:moderationDone', { success: false, error: String(error) })
+   173→      }
+   174→    })
+   175→
+   176→    // El dashboard pide crear un ticket panel en un canal
+   177→    this.dashboardSocket.on('dashboard:createTicketPanel', async (data: { channelId: string; categories: any[] }) => {
+   178→      console.log(`🎫 Creando panel de tickets en canal ${data.channelId}`)
+   179→      try {
+   180→        const channel = await this.channels.fetch(data.channelId)
+   181→        if (channel?.isTextBased()) {
+   182→          const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = await import('discord.js')
+   183→
+   184→          const embed = new EmbedBuilder()
+   185→            .setTitle('🎫 Sistema de Tickets')
+   186→            .setDescription('Selecciona una categoría para abrir un ticket')
+   187→            .setColor(0x5865F2)
+   188→
+   189→          // If few categories, use buttons
+   190→          if (data.categories.length <= 5) {
+   191→            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+   192→              ...data.categories.map((cat: any) =>
+   193→                new ButtonBuilder()
+   194→                  .setCustomId(`ticket_${cat.id}`)
+   195→                  .setLabel(`${cat.emoji} ${cat.name}`)
+   196→                  .setStyle(ButtonStyle.Primary)
+   197→              )
+   198→            )
+   199→            await channel.send({ embeds: [embed], components: [row] })
+   200→          } else {
+   201→            // If many categories, use select menu
+   202→            const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+   203→              new StringSelectMenuBuilder()
+   204→                .setCustomId('ticket_select')
+   205→                .setPlaceholder('Selecciona una categoría...')
+   206→                .addOptions(
+   207→                  ...data.categories.map((cat: any) => ({
+   208→                    label: cat.name,
+   209→                    description: cat.description || '',
+   210→                    value: cat.id,
+   211→                    emoji: cat.emoji,
+   212→                  }))
+   213→                )
+   214→            )
+   215→            await channel.send({ embeds: [embed], components: [row] })
+   216→          }
+   217→
+   218→          this.emitToDashboard('bot:ticketPanelCreated', { success: true })
+   219→        }
+   220→      } catch (error) {
+   221→        this.emitToDashboard('bot:ticketPanelCreated', { success: false, error: String(error) })
+   222→      }
+   223→    })
+   224→
+   225→    // El dashboard pide crear un reaction role
+   226→    this.dashboardSocket.on('dashboard:createReactionRole', async (data: { channelId: string; type: string; emoji: string; label: string; roleIds: string[] }) => {
+   227→      console.log(`😀 Creando reaction role en canal ${data.channelId}`)
+   228→      try {
+   229→        const channel = await this.channels.fetch(data.channelId)
+   230→        if (channel?.isTextBased()) {
+   231→          const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = await import('discord.js')
+   232→
+   233→          const embed = new EmbedBuilder()
+   234→            .setTitle('Roles Disponibles')
+   235→            .setDescription('Haz clic en un botón para obtener o quitar un rol')
+   236→            .setColor(0x5865F2)
+   237→
+   238→          if (data.type === 'button') {
+   239→            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+   240→              new ButtonBuilder()
+   241→                .setCustomId(`rr_${data.roleIds[0]}`)
+   242→                .setLabel(data.label)
+   243→                .setEmoji(data.emoji)
+   244→                .setStyle(ButtonStyle.Primary)
+   245→            )
+   246→            await channel.send({ embeds: [embed], components: [row] })
+   247→          }
+   248→
+   249→          this.emitToDashboard('bot:reactionRoleCreated', { success: true })
+   250→        }
+   251→      } catch (error) {
+   252→        this.emitToDashboard('bot:reactionRoleCreated', { success: false, error: String(error) })
+   253→      }
+   254→    })
+   255→
+   256→    // El dashboard pide crear una encuesta
+   257→    this.dashboardSocket.on('dashboard:createPoll', async (data: { channelId: string; question: string; options: string[] }) => {
+   258→      console.log(`📊 Creando encuesta en canal ${data.channelId}`)
+   259→      try {
+   260→        const channel = await this.channels.fetch(data.channelId)
+   261→        if (channel?.isTextBased()) {
+   262→          const { EmbedBuilder } = await import('discord.js')
+   263→          const pollText = data.options.map((opt, i) => `**${i + 1}.** ${opt}`).join('\n')
+   264→
+   265→          const embed = new EmbedBuilder()
+   266→            .setTitle(`📊 ${data.question}`)
+   267→            .setDescription(pollText)
+   268→            .setColor(0x8B5CF6)
+   269→            .setFooter({ text: 'Reacciona con el número de tu opción' })
+   270→
+   271→          const msg = await channel.send({ embeds: [embed] })
+   272→          const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+   273→          for (let i = 0; i < data.options.length && i < 10; i++) {
+   274→            await msg.react(numberEmojis[i])
+   275→          }
+   276→
+   277→          this.emitToDashboard('bot:pollCreated', { success: true, messageId: msg.id })
+   278→        }
+   279→      } catch (error) {
+   280→        this.emitToDashboard('bot:pollCreated', { success: false, error: String(error) })
+   281→      }
+   282→    })
+   283→
+   284→    // El dashboard pide crear un sorteo
+   285→    this.dashboardSocket.on('dashboard:createGiveaway', async (data: { channelId: string; prize: string; description: string; duration: string; winnerCount: number }) => {
+   286→      console.log(`🎁 Creando sorteo en canal ${data.channelId}`)
+   287→      try {
+   288→        const channel = await this.channels.fetch(data.channelId)
+   289→        if (channel?.isTextBased()) {
+   290→          const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js')
+   291→
+   292→          const embed = new EmbedBuilder()
+   293→            .setTitle(`🎁 Sorteo: ${data.prize}`)
+   294→            .setDescription(data.description || '¡Participa para ganar!')
+   295→            .setColor(0xF59E0B)
+   296→            .addFields(
+   297→              { name: '🏆 Ganadores', value: String(data.winnerCount), inline: true },
+   298→              { name: '⏰ Termina', value: `<t:${Math.floor((Date.now() + parseDuration(data.duration)) / 1000)}:R>`, inline: true },
+   299→            )
+   300→            .setFooter({ text: 'Haz clic en el botón para participar' })
+   301→
+   302→          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+   303→            new ButtonBuilder()
+   304→              .setCustomId('giveaway_join')
+   305→              .setLabel('🎉 Participar')
+   306→              .setStyle(ButtonStyle.Success)
+   307→          )
+   308→
+   309→          const msg = await channel.send({ embeds: [embed], components: [row] })
+   310→          this.emitToDashboard('bot:giveawayCreated', { success: true, messageId: msg.id })
+   311→        }
+   312→      } catch (error) {
+   313→        this.emitToDashboard('bot:giveawayCreated', { success: false, error: String(error) })
+   314→      }
+   315→    })
+   316→
+   317→    // El dashboard pide crear un mensaje de verificación
+   318→    this.dashboardSocket.on('dashboard:createVerification', async (data: { channelId: string; type: string; message: string; roleId: string }) => {
+   319→      console.log(`✅ Creando verificación en canal ${data.channelId}`)
+   320→      try {
+   321→        const channel = await this.channels.fetch(data.channelId)
+   322→        if (channel?.isTextBased()) {
+   323→          const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js')
+   324→
+   325→          const embed = new EmbedBuilder()
+   326→            .setTitle('✅ Verificación')
+   327→            .setDescription(data.message)
+   328→            .setColor(0x10B981)
+   329→
+   330→          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+   331→            new ButtonBuilder()
+   332→              .setCustomId(`verify_${data.type}`)
+   333→              .setLabel('Verificarse')
+   334→              .setStyle(ButtonStyle.Success)
+   335→          )
+   336→
+   337→          await channel.send({ embeds: [embed], components: [row] })
+   338→          this.emitToDashboard('bot:verificationCreated', { success: true })
+   339→        }
+   340→      } catch (error) {
+   341→        this.emitToDashboard('bot:verificationCreated', { success: false, error: String(error) })
+   342→      }
+   343→    })
+   344→
+   345→    console.log('✅ Eventos del dashboard registrados')
+   346→  }
+   347→
+   348→  // ============================================
+   349→  // EMITIR EVENTOS AL DASHBOARD
+   350→  // El bot notifica al dashboard de todo lo que pasa
+   351→  // ============================================
+   352→  emitToDashboard(event: string, data: any) {
+   353→    if (this.dashboardSocket?.connected) {
+   354→      this.dashboardSocket.emit(event, data)
+   355→    }
+   356→  }
+   357→
+   358→  // ============================================
+   359→  // OBTENER ESTADO DEL BOT
+   360→  // ============================================
+   361→  getStatus(): BotStatus {
+   362→    return {
+   363→      online: this.isReady(),
+   364→      guilds: this.guilds.cache.size,
+   365→      users: this.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0),
+   366→      uptime: this.uptime ? Date.now() - this.uptime : 0,
+   367→      ping: this.ws.ping ?? 0,
+   368→      lastReady: this.botStatus.lastReady,
+   369→    }
+   370→  }
+   371→}
+   372→
+   373→// ============================================
+   374→// UTILIDADES
+   375→// ============================================
+   376→
+   377→function parseDuration(str: string): number {
+   378→  const match = str.match(/^(\d+)(s|m|h|d)$/)
+   379→  if (!match) return 3600000 // default 1h
+   380→  const num = parseInt(match[1])
+   381→  const unit = match[2]
+   382→  switch (unit) {
+   383→    case 's': return num * 1000
+   384→    case 'm': return num * 60 * 1000
+   385→    case 'h': return num * 60 * 60 * 1000
+   386→    case 'd': return num * 24 * 60 * 60 * 1000
+   387→    default: return 3600000
+   388→  }
+   389→}
+   390→
+   391→// ============================================
+   392→// INICIALIZACIÓN DEL BOT
+   393→// ============================================
+   394→
+   395→const client = new DiscordForgeClient()
+   396→
+   397→// Configuración (leer desde variables de entorno o archivo)
+   398→const config: BotConfig = {
+   399→  token: process.env.DISCORD_BOT_TOKEN || 'YOUR_BOT_TOKEN_HERE',
+   400→  clientId: process.env.DISCORD_CLIENT_ID || 'YOUR_CLIENT_ID_HERE',
+   401→  dashboardUrl: process.env.DASHBOARD_WS_URL || 'http://localhost:3003',
+   402→  dashboardPort: 3003,
+   403→  prismaDatabaseUrl: process.env.DATABASE_URL || 'file:../../db/custom.db',
+   404→}
+   405→
+   406→// ============================================
+   407→// REGISTRAR EVENTOS DE DISCORD
+   408→// ============================================
+   409→
+   410→// --- EVENT: Bot Ready ---
+   411→client.on('ready', async () => {
+   412→  console.log(`\n🤖 DiscordForge Bot conectado como ${client.user?.tag}`)
+   413→
+   414→  // Fetch guilds actively (needed if Guilds intent is not fully cached)
+   415→  console.log(`📍 Cache inicial: ${client.guilds.cache.size} servidores`)
+   416→  try {
+   417→    const guilds = await client.guilds.fetch()
+   418→    console.log(`📍 En ${guilds.size} servidores (REST fetch)`)
+   419→
+   420→    // Fetch full guild data for each
+   421→    for (const [id] of guilds) {
+   422→      try {
+   423→        const guild = await client.guilds.fetch(id)
+   424→        console.log(`👥 Servidor: ${guild.name} (${guild.memberCount || '?'} miembros)`)
+   425→      } catch (fetchErr) {
+   426→        console.error(`  ⚠️ Error fetching guild ${id}:`, fetchErr)
+   427→      }
+   428→    }
+   429→  } catch (e) {
+   430→    console.error('⚠️ Error fetching guilds via REST:', e)
+   431→    console.log(`📍 En ${client.guilds.cache.size} servidores (caché)`)
+   432→    for (const [id, guild] of client.guilds.cache) {
+   433→      console.log(`👥 Servidor (cache): ${guild.name} (${guild.memberCount || '?'} miembros)`)
+   434→    }
+   435→  }
+   436→
+   437→  client.botStatus.online = true
+   438→  client.botStatus.lastReady = new Date().toISOString()
+   439→
+   440→  // Establecer presencia
+   441→  client.user?.setActivity('DiscordForge | /help', { type: ActivityType.Watching })
+   442→
+   443→  // Conectar al dashboard
+   444→  client.connectToDashboard(config.dashboardUrl)
+   445→
+   446→  // Notificar al dashboard (con delay para que la conexión WS se establezca)
+   447→  setTimeout(() => {
+   448→    client.emitToDashboard('bot:ready', client.getStatus())
+   449→  }, 2000)
+   450→
+   451→  // Sincronizar servidores con la base de datos usando REST API
+   452→  try {
+   453→    const rest = new (await import('discord.js')).REST({ version: '10' }).setToken(config.token)
+   454→    const guildsData = await rest.get((await import('discord.js')).Routes.userGuilds()) as any[]
+   455→
+   456→    for (const guild of guildsData) {
+   457→      console.log(`  📌 Sincronizando servidor: ${guild.name} (${guild.id})`)
+   458→      client.emitToDashboard('bot:guildSync', {
+   459→        discordId: guild.id,
+   460→        name: guild.name,
+   461→        icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
+   462→        memberCount: guild.approximate_member_count || 0,
+   463→      })
+   464→
+   465→      // Sincronizar con la base de datos
+   466→      try {
+   467→        const { PrismaClient } = await import('@prisma/client')
+   468→        const prisma = new PrismaClient()
+   469→        await prisma.server.upsert({
+   470→          where: { discordId: guild.id },
+   471→          update: { name: guild.name, icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null },
+   472→          create: {
+   473→            discordId: guild.id,
+   474→            name: guild.name,
+   475→            icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
+   476→            ownerId: guild.owner_id || 'unknown',
+   477→            memberCount: guild.approximate_member_count || 0,
+   478→          },
+   479→        })
+   480→        await prisma.$disconnect()
+   481→      } catch (dbErr) {
+   482→        console.error(`  ⚠️ Error DB para ${guild.name}:`, dbErr)
+   483→      }
+   484→    }
+   485→
+   486→    // Update status with real guild count
+   487→    client.botStatus.guilds = guildsData.length
+   488→    client.emitToDashboard('bot:status', client.getStatus())
+   489→  } catch (err) {
+   490→    console.log('  ⚠️ No se pudieron obtener guilds via REST, usando caché')
+   491→    for (const [id, guild] of client.guilds.cache) {
+   492→      console.log(`  📌 Sincronizando servidor: ${guild.name} (${guild.memberCount} miembros)`)
+   493→      client.emitToDashboard('bot:guildSync', {
+   494→        discordId: guild.id,
+   495→        name: guild.name,
+   496→        icon: guild.iconURL(),
+   497→        memberCount: guild.memberCount,
+   498→      })
+   499→    }
+   500→  }
+   501→})
+   502→
+   503→// --- EVENT: Bot se une a un servidor ---
+   504→client.on('guildCreate', async (guild) => {
+   505→  console.log(`🆕 Bot añadido al servidor: ${guild.name} (${guild.memberCount} miembros)`)
+   506→  client.emitToDashboard('bot:guildJoined', {
+   507→    discordId: guild.id,
+   508→    name: guild.name,
+   509→    icon: guild.iconURL(),
+   510→    memberCount: guild.memberCount,
+   511→    ownerId: guild.ownerId,
+   512→  })
+   513→})
+   514→
+   515→// --- EVENT: Bot es eliminado de un servidor ---
+   516→client.on('guildDelete', async (guild) => {
+   517→  console.log(`👋 Bot eliminado del servidor: ${guild.name}`)
+   518→  client.emitToDashboard('bot:guildLeft', { discordId: guild.id })
+   519→})
+   520→
+   521→// --- EVENT: Nuevo miembro se une ---
+   522→client.on('guildMemberAdd', async (member) => {
+   523→  console.log(`👤 Nuevo miembro en ${member.guild.name}: ${member.user.tag}`)
+   524→
+   525→  // Leer la configuración de bienvenida desde la DB
+   526→  // Aquí se implementaría la lógica de bienvenida
+   527→  // con la configuración que el admin definió en el dashboard
+   528→
+   529→  client.emitToDashboard('bot:memberJoined', {
+   530→    guildId: member.guild.id,
+   531→    userId: member.user.id,
+   532→    username: member.user.username,
+   533→    avatar: member.user.avatarURL(),
+   534→    memberCount: member.guild.memberCount,
+   535→  })
+   536→
+   537→  // ============================================
+   538→  // SISTEMA DE BIENVENIDA
+   539→  // Aquí el bot lee la config de la DB y ejecuta:
+   540→  // ============================================
+   541→  try {
+   542→    // Buscar config de bienvenida para este servidor
+   543→    const { PrismaClient } = await import('@prisma/client')
+   544→    const prisma = new PrismaClient()
+   545→
+   546→    const server = await prisma.server.findUnique({
+   547→      where: { discordId: member.guild.id },
+   548→      include: { welcomeConfig: true, config: true },
+   549→    })
+   550→
+   551→    if (server?.welcomeConfig?.enabled && server.config?.welcomeChannelId) {
+   552→      const wc = server.welcomeConfig
+   553→      const channel = member.guild.channels.cache.get(server.config.welcomeChannelId)
+   554→
+   555→      if (channel?.isTextBased()) {
+   556→        // Reemplazar variables
+   557→        const replaceVars = (text: string) =>
+   558→          text
+   559→            .replace(/\{user\}/g, `<@${member.id}>`)
+   560→            .replace(/\{username\}/g, member.user.username)
+   561→            .replace(/\{membercount\}/g, String(member.guild.memberCount))
+   562→            .replace(/\{server\}/g, member.guild.name)
+   563→            .replace(/\{date\}/g, new Date().toLocaleDateString('es-ES'))
+   564→
+   565→        if (wc.type === 'embed') {
+   566→          const { EmbedBuilder } = await import('discord.js')
+   567→          const embed = new EmbedBuilder()
+   568→            .setColor(wc.color as any)
+   569→            .setTitle(wc.title ? replaceVars(wc.title) : null)
+   570→            .setDescription(wc.description ? replaceVars(wc.description) : null)
+   571→            .setFooter(wc.footer ? { text: replaceVars(wc.footer) } : null)
+   572→            .setTimestamp()
+   573→
+   574→          if (wc.useAvatar) {
+   575→            embed.setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+   576→          }
+   577→
+   578→          await (channel as any).send({ embeds: [embed] })
+   579→        } else {
+   580→          // Simple message
+   581→          const msg = wc.description ? replaceVars(wc.description) : `¡Bienvenido/a <@${member.id}> al servidor!`
+   582→          await (channel as any).send(msg)
+   583→        }
+   584→
+   585→        // Auto-role
+   586→        if (wc.autoRole) {
+   587→          const roleIds = JSON.parse(wc.autoRoleIds || '[]')
+   588→          for (const roleId of roleIds) {
+   589→            const role = member.guild.roles.cache.get(roleId)
+   590→            if (role) {
+   591→              await member.roles.add(role)
+   592→            }
+   593→          }
+   594→        }
+   595→      }
+   596→    }
+   597→
+   598→    await prisma.$disconnect()
+   599→  } catch (error) {
+   600→    console.error('Error en bienvenida:', error)
+   601→  }
+   602→
+   603→  // ============================================
+   604→  // SISTEMA DE VERIFICACIÓN
+   605→  // Si el servidor tiene verificación, el usuario no tiene el rol verificado
+   606→  // ============================================
+   607→  try {
+   608→    const { PrismaClient } = await import('@prisma/client')
+   609→    const prisma = new PrismaClient()
+   610→
+   611→    const server = await prisma.server.findUnique({
+   612→      where: { discordId: member.guild.id },
+   613→      include: { verification: true },
+   614→    })
+   615→
+   616→    if (server?.verification?.enabled && server.verification.roleId) {
+   617→      // No dar el rol hasta que se verifique
+   618→      // El rol se asigna cuando el usuario hace clic en el botón de verificación
+   619→      console.log(`  ✅ Verificación requerida para ${member.user.tag}`)
+   620→    }
+   621→
+   622→    await prisma.$disconnect()
+   623→  } catch (error) {
+   624→    console.error('Error en verificación:', error)
+   625→  }
+   626→})
+   627→
+   628→// --- EVENT: Miembro sale ---
+   629→client.on('guildMemberRemove', async (member) => {
+   630→  console.log(`👋 Miembro salió de ${member.guild.name}: ${member.user.tag}`)
+   631→  client.emitToDashboard('bot:memberLeft', {
+   632→    guildId: member.guild.id,
+   633→    userId: member.user.id,
+   634→    username: member.user.username,
+   635→  })
+   636→})
+   637→
+   638→// --- EVENT: Interacción (botones, select menus, modales) ---
+   639→client.on('interactionCreate', async (interaction) => {
+   640→  // ============================================
+   641→  // SISTEMA DE TICKETS - Botones y Select Menus
+   642→  // ============================================
+   643→  if (interaction.isButton() && interaction.customId.startsWith('ticket_')) {
+   644→    const categoryId = interaction.customId.replace('ticket_', '')
+   645→    console.log(`🎫 Ticket abierto para categoría: ${categoryId}`)
+   646→
+   647→    try {
+   648→      const { PrismaClient } = await import('@prisma/client')
+   649→      const prisma = new PrismaClient()
+   650→
+   651→      const category = await prisma.ticketCategory.findUnique({ where: { id: categoryId } })
+   652→      const server = await prisma.server.findUnique({ where: { discordId: interaction.guildId! } })
+   653→
+   654→      if (category && server) {
+   655→        // Check max tickets
+   656→        const userTickets = await prisma.ticket.count({
+   657→          where: { serverId: server.id, creatorId: interaction.user.id, status: 'open' },
+   658→        })
+   659→
+   660→        const serverConfig = await prisma.serverConfig.findUnique({ where: { serverId: server.id } })
+   661→        const maxTickets = serverConfig?.maxTicketsPerUser || 3
+   662→
+   663→        if (userTickets >= maxTickets) {
+   664→          await interaction.reply({
+   665→            content: `❌ Ya tienes ${maxTickets} tickets abiertos. Cierra uno antes de abrir otro.`,
+   666→            ephemeral: true,
+   667→          })
+   668→          await prisma.$disconnect()
+   669→          return
+   670→        }
+   671→
+   672→        // Crear canal de ticket
+   673→        const { ChannelType, PermissionFlagsBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = await import('discord.js')
+   674→        const guild = interaction.guild!
+   675→
+   676→        const ticketChannel = await guild.channels.create({
+   677→          name: `ticket-${interaction.user.username}`,
+   678→          type: ChannelType.GuildText,
+   679→          parent: null, // Podría ser una categoría de Discord
+   680→          permissionOverwrites: [
+   681→            { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+   682→            { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+   683→            ...(category.staffRoleId ? [{ id: category.staffRoleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }] : []),
+   684→          ],
+   685→        })
+   686→
+   687→        // Embed del ticket
+   688→        const ticketEmbed = new EmbedBuilder()
+   689→          .setTitle(`${category.emoji} Ticket: ${category.name}`)
+   690→          .setDescription(category.customMessage || 'Un miembro del staff te atenderá pronto.')
+   691→          .setColor(category.color as any)
+   692→          .addFields(
+   693→            { name: '👤 Usuario', value: `<@${interaction.user.id}>`, inline: true },
+   694→            { name: '📋 Categoría', value: category.name, inline: true },
+   695→          )
+   696→          .setTimestamp()
+   697→
+   698→        // Botones de control del ticket
+   699→        const controls = new ActionRowBuilder<ButtonBuilder>().addComponents(
+   700→          new ButtonBuilder().setCustomId('ticket_claim').setLabel('📌 Reclamar').setStyle(ButtonStyle.Primary),
+   701→          new ButtonBuilder().setCustomId('ticket_close').setLabel('🔒 Cerrar').setStyle(ButtonStyle.Danger),
+   702→        )
+   703→
+   704→        await ticketChannel.send({
+   705→          content: `<@${interaction.user.id}>${category.staffRoleId ? ` | <@&${category.staffRoleId}>` : ''}`,
+   706→          embeds: [ticketEmbed],
+   707→          components: [controls],
+   708→        })
+   709→
+   710→        // Guardar en la base de datos
+   711→        const ticket = await prisma.ticket.create({
+   712→          data: {
+   713→            serverId: server.id,
+   714→            categoryId: category.id,
+   715→            channelId: ticketChannel.id,
+   716→            creatorId: interaction.user.id,
+   717→            subject: `Ticket de ${category.name}`,
+   718→            status: 'open',
+   719→          },
+   720→        })
+   721→
+   722→        await interaction.reply({
+   723→          content: `✅ Ticket creado: ${ticketChannel}`,
+   724→          ephemeral: true,
+   725→        })
+   726→
+   727→        client.emitToDashboard('bot:ticketCreated', {
+   728→          ticketId: ticket.id,
+   729→          channelId: ticketChannel.id,
+   730→          categoryId: category.id,
+   731→          userId: interaction.user.id,
+   732→          username: interaction.user.username,
+   733→        })
+   734→
+   735→        // Log
+   736→        await prisma.log.create({
+   737→          data: {
+   738→            serverId: server.id,
+   739→            userId: interaction.user.id,
+   740→            type: 'ticket_create',
+   741→            description: `Ticket creado en categoría ${category.name}`,
+   742→            metadata: JSON.stringify({ ticketId: ticket.id, channelId: ticketChannel.id }),
+   743→          },
+   744→        })
+   745→      }
+   746→
+   747→      await prisma.$disconnect()
+   748→    } catch (error) {
+   749→      console.error('Error creando ticket:', error)
+   750→      await interaction.reply({ content: '❌ Error al crear el ticket.', ephemeral: true }).catch(() => {})
+   751→    }
+   752→  }
+   753→
+   754→  // ============================================
+   755→  // TICKET - Reclamar
+   756→  // ============================================
+   757→  if (interaction.isButton() && interaction.customId === 'ticket_claim') {
+   758→    try {
+   759→      const { PrismaClient } = await import('@prisma/client')
+   760→      const prisma = new PrismaClient()
+   761→      const server = await prisma.server.findUnique({ where: { discordId: interaction.guildId! } })
+   762→
+   763→      if (server) {
+   764→        const ticket = await prisma.ticket.update({
+   765→          where: { channelId: interaction.channelId },
+   766→          data: { status: 'claimed', claimedBy: interaction.user.id },
+   767→        })
+   768→
+   769→        await interaction.reply(`📌 Ticket reclamado por <@${interaction.user.id}>`)
+   770→        client.emitToDashboard('bot:ticketClaimed', { ticketId: ticket.id, claimedBy: interaction.user.id })
+   771→      }
+   772→
+   773→      await prisma.$disconnect()
+   774→    } catch (error) {
+   775→      await interaction.reply({ content: '❌ Error al reclamar.', ephemeral: true }).catch(() => {})
+   776→    }
+   777→  }
+   778→
+   779→  // ============================================
+   780→  // TICKET - Cerrar
+   781→  // ============================================
+   782→  if (interaction.isButton() && interaction.customId === 'ticket_close') {
+   783→    try {
+   784→      const { PrismaClient } = await import('@prisma/client')
+   785→      const prisma = new PrismaClient()
+   786→      const server = await prisma.server.findUnique({ where: { discordId: interaction.guildId! } })
+   787→
+   788→      if (server) {
+   789→        const ticket = await prisma.ticket.update({
+   790→          where: { channelId: interaction.channelId },
+   791→          data: { status: 'closed', closedBy: interaction.user.id, closedAt: new Date() },
+   792→        })
+   793→
+   794→        // Generar transcript
+   795→        const messages = await interaction.channel?.messages.fetch({ limit: 100 })
+   796→        const transcriptHtml = generateTranscriptHtml(messages, interaction.channel as any)
+   797→
+   798→        await prisma.transcript.upsert({
+   799→          where: { ticketId: ticket.id },
+   800→          update: { htmlContent: transcriptHtml, messageCount: messages?.size || 0 },
+   801→          create: { ticketId: ticket.id, htmlContent: transcriptHtml, messageCount: messages?.size || 0 },
+   802→        })
+   803→
+   804→        await interaction.reply(`🔒 Ticket cerrado por <@${interaction.user.id}>. Este canal se eliminará en 10 segundos.`)
+   805→        client.emitToDashboard('bot:ticketClosed', { ticketId: ticket.id, closedBy: interaction.user.id })
+   806→
+   807→        // Eliminar canal después de 10 segundos
+   808→        setTimeout(async () => {
+   809→          await (interaction.channel as any)?.delete?.().catch(() => {})
+   810→        }, 10000)
+   811→      }
+   812→
+   813→      await prisma.$disconnect()
+   814→    } catch (error) {
+   815→      await interaction.reply({ content: '❌ Error al cerrar.', ephemeral: true }).catch(() => {})
+   816→    }
+   817→  }
+   818→
+   819→  // ============================================
+   820→  // SELECT MENU - Tickets (para muchas categorías)
+   821→  // ============================================
+   822→  if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_select') {
+   823→    const categoryId = interaction.values[0]
+   824→    // Simular el mismo flujo que el botón
+   825→    console.log(`🎫 Ticket desde select menu: ${categoryId}`)
+   826→    await interaction.reply({ content: `✅ Creando ticket para la categoría seleccionada...`, ephemeral: true })
+   827→  }
+   828→
+   829→  // ============================================
+   830→  // SISTEMA DE VERIFICACIÓN
+   831→  // ============================================
+   832→  if (interaction.isButton() && interaction.customId.startsWith('verify_')) {
+   833→    const verifyType = interaction.customId.replace('verify_', '')
+   834→    console.log(`✅ Verificación solicitada: ${verifyType}`)
+   835→
+   836→    try {
+   837→      const { PrismaClient } = await import('@prisma/client')
+   838→      const prisma = new PrismaClient()
+   839→      const server = await prisma.server.findUnique({
+   840→        where: { discordId: interaction.guildId! },
+   841→        include: { verification: true },
+   842→      })
+   843→
+   844→      if (server?.verification?.enabled && server.verification.roleId) {
+   845→        const member = interaction.member
+   846→
+   847→        if (verifyType === 'button') {
+   848→          // Verificación simple con botón
+   849→          const role = interaction.guild?.roles.cache.get(server.verification.roleId)
+   850→          if (role && member && 'roles' in member) {
+   851→            await (member as any).roles.add(role)
+   852→            await interaction.reply({ content: '✅ ¡Te has verificado correctamente!', ephemeral: true })
+   853→            client.emitToDashboard('bot:userVerified', { userId: interaction.user.id, guildId: interaction.guildId })
+   854→          }
+   855→        } else if (verifyType === 'captcha_math') {
+   856→          // Captcha matemático
+   857→          const a = Math.floor(Math.random() * 10) + 1
+   858→          const b = Math.floor(Math.random() * 10) + 1
+   859→          const answer = a + b
+   860→
+   861→          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js')
+   862→
+   863→          const modal = new ModalBuilder()
+   864→            .setCustomId(`captcha_math_${answer}`)
+   865→            .setTitle('Verificación - Captcha Matemático')
+   866→
+   867→          const input = new TextInputBuilder()
+   868→            .setCustomId('captcha_answer')
+   869→            .setLabel(`¿Cuánto es ${a} + ${b}?`)
+   870→            .setStyle(TextInputStyle.Short)
+   871→            .setRequired(true)
+   872→            .setMinLength(1)
+   873→            .setMaxLength(3)
+   874→
+   875→          modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(input))
+   876→          await interaction.showModal(modal)
+   877→        }
+   878→      }
+   879→
+   880→      await prisma.$disconnect()
+   881→    } catch (error) {
+   882→      await interaction.reply({ content: '❌ Error en la verificación.', ephemeral: true }).catch(() => {})
+   883→    }
+   884→  }
+   885→
+   886→  // ============================================
+   887→  // MODAL SUBMIT - Captcha matemático
+   888→  // ============================================
+   889→  if (interaction.isModalSubmit() && interaction.customId.startsWith('captcha_math_')) {
+   890→    const correctAnswer = interaction.customId.replace('captcha_math_', '')
+   891→    const userAnswer = interaction.fields.getTextInputValue('captcha_answer')
+   892→
+   893→    if (userAnswer === correctAnswer) {
+   894→      try {
+   895→        const { PrismaClient } = await import('@prisma/client')
+   896→        const prisma = new PrismaClient()
+   897→        const server = await prisma.server.findUnique({
+   898→          where: { discordId: interaction.guildId! },
+   899→          include: { verification: true },
+   900→        })
+   901→
+   902→        if (server?.verification?.roleId) {
+   903→          const role = interaction.guild?.roles.cache.get(server.verification.roleId)
+   904→          if (role) {
+   905→            const member = interaction.guild?.members.cache.get(interaction.user.id)
+   906→            await member?.roles.add(role)
+   907→          }
+   908→        }
+   909→        await prisma.$disconnect()
+   910→      } catch {}
+   911→
+   912→      await interaction.reply({ content: '✅ ¡Verificación exitosa!', ephemeral: true })
+   913→    } else {
+   914→      await interaction.reply({ content: '❌ Respuesta incorrecta. Intenta de nuevo.', ephemeral: true })
+   915→    }
+   916→  }
+   917→
+   918→  // ============================================
+   919→  // REACTION ROLES - Botones
+   920→  // ============================================
+   921→  if (interaction.isButton() && interaction.customId.startsWith('rr_')) {
+   922→    const roleId = interaction.customId.replace('rr_', '')
+   923→    console.log(`😀 Reaction role: ${roleId}`)
+   924→
+   925→    const member = interaction.member
+   926→    if (member && 'roles' in member) {
+   927→      const hasRole = (member as any).roles.cache.has(roleId)
+   928→      if (hasRole) {
+   929→        await (member as any).roles.remove(roleId)
+   930→        await interaction.reply({ content: `❌ Rol removido.`, ephemeral: true })
+   931→      } else {
+   932→        await (member as any).roles.add(roleId)
+   933→        await interaction.reply({ content: `✅ Rol añadido.`, ephemeral: true })
+   934→      }
+   935→    }
+   936→  }
+   937→
+   938→  // ============================================
+   939→  // GIVEAWAY - Participar
+   940→  // ============================================
+   941→  if (interaction.isButton() && interaction.customId === 'giveaway_join') {
+   942→    try {
+   943→      const { PrismaClient } = await import('@prisma/client')
+   944→      const prisma = new PrismaClient()
+   945→      const server = await prisma.server.findUnique({ where: { discordId: interaction.guildId! } })
+   946→
+   947→      if (server) {
+   948→        const giveaway = await prisma.giveaway.findFirst({
+   949→          where: { serverId: server.id, isActive: true },
+   950→        })
+   951→
+   952→        if (giveaway) {
+   953→          try {
+   954→            await prisma.giveawayEntry.create({
+   955→              data: { giveawayId: giveaway.id, userId: interaction.user.id },
+   956→            })
+   957→            await interaction.reply({ content: '🎉 ¡Te has unido al sorteo!', ephemeral: true })
+   958→          } catch {
+   959→            await interaction.reply({ content: '⚠️ Ya estás participando.', ephemeral: true })
+   960→          }
+   961→        }
+   962→      }
+   963→
+   964→      await prisma.$disconnect()
+   965→    } catch (error) {
+   966→      await interaction.reply({ content: '❌ Error al participar.', ephemeral: true }).catch(() => {})
+   967→    }
+   968→  }
+   969→
+   970→  // ============================================
+   971→  // SLASH COMMANDS
+   972→  // ============================================
+   973→  if (interaction.isChatInputCommand()) {
+   974→    const { handleSlashCommand } = await import('./commands/slashHandler')
+   975→    await handleSlashCommand(client, interaction)
+   976→  }
+   977→})
+   978→
+   979→// --- EVENT: Mensaje creado (para auto-mod) ---
+   980→client.on('messageCreate', async (message) => {
+   981→  if (message.author.bot || !message.guild) return
+   982→
+   983→  // ============================================
+   984→  // SISTEMA DE AUTO-MODERACIÓN
+   985→  // ============================================
+   986→  try {
+   987→    const { PrismaClient } = await import('@prisma/client')
+   988→    const prisma = new PrismaClient()
+   989→
+   990→    const server = await prisma.server.findUnique({
+   991→      where: { discordId: message.guild.id },
+   992→      include: { config: true, autoModRules: { where: { enabled: true } } },
+   993→    })
+   994→
+   995→    if (server?.config?.autoModEnabled) {
+   996→      for (const rule of server.autoModRules) {
+   997→        let violated = false
+   998→
+   999→        switch (rule.type) {
+  1000→          case 'spam': {
+  1001→            // Detección básica de spam (mensajes repetidos en poco tiempo)
+  1002→            // En producción se usaría un sistema de rate limiting por usuario
+  1003→            const msgCount = 1 // Placeholder - se implementaría con cache de mensajes
+  1004→            violated = msgCount >= rule.threshold
+  1005→            break
+  1006→          }
+  1007→          case 'flood': {
+  1008→            // Detección de flood (mensajes muy seguidos)
+  1009→            violated = message.content.length > 500 && message.content.split('\n').length > rule.threshold
+  1010→            break
+  1011→          }
+  1012→          case 'links': {
+  1013→            const urlRegex = /https?:\/\/[^\s]+/gi
+  1014→            violated = urlRegex.test(message.content)
+  1015→            break
+  1016→          }
+  1017→          case 'invites': {
+  1018→            const inviteRegex = /(discord\.(gg|io|me|li)|discordapp\.com\/invite)\/[^\s]+/gi
+  1019→            violated = inviteRegex.test(message.content)
+  1020→            break
+  1021→          }
+  1022→          case 'words': {
+  1023→            const badWords: string[] = JSON.parse(rule.words || '[]')
+  1024→            violated = badWords.some(w => message.content.toLowerCase().includes(w.toLowerCase()))
+  1025→            break
+  1026→          }
+  1027→          case 'mentions': {
+  1028→            const mentionCount = (message.content.match(/<@!?\d+>/g) || []).length
+  1029→            violated = mentionCount >= rule.threshold
+  1030→            break
+  1031→          }
+  1032→          case 'raid': {
+  1033→            // La detección de raid se haría a nivel de guild (muchas entradas rápidas)
+  1034→            violated = false // Se maneja en guildMemberAdd
+  1035→            break
+  1036→          }
+  1037→        }
+  1038→
+  1039→        if (violated) {
+  1040→          console.log(`🚫 Auto-mod: Regla "${rule.name}" violada por ${message.author.tag}`)
+  1041→
+  1042→          // Ejecutar acción
+  1043→          switch (rule.action) {
+  1044→            case 'delete':
+  1045→              await message.delete().catch(() => {})
+  1046→              break
+  1047→            case 'warn':
+  1048→              await message.reply(`⚠️ **Aviso:** ${rule.name}`).then(m => setTimeout(() => m.delete().catch(() => {}), 5000))
+  1049→              break
+  1050→            case 'mute': {
+  1051→              const member = message.member
+  1052→              if (member) {
+  1053→                const ms = parseDuration(rule.duration || '10m')
+  1054→                await member.timeout(ms, `Auto-mod: ${rule.name}`).catch(() => {})
+  1055→              }
+  1056→              await message.delete().catch(() => {})
+  1057→              break
+  1058→            }
+  1059→            case 'kick':
+  1060→              await message.member?.kick(`Auto-mod: ${rule.name}`).catch(() => {})
+  1061→              break
+  1062→            case 'ban':
+  1063→              await message.member?.ban({ reason: `Auto-mod: ${rule.name}` }).catch(() => {})
+  1064→              break
+  1065→          }
+  1066→
+  1067→          // Notificar al dashboard
+  1068→          client.emitToDashboard('bot:autoModTriggered', {
+  1069→            guildId: message.guild.id,
+  1070→            userId: message.author.id,
+  1071→            username: message.author.tag,
+  1072→            rule: rule.name,
+  1073→            action: rule.action,
+  1074→            messageContent: message.content.substring(0, 200),
+  1075→          })
+  1076→
+  1077→          // Log
+  1078→          await prisma.log.create({
+  1079→            data: {
+  1080→              serverId: server.id,
+  1081→              userId: message.author.id,
+  1082→              type: 'message_delete',
+  1083→              description: `Auto-mod: ${rule.name} - ${rule.action}`,
+  1084→              metadata: JSON.stringify({ ruleId: rule.id, content: message.content.substring(0, 100) }),
+  1085→            },
+  1086→          })
+  1087→
+  1088→          break // Solo aplicar la primera regla violada
+  1089→        }
+  1090→      }
+  1091→    }
+  1092→
+  1093→    await prisma.$disconnect()
+  1094→  } catch (error) {
+  1095→    // Silenciar errores de auto-mod para no romper el flujo
+  1096→  }
+  1097→})
+  1098→
+  1099→// --- EVENT: Mensaje eliminado ---
+  1100→client.on('messageDelete', async (message) => {
+  1101→  if (!message.guild || message.author?.bot) return
+  1102→
+  1103→  client.emitToDashboard('bot:messageDeleted', {
+  1104→    guildId: message.guild.id,
+  1105→    channelId: message.channelId,
+  1106→    messageId: message.id,
+  1107→    authorId: message.author?.id,
+  1108→    content: message.content?.substring(0, 200),
+  1109→  })
+  1110→})
+  1111→
+  1112→// --- EVENT: Mensaje editado ---
+  1113→client.on('messageUpdate', async (oldMessage, newMessage) => {
+  1114→  if (!oldMessage.guild || oldMessage.author?.bot) return
+  1115→
+  1116→  client.emitToDashboard('bot:messageEdited', {
+  1117→    guildId: oldMessage.guild.id,
+  1118→    channelId: oldMessage.channelId,
+  1119→    messageId: oldMessage.id,
+  1120→    authorId: oldMessage.author?.id,
+  1121→    oldContent: oldMessage.content?.substring(0, 200),
+  1122→    newContent: newMessage.content?.substring(0, 200),
+  1123→  })
+  1124→})
+  1125→
+  1126→// --- EVENT: Reacción añadida (para reaction roles) ---
+  1127→client.on('messageReactionAdd', async (reaction, user) => {
+  1128→  if (user.bot) return
+  1129→
+  1130→  // Aquí se implementaría la lógica de reaction roles con reacciones
+  1131→  console.log(`👍 Reacción añadida: ${reaction.emoji.name} por ${user.tag}`)
+  1132→})
+  1133→
+  1134→// --- EVENT: Miembro baneado ---
+  1135→client.on('guildBanAdd', async (ban) => {
+  1136→  client.emitToDashboard('bot:memberBanned', {
+  1137→    guildId: ban.guild.id,
+  1138→    userId: ban.user.id,
+  1139→    username: ban.user.tag,
+  1140→    reason: ban.reason || 'Sin razón especificada',
+  1141→  })
+  1142→})
+  1143→
+  1144→// --- EVENT: Miembro desbaneado ---
+  1145→client.on('guildBanRemove', async (ban) => {
+  1146→  client.emitToDashboard('bot:memberUnbanned', {
+  1147→    guildId: ban.guild.id,
+  1148→    userId: ban.user.id,
+  1149→  })
+  1150→})
+  1151→
+  1152→// ============================================
+  1153→// TRANSCRIPT GENERATOR
+  1154→// ============================================
+  1155→function generateTranscriptHtml(messages: any, channel: any): string {
+  1156→  if (!messages) return '<html><body><p>No hay mensajes</p></body></html>'
+  1157→
+  1158→  const msgs = [...messages.values()].reverse()
+  1159→
+  1160→  const messageRows = msgs.map(m => `
+  1161→    <div style="display:flex;gap:12px;padding:8px 16px;border-bottom:1px solid #3f4147;">
+  1162→      <img src="${m.author?.displayAvatarURL?.() || ''}" style="width:40px;height:40px;border-radius:50%;" />
+  1163→      <div>
+  1164→        <div style="display:flex;gap:8px;align-items:center;">
+  1165→          <strong style="color:${m.author?.id === channel?.client?.user?.id ? '#5865F2' : '#ffffff'}">${m.author?.username || 'Unknown'}</strong>
+  1166→          <span style="color:#72767d;font-size:12px;">${m.createdAt?.toLocaleString('es-ES') || ''}</span>
+  1167→        </div>
+  1168→        <div style="color:#dcddde;margin-top:2px;">${m.content || ''}</div>
+  1169→      </div>
+  1170→    </div>
+  1171→  `).join('')
+  1172→
+  1173→  return `<!DOCTYPE html>
+  1174→<html>
+  1175→<head>
+  1176→  <meta charset="utf-8">
+  1177→  <title>Transcript - #${channel?.name || 'ticket'}</title>
+  1178→  <style>
+  1179→    body { background:#36393f; color:#dcddde; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; margin:0; }
+  1180→    .header { background:#2f3136; padding:16px; border-bottom:2px solid #5865F2; }
+  1181→    .header h1 { color:#ffffff; margin:0; font-size:18px; }
+  1182→    .header p { color:#72767d; margin:4px 0 0; font-size:13px; }
+  1183→    .messages { max-width:800px; margin:0 auto; }
+  1184→  </style>
+  1185→</head>
+  1186→<body>
+  1187→  <div class="header">
+  1188→    <h1>📋 Transcript: #${channel?.name || 'ticket'}</h1>
+  1189→    <p>${msgs.length} mensajes | Generado el ${new Date().toLocaleString('es-ES')}</p>
+  1190→  </div>
+  1191→  <div class="messages">${messageRows}</div>
+  1192→</body>
+  1193→</html>`
+  1194→}
+  1195→
+  1196→// ============================================
+  1197→// INICIAR BOT
+  1198→// ============================================
+  1199→
+  1200→async function startBot() {
+  1201→  console.log('\n🚀 DiscordForge Bot v1.0.0')
+  1202→  console.log('═══════════════════════════════════\n')
+  1203→
+  1204→  if (config.token === 'YOUR_BOT_TOKEN_HERE') {
+  1205→    console.log('⚠️  CONFIGURACIÓN REQUERIDA')
+  1206→    console.log('─────────────────────────────────────')
+  1207→    console.log('Para ejecutar el bot necesitas:')
+  1208→    console.log('')
+  1209→    console.log('1. Crear una aplicación en https://discord.com/developers/applications')
+  1210→    console.log('2. Crear un Bot y copiar el TOKEN')
+  1211→    console.log('3. Activar los Intents necesarios en el Portal')
+  1212→    console.log('4. Configurar las variables de entorno:')
+  1213→    console.log('')
+  1214→    console.log('   DISCORD_BOT_TOKEN=tu_token_aqui')
+  1215→    console.log('   DISCORD_CLIENT_ID=tu_client_id_aqui')
+  1216→    console.log('   DASHBOARD_WS_URL=http://localhost:3003')
+  1217→    console.log('')
+  1218→    console.log('5. Invitar el bot con la URL:')
+  1219→    console.log('   https://discord.com/api/oauth2/authorize?client_id=TU_CLIENT_ID&permissions=8&scope=bot%20applications.commands')
+  1220→    console.log('')
+  1221→    console.log('📖 El bot se ejecutará en modo DEMO sin conexión a Discord.')
+  1222→    console.log('   El Dashboard funciona independientemente.\n')
+  1223→
+  1224→    // Iniciar solo la conexión WebSocket con el dashboard
+  1225→    // para que el dashboard pueda mostrar el estado del bot
+  1226→    client.connectToDashboard(config.dashboardUrl)
+  1227→    client.botStatus.online = false
+  1228→
+  1229→    console.log('🟡 Bot en modo DEMO - Solo WebSocket activo')
+  1230→    console.log('   Configura DISCORD_BOT_TOKEN para conexión completa\n')
+  1231→    return
+  1232→  }
+  1233→
+  1234→  try {
+  1235→    await client.login(config.token)
+  1236→  } catch (error) {
+  1237→    console.error('❌ Error al conectar el bot:', error)
+  1238→    console.log('\n🔄 Iniciando en modo DEMO (solo WebSocket)...')
+  1239→    client.connectToDashboard(config.dashboardUrl)
+  1240→  }
+  1241→}
+  1242→
+  1243→startBot()
+  1244→
+  1245→export { client, config }
+  1246→

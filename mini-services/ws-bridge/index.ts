@@ -190,7 +190,7 @@ io.on('connection', (socket) => {
 
       // Retransmitir a todos los dashboards
       socket.to('dashboards').emit(event, data)
-      console.log(`📡 ${event}:`, JSON.stringify(data).substring(0, 100))
+      console.log(`📡 ${event}:`, JSON.stringify(data ?? {}).substring(0, 100))
     })
   }
 
@@ -218,7 +218,7 @@ io.on('connection', (socket) => {
       // Retransmitir al bot
       if (botSocket) {
         botSocket.emit(event, data)
-        console.log(`📤 ${event}:`, JSON.stringify(data).substring(0, 100))
+        console.log(`📤 ${event}:`, JSON.stringify(data ?? {}).substring(0, 100))
       } else {
         // Si no hay bot conectado, responder con error
         socket.emit('error:noBot', { message: 'Bot no conectado', event })

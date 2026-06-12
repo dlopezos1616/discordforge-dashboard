@@ -76,3 +76,32 @@ Stage Summary:
 - Bot Status panel fully integrated into dashboard
 - Setup guide explains the complete process from Discord Developer Portal to running the bot
 - All 15 sections now visible in sidebar navigation
+
+---
+Task ID: 7
+Agent: Main Orchestrator
+Task: Fix bot connectivity issues and add real-time WebSocket status to dashboard
+
+Work Log:
+- Fixed syntax error in bot index.ts (missing closing brace in catch block)
+- Fixed typo in env variable: DISORD_CLIENT_ID → DISCORD_CLIENT_ID
+- Fixed db reference → prisma reference in bot guild sync
+- Added 'identify' event emission when bot connects to WS Bridge
+- Added polling transport fallback to WS connection (was websocket-only)
+- Added connect_error logging to bot's socket.io client
+- Fixed uptime calculation: was `Date.now() - this.uptime` → changed to `this.uptime ?? 0`
+- Fixed WS Bridge crash: JSON.stringify(data ?? {}) for undefined data
+- Added socket.io-client dependency to main Next.js project
+- Added full WebSocket useEffect hook to BotStatusPanel.tsx for real-time status
+- Added prominent orange alert when bot is online but has 0 guilds
+- Alert includes: invite URL, copy button, direct invite button, privileged intents guide
+- Updated invite URLs throughout to use actual client_id (1514983732761854113)
+- Created start-services.sh script for reliable service startup
+- All 3 services now running: Dashboard (3000), WS Bridge (3003), Bot (discord.js)
+
+Stage Summary:
+- Bot connects to Discord as disbotForge#7927 but shows 0 guilds (not in any server)
+- User needs to re-invite bot to their server using the provided URL
+- Dashboard now shows real-time bot status via WebSocket
+- Orange alert visible when bot is online but not in any server
+- All services communicate: Dashboard ↔ WS Bridge ↔ Bot ↔ Discord
