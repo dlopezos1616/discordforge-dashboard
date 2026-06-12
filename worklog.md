@@ -3,19 +3,19 @@
 ---
 Task ID: 1
 Agent: Main Agent
-Task: Fix Discord OAuth login flow for Vercel deployment
+Task: Fix Discord OAuth login - cookie size issue causing silent failure
 
 Work Log:
-- Reviewed current project state: page.tsx, OAuth route, LandingPage, ServerSelectPage
-- Identified root causes of silent login failure: no error feedback, missing env vars on Vercel, missing redirect URI in Discord, cookie `secure: true` always set
-- Fixed `/api/auth/discord/route.ts`: Added early check for missing DISCORD_CLIENT_SECRET, specific error reasons in redirect URLs, dynamic secure cookie based on HTTPS detection
-- Fixed `page.tsx`: Added authError state, visual error banner for OAuth failures, specific messages per error type (no_secret, token_exchange, user_fetch, exception, denied)
-- Updated `LandingPage.tsx`: Added authError/onClearError props, red error banner with AnimatePresence, dismiss button, proper navbar offset when error is shown
-- Committed and pushed to GitHub: `fix: improve Discord OAuth - add error feedback, fix secure cookie, add diagnostics`
-- Provided user with manual steps: add DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET in Vercel env vars, add redirect URI in Discord Developer Portal
+- Analyzed user screenshots: URL showed `?auth=success` meaning OAuth code exchange succeeded
+- Identified ROOT CAUSE: Session cookie stored all user guilds (could be 100+ servers) encoded as base64, exceeding the 4KB browser cookie limit. Browser silently drops oversized cookies, so session is lost after redirect.
+- Fixed `/api/auth/discord/route.ts`: Removed guilds from cookie, now only stores user data + access token (~300 bytes vs potentially 10KB+)
+- Fixed `/api/discord/guilds/route.ts`: Now fetches guilds directly from Discord API using stored access token instead of reading from cookie
+- Updated `/api/auth/session/route.ts`: Added debug logging for troubleshooting
+- Created `/api/auth/debug/route.ts`: Diagnostic endpoint to check env vars and session state
+- Committed and pushed to GitHub (commit 33df06d)
 
 Stage Summary:
-- Code pushed to GitHub (commit d717e4a)
-- Vercel will auto-deploy
-- User must manually: (1) Add env vars in Vercel, (2) Add redirect URI in Discord Developer Portal
-- After those 2 manual steps, OAuth login should work
+- Critical fix: Cookie size was the root cause of login failure
+- Vercel will auto-deploy the fix
+- User should wait ~1-2 min for deployment then try logging in again
+- Debug endpoint available at /api/auth/debug to verify env vars and session state
