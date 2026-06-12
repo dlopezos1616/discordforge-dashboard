@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     }
 
     const tokenData = await tokenResponse.json()
-    const { access_token, token_type } = tokenData
+    const { access_token, token_type, refresh_token } = tokenData
 
     // Fetch user info
     const userResponse = await fetch('https://discord.com/api/v10/users/@me', {
@@ -75,17 +75,8 @@ export async function GET(request: NextRequest) {
 
     const discordUser = await userResponse.json()
 
-    // Fetch user's guilds
-    const guildsResponse = await fetch('https://discord.com/api/v10/users/@me/guilds', {
-      headers: { Authorization: `${token_type} ${access_token}` },
-    })
-
-    let guilds: any[] = []
-    if (guildsResponse.ok) {
-      guilds = await guildsResponse.json()
-    }
-
-    // Create session cookie with user data + guilds
+    // IMPORTANT: Only store minimal data in the cookie to avoid exceeding
+    // the 4KB browser cookie limit. Guilds are fetched on demand via /api/discord/guilds
     const sessionData = {
       user: {
         id: discordUser.id,
@@ -96,17 +87,18 @@ export async function GET(request: NextRequest) {
       },
       accessToken: access_token,
       tokenType: token_type,
-      guilds: guilds.map((g: any) => ({
-        id: g.id,
-        name: g.name,
-        icon: g.icon,
-        owner: g.owner,
-        permissions: g.permissions,
-      })),
+      refreshToken: refresh_token || null,
     }
 
     // Encode session data as base64 for cookie
     const encoded = Buffer.from(JSON.stringify(sessionData)).toString('base64')
+
+    // Log cookie size for debugging
+    console.log(`Session cookie size: ${encoded.length} bytes (limit: 4093)`)
+
+    if (encoded.length > 4000) {
+      console.error('WARNING: Session cookie may exceed browser limit!')
+    }
 
     const isSecure = origin.startsWith('https')
 
