@@ -193,7 +193,7 @@ export function ModerationPanel() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Moderación
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -204,7 +204,7 @@ export function ModerationPanel() {
           onClick={handleExport}
           variant="outline"
           size="sm"
-          className="gap-2 border-violet-500/30 hover:bg-violet-500/10"
+          className="gap-2 border-[#FF3A2F]/30 hover:bg-[#FF3A2F]/10"
         >
           <Download className="w-4 h-4" />
           Exportar CSV
@@ -244,7 +244,7 @@ export function ModerationPanel() {
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Gavel className="w-5 h-5 text-violet-400" />
+              <Gavel className="w-5 h-5 text-[#FF3A2F]" />
               Ejecutar Acción
             </CardTitle>
           </CardHeader>
@@ -298,7 +298,7 @@ export function ModerationPanel() {
                 <Button
                   onClick={handleExecute}
                   disabled={submitting || !formUser}
-                  className="w-full bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white gap-2"
+                  className="w-full bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white gap-2"
                 >
                   {submitting ? (
                     <motion.div
@@ -346,7 +346,7 @@ export function ModerationPanel() {
           <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Shield className="w-5 h-5 text-violet-400" />
+                <Shield className="w-5 h-5 text-[#FF3A2F]" />
                 Historial de Acciones
               </CardTitle>
               <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -388,7 +388,7 @@ export function ModerationPanel() {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                  className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+                  className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
                 />
               </div>
             ) : filteredActions.length === 0 ? (

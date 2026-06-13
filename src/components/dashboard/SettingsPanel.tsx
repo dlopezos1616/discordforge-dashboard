@@ -157,7 +157,7 @@ export function SettingsPanel() {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-          className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+          className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
         />
       </div>
     )
@@ -172,7 +172,7 @@ export function SettingsPanel() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Configuración
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -182,7 +182,7 @@ export function SettingsPanel() {
         <Button
           onClick={handleSave}
           disabled={saving || !hasChanges}
-          className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+          className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
         >
           {saving ? (
             <motion.div
@@ -217,7 +217,7 @@ export function SettingsPanel() {
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Settings className="w-5 h-5 text-violet-400" />
+              <Settings className="w-5 h-5 text-[#FF3A2F]" />
               General
             </CardTitle>
           </CardHeader>
@@ -269,7 +269,7 @@ export function SettingsPanel() {
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Hash className="w-5 h-5 text-violet-400" />
+              <Hash className="w-5 h-5 text-[#FF3A2F]" />
               Canales
             </CardTitle>
           </CardHeader>
@@ -333,7 +333,7 @@ export function SettingsPanel() {
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Shield className="w-5 h-5 text-violet-400" />
+              <Shield className="w-5 h-5 text-[#FF3A2F]" />
               Ajustes de Seguridad
             </CardTitle>
           </CardHeader>

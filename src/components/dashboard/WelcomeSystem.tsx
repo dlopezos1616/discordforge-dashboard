@@ -117,7 +117,7 @@ export function WelcomeSystem() {
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <HandMetal className="w-5 h-5 text-violet-400" />
+            <HandMetal className="w-5 h-5 text-[#FF3A2F]" />
             Sistema de Bienvenidas
           </h2>
           <p className="text-sm text-muted-foreground mt-1">Configura mensajes de bienvenida automáticos</p>
@@ -144,7 +144,7 @@ export function WelcomeSystem() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Settings2 className="w-4 h-4 text-violet-400" />
+                <Settings2 className="w-4 h-4 text-[#FF3A2F]" />
                 Tipo de Mensaje
               </CardTitle>
             </CardHeader>
@@ -161,7 +161,7 @@ export function WelcomeSystem() {
                     }}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all duration-200 ${
                       activeType === option.value
-                        ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                        ? 'border-[#FF3A2F] bg-[#FF3A2F]/10 text-[#FF3A2F]'
                         : 'border-border/50 bg-card/30 text-muted-foreground hover:border-border hover:bg-card/50'
                     }`}
                   >
@@ -339,7 +339,7 @@ export function WelcomeSystem() {
                       onClick={() => toggleRole(role.id)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-200 ${
                         isSelected
-                          ? 'border-violet-500/50 bg-violet-500/15 text-violet-300'
+                          ? 'border-[#FF3A2F]/50 bg-[#FF3A2F]/15 text-[#FF6B00]'
                           : 'border-border/50 bg-card/30 text-muted-foreground hover:border-border'
                       }`}
                     >
@@ -360,7 +360,7 @@ export function WelcomeSystem() {
           <div className="flex items-center gap-2">
             <Button
               onClick={handleSave}
-              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0 gap-1.5"
+              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0 gap-1.5"
             >
               <Check className="w-4 h-4" /> Guardar Configuración
             </Button>
@@ -395,7 +395,7 @@ export function WelcomeSystem() {
                 <div className="p-3 space-y-3">
                   {/* Bot message */}
                   <div className="flex items-start gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center shrink-0">
                       <Sparkles className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -423,7 +423,7 @@ export function WelcomeSystem() {
                             <div className="p-2.5 flex-1 min-w-0">
                               {config.useAvatar && (
                                 <div className="flex items-center gap-2 mb-2">
-                                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center text-[7px] font-bold text-white">
+                                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FFD700] flex items-center justify-center text-[7px] font-bold text-white">
                                     A
                                   </div>
                                   <span className="text-[10px] text-white font-medium">AdminDemo</span>
@@ -522,7 +522,7 @@ export function WelcomeSystem() {
                             className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-accent/30 transition-colors group"
                           >
                             <div className="flex items-center gap-2">
-                              <code className="text-[10px] font-mono bg-violet-500/15 text-violet-400 px-1.5 py-0.5 rounded">
+                              <code className="text-[10px] font-mono bg-[#FF3A2F]/15 text-[#FF3A2F] px-1.5 py-0.5 rounded">
                                 {v.key}
                               </code>
                               <span className="text-[10px] text-muted-foreground">{v.description}</span>

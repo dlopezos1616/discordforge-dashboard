@@ -276,7 +276,7 @@ export function BotCustomization() {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-          className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+          className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
         />
       </div>
     )
@@ -303,7 +303,7 @@ export function BotCustomization() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent flex items-center gap-2">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FFD700] bg-clip-text text-transparent flex items-center gap-2">
             🤖 Personalización del Bot
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -312,7 +312,7 @@ export function BotCustomization() {
         </div>
         <Badge
           variant="outline"
-          className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-xs gap-1.5"
+          className="bg-[#FF3A2F]/10 text-[#FF3A2F] border-[#FF3A2F]/30 text-xs gap-1.5"
         >
           <Sparkles className="w-3 h-3" />
           {currentServer.name}
@@ -330,7 +330,7 @@ export function BotCustomization() {
           <Card className="bg-card/80 backdrop-blur-sm border-border/50 overflow-hidden">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Bot className="w-4 h-4 text-emerald-400" />
+                <Bot className="w-4 h-4 text-[#FF3A2F]" />
                 Vista Previa
               </CardTitle>
               <CardDescription className="text-xs">
@@ -399,7 +399,7 @@ export function BotCustomization() {
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <User className="w-5 h-5 text-emerald-400" />
+                <User className="w-5 h-5 text-[#FF3A2F]" />
                 Nombre del Bot
               </CardTitle>
               <CardDescription className="text-xs">
@@ -430,18 +430,18 @@ export function BotCustomization() {
                         usernameError
                           ? 'border-red-500/50 focus-visible:ring-red-500/30'
                           : usernameChanged
-                          ? 'border-emerald-500/50 focus-visible:ring-emerald-500/30'
+                          ? 'border-[#FF3A2F]/50 focus-visible:ring-emerald-500/30'
                           : ''
                       }`}
                     />
                     {usernameChanged && !usernameError && (
-                      <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                      <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FF3A2F]" />
                     )}
                   </div>
                   <Button
                     onClick={handleSaveUsername}
                     disabled={savingUsername || !usernameChanged || !!usernameError}
-                    className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white min-w-[100px]"
+                    className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white min-w-[100px]"
                   >
                     {savingUsername ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -491,7 +491,7 @@ export function BotCustomization() {
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Camera className="w-5 h-5 text-emerald-400" />
+                <Camera className="w-5 h-5 text-[#FF3A2F]" />
                 Avatar del Bot
               </CardTitle>
               <CardDescription className="text-xs">
@@ -534,7 +534,7 @@ export function BotCustomization() {
                 {/* Drop zone / upload button */}
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative group cursor-pointer border-2 border-dashed border-border/60 rounded-xl p-6 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/5"
+                  className="relative group cursor-pointer border-2 border-dashed border-border/60 rounded-xl p-6 transition-all hover:border-[#FF3A2F]/40 hover:bg-[#FF3A2F]/5"
                 >
                   <input
                     ref={fileInputRef}
@@ -547,7 +547,7 @@ export function BotCustomization() {
                   {newAvatar ? (
                     /* Preview of selected image */
                     <div className="flex items-center gap-4">
-                      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500/40 shrink-0">
+                      <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#FF3A2F]/40 shrink-0">
                         <img
                           src={newAvatar}
                           alt="Nuevo avatar (vista previa)"
@@ -555,7 +555,7 @@ export function BotCustomization() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-emerald-400 flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-[#FF3A2F] flex items-center gap-1.5">
                           <Check className="w-3.5 h-3.5" />
                           Imagen seleccionada
                         </p>
@@ -581,11 +581,11 @@ export function BotCustomization() {
                   ) : (
                     /* Empty state */
                     <div className="flex flex-col items-center gap-3 text-center">
-                      <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors">
-                        <Upload className="w-5 h-5 text-muted-foreground group-hover:text-emerald-400 transition-colors" />
+                      <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center group-hover:bg-[#FF3A2F]/10 transition-colors">
+                        <Upload className="w-5 h-5 text-muted-foreground group-hover:text-[#FF3A2F] transition-colors" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium group-hover:text-emerald-400 transition-colors">
+                        <p className="text-sm font-medium group-hover:text-[#FF3A2F] transition-colors">
                           Haz clic para subir una imagen
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -613,7 +613,7 @@ export function BotCustomization() {
                   <Button
                     onClick={handleSaveAvatar}
                     disabled={savingAvatar || !avatarChanged}
-                    className="gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                    className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
                   >
                     {savingAvatar ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -650,7 +650,7 @@ export function BotCustomization() {
             <Card className="bg-card/80 backdrop-blur-sm border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Info className="w-5 h-5 text-emerald-400" />
+                  <Info className="w-5 h-5 text-[#FF3A2F]" />
                   Información Importante
                 </CardTitle>
               </CardHeader>
@@ -665,10 +665,10 @@ export function BotCustomization() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-violet-500/5 border border-violet-500/20">
-                  <Shield className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-[#FF3A2F]/5 border border-[#FF3A2F]/20">
+                  <Shield className="w-4 h-4 text-[#FF3A2F] shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-violet-300">Permisos necesarios</p>
+                    <p className="text-sm font-medium text-[#FF6B00]">Permisos necesarios</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Solo el <strong>propietario del bot</strong> puede realizar estos cambios. Si no eres el propietario, las modificaciones serán rechazadas por la API de Discord.
                     </p>

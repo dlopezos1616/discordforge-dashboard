@@ -50,7 +50,7 @@ const logTypeColors: Record<string, string> = {
   unban: 'bg-emerald-500/20 text-emerald-400',
   role_add: 'bg-blue-500/20 text-blue-400',
   role_remove: 'bg-orange-500/20 text-orange-400',
-  ticket_create: 'bg-violet-500/20 text-violet-400',
+  ticket_create: 'bg-[#FF3A2F]/20 text-[#FF3A2F]',
   ticket_close: 'bg-fuchsia-500/20 text-fuchsia-400',
   message_delete: 'bg-yellow-500/20 text-yellow-400',
   message_edit: 'bg-cyan-500/20 text-cyan-400',
@@ -107,7 +107,7 @@ export function DashboardHome() {
   }
 
   const statCards = [
-    { label: 'Miembros', value: stats.totalMembers.toLocaleString(), icon: Users, color: 'from-violet-500 to-fuchsia-500', change: '+12%', up: true },
+    { label: 'Miembros', value: stats.totalMembers.toLocaleString(), icon: Users, color: 'from-[#FF3A2F] to-[#FF6B00]', change: '+12%', up: true },
     { label: 'Tickets Abiertos', value: stats.openTickets.toString(), icon: Ticket, color: 'from-emerald-500 to-teal-500', change: `${stats.closedTickets} cerrados`, up: true },
     { label: 'Moderaciones', value: stats.moderationCount.toString(), icon: Shield, color: 'from-orange-500 to-red-500', change: 'Hoy', up: false },
     { label: 'Whitelist Pendiente', value: stats.whitelistPending.toString(), icon: AlertCircle, color: 'from-blue-500 to-cyan-500', change: `${stats.activePolls} encuestas`, up: true },
@@ -119,11 +119,11 @@ export function DashboardHome() {
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-6">
       {/* Welcome banner */}
       <motion.div variants={item}>
-        <Card className="border-0 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/5 to-transparent overflow-hidden relative">
+        <Card className="border-0 bg-gradient-to-r from-[#FF3A2F]/10 via-[#FF6B00]/5 to-transparent overflow-hidden relative">
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
           <CardHeader className="relative">
             <CardTitle className="text-xl">
-              ¡Bienvenido a <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">{currentServer.name}</span>!
+              ¡Bienvenido a <span className="bg-gradient-to-r from-[#FF3A2F] to-[#FFD700] bg-clip-text text-transparent">{currentServer.name}</span>!
             </CardTitle>
             <CardDescription>Resumen de la actividad del servidor</CardDescription>
           </CardHeader>
@@ -171,7 +171,7 @@ export function DashboardHome() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Activity className="w-4 h-4 text-violet-400" />
+                <Activity className="w-4 h-4 text-[#FF3A2F]" />
                 Actividad del Servidor
               </CardTitle>
               <CardDescription>Últimos 7 días</CardDescription>
@@ -332,7 +332,7 @@ export function DashboardHome() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Auto-Mod', value: 85, color: 'bg-violet-500' },
+                { label: 'Auto-Mod', value: 85, color: 'bg-[#FF3A2F]' },
                 { label: 'Actividad', value: 72, color: 'bg-emerald-500' },
                 { label: 'Seguridad', value: 94, color: 'bg-cyan-500' },
                 { label: 'Engagement', value: 68, color: 'bg-fuchsia-500' },

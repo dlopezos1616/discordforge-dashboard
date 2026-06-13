@@ -49,15 +49,15 @@ const verificationTypes = [
     label: 'Botón',
     icon: MousePointer,
     description: 'Verificación con un simple clic en un botón',
-    color: 'from-violet-500/20 to-violet-600/10',
-    iconColor: 'text-violet-400',
+    color: 'from-[#FF3A2F]/20 to-violet-600/10',
+    iconColor: 'text-[#FF3A2F]',
   },
   {
     id: 'reaction' as VerificationType,
     label: 'Reacción',
     icon: SmilePlus,
     description: 'Verificación reaccionando a un mensaje',
-    color: 'from-fuchsia-500/20 to-fuchsia-600/10',
+    color: 'from-[#FF3A2F]/20 to-[#FF6B00]/10',
     iconColor: 'text-fuchsia-400',
   },
   {
@@ -140,11 +140,11 @@ export function VerificationSystem() {
         return (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xs font-bold text-white">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-xs font-bold text-white">
                 B
               </div>
               <div>
-                <p className="text-xs font-semibold text-violet-400">Bot de Verificación</p>
+                <p className="text-xs font-semibold text-[#FF3A2F]">Bot de Verificación</p>
                 <p className="text-[10px] text-muted-foreground">Hoy a las 12:00</p>
               </div>
             </div>
@@ -153,7 +153,7 @@ export function VerificationSystem() {
               {config.acceptRules && (
                 <p className="text-xs text-gray-400">✅ Al verificar, aceptas las reglas del servidor</p>
               )}
-              <button className="px-4 py-1.5 rounded-md bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium">
+              <button className="px-4 py-1.5 rounded-md bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] text-white text-sm font-medium">
                 {config.buttonText || 'Verificarme'}
               </button>
             </div>
@@ -163,11 +163,11 @@ export function VerificationSystem() {
         return (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xs font-bold text-white">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-xs font-bold text-white">
                 B
               </div>
               <div>
-                <p className="text-xs font-semibold text-violet-400">Bot de Verificación</p>
+                <p className="text-xs font-semibold text-[#FF3A2F]">Bot de Verificación</p>
                 <p className="text-[10px] text-muted-foreground">Hoy a las 12:00</p>
               </div>
             </div>
@@ -260,7 +260,7 @@ export function VerificationSystem() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Sistema de Verificación
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -274,7 +274,7 @@ export function VerificationSystem() {
           <Switch
             checked={config.enabled}
             onCheckedChange={(v) => updateConfig('enabled', v)}
-            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
           />
         </div>
       </motion.div>
@@ -306,7 +306,7 @@ export function VerificationSystem() {
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <KeyRound className="w-5 h-5 text-violet-400" />
+                      <KeyRound className="w-5 h-5 text-[#FF3A2F]" />
                       Tipo de Verificación
                     </CardTitle>
                     <CardDescription>Selecciona el método de verificación</CardDescription>
@@ -319,7 +319,7 @@ export function VerificationSystem() {
                           onClick={() => updateConfig('type', vt.id)}
                           className={`relative p-4 rounded-xl border-2 transition-all text-left ${
                             config.type === vt.id
-                              ? 'border-violet-500/60 bg-violet-500/10 shadow-lg shadow-violet-500/10'
+                              ? 'border-[#FF3A2F]/60 bg-[#FF3A2F]/10 shadow-lg shadow-[#FF3A2F]/10'
                               : 'border-border/50 bg-card/50 hover:bg-accent/30 hover:border-border'
                           }`}
                           whileHover={{ scale: 1.02 }}
@@ -328,7 +328,7 @@ export function VerificationSystem() {
                           {config.type === vt.id && (
                             <motion.div
                               layoutId="verification-type-glow"
-                              className="absolute inset-0 rounded-xl bg-gradient-to-r from-violet-500/5 to-fuchsia-500/5"
+                              className="absolute inset-0 rounded-xl bg-gradient-to-r from-[#FF3A2F]/5 to-[#FF6B00]/5"
                               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                             />
                           )}
@@ -355,7 +355,7 @@ export function VerificationSystem() {
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-violet-400" />
+                      <Sparkles className="w-5 h-5 text-[#FF3A2F]" />
                       Configuración
                     </CardTitle>
                   </CardHeader>
@@ -533,7 +533,7 @@ export function VerificationSystem() {
                       <Switch
                         checked={config.autoRole}
                         onCheckedChange={(v) => updateConfig('autoRole', v)}
-                        className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+                        className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
                       />
                       <Label className="text-xs">Auto-asignar rol al verificar</Label>
                     </div>
@@ -541,7 +541,7 @@ export function VerificationSystem() {
                     <Button
                       onClick={handleSave}
                       disabled={saving}
-                      className="w-full bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+                      className="w-full bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
                     >
                       {saving ? 'Guardando...' : 'Guardar Configuración'}
                     </Button>
@@ -558,7 +558,7 @@ export function VerificationSystem() {
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <MessageSquare className="w-5 h-5 text-violet-400" />
+                      <MessageSquare className="w-5 h-5 text-[#FF3A2F]" />
                       Configuración del Embed
                     </CardTitle>
                     <CardDescription>
@@ -587,7 +587,7 @@ export function VerificationSystem() {
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-violet-400" />
+                      <MessageSquare className="w-4 h-4 text-[#FF3A2F]" />
                       Variables Disponibles
                     </CardTitle>
                   </CardHeader>
@@ -595,7 +595,7 @@ export function VerificationSystem() {
                     <div className="space-y-2">
                       {variables.map((v) => (
                         <div key={v.name} className="flex items-center justify-between py-1">
-                          <code className="text-xs bg-violet-500/10 text-violet-400 px-2 py-0.5 rounded font-mono">
+                          <code className="text-xs bg-[#FF3A2F]/10 text-[#FF3A2F] px-2 py-0.5 rounded font-mono">
                             {v.name}
                           </code>
                           <span className="text-xs text-muted-foreground">{v.desc}</span>
@@ -615,7 +615,7 @@ export function VerificationSystem() {
                 <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <Info className="w-4 h-4 text-violet-400" />
+                      <Info className="w-4 h-4 text-[#FF3A2F]" />
                       Consejos
                     </CardTitle>
                   </CardHeader>
@@ -623,7 +623,7 @@ export function VerificationSystem() {
                     <div className="space-y-2">
                       {tips.map((tip, i) => (
                         <div key={i} className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 mt-1.5 shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] mt-1.5 shrink-0" />
                           <p className="text-xs text-muted-foreground">{tip}</p>
                         </div>
                       ))}
@@ -647,7 +647,7 @@ export function VerificationSystem() {
               <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Eye className="w-5 h-5 text-violet-400" />
+                    <Eye className="w-5 h-5 text-[#FF3A2F]" />
                     Vista Previa del Mensaje
                   </CardTitle>
                   <CardDescription>Así se verá el mensaje de verificación en Discord</CardDescription>
@@ -679,7 +679,7 @@ export function VerificationSystem() {
               <Card className="bg-card/80 backdrop-blur-sm border-border/50">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-violet-400" />
+                    <ShieldCheck className="w-5 h-5 text-[#FF3A2F]" />
                     Vista Previa del Embed
                   </CardTitle>
                   <CardDescription>Así se verá el embed de verificación enviado por el bot</CardDescription>
@@ -687,11 +687,11 @@ export function VerificationSystem() {
                 <CardContent>
                   <div className="bg-[#313338] rounded-lg p-4 min-h-[200px]">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-xs font-bold text-white">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-xs font-bold text-white">
                         B
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-violet-400">Bot de Verificación</p>
+                        <p className="text-xs font-semibold text-[#FF3A2F]">Bot de Verificación</p>
                         <p className="text-[10px] text-muted-foreground">Hoy a las 12:00</p>
                       </div>
                     </div>

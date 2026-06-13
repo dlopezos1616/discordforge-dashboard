@@ -234,7 +234,7 @@ export function EmbedBuilder() {
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Code2 className="w-5 h-5 text-violet-400" />
+            <Code2 className="w-5 h-5 text-[#FF3A2F]" />
             Constructor de Embeds
           </h2>
           <p className="text-sm text-muted-foreground mt-1">Crea y envía embeds personalizados</p>
@@ -249,7 +249,7 @@ export function EmbedBuilder() {
               setPresetName('')
               setSaveDialogOpen(true)
             }}
-            className="gap-1.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0"
+            className="gap-1.5 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
           >
             <Bookmark className="w-3.5 h-3.5" /> Guardar como Plantilla
           </Button>
@@ -321,7 +321,7 @@ export function EmbedBuilder() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Palette className="w-4 h-4 text-violet-400" />
+                <Palette className="w-4 h-4 text-[#FF3A2F]" />
                 Propiedades del Embed
               </CardTitle>
             </CardHeader>
@@ -580,7 +580,7 @@ export function EmbedBuilder() {
                 <div className="p-3">
                   <div className="flex items-start gap-2.5">
                     {/* Bot avatar */}
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center shrink-0">
                       <Sparkles className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -730,7 +730,7 @@ export function EmbedBuilder() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Bookmark className="w-4 h-4 text-violet-400" /> Guardar como Plantilla
+              <Bookmark className="w-4 h-4 text-[#FF3A2F]" /> Guardar como Plantilla
             </DialogTitle>
             <DialogDescription>
               Guarda este embed como plantilla para reutilizarlo más tarde
@@ -754,7 +754,7 @@ export function EmbedBuilder() {
               size="sm"
               onClick={handleSavePreset}
               disabled={!presetName}
-              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0"
+              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
             >
               Guardar
             </Button>

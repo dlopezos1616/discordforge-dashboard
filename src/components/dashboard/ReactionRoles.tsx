@@ -42,7 +42,7 @@ interface ReactionRole {
 }
 
 const typeConfig: Record<string, { label: string; icon: React.ElementType; color: string; iconColor: string }> = {
-  reaction: { label: 'Reacción', icon: SmilePlus, color: 'bg-violet-500/15 text-violet-400 border-violet-500/30', iconColor: 'text-violet-400' },
+  reaction: { label: 'Reacción', icon: SmilePlus, color: 'bg-[#FF3A2F]/15 text-[#FF3A2F] border-[#FF3A2F]/30', iconColor: 'text-[#FF3A2F]' },
   button: { label: 'Botón', icon: MousePointer, color: 'bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30', iconColor: 'text-fuchsia-400' },
   select: { label: 'Select Menu', icon: List, color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30', iconColor: 'text-cyan-400' },
 }
@@ -218,10 +218,10 @@ export function ReactionRoles() {
         return (
           <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white">
                 B
               </div>
-              <span className="text-xs font-semibold text-violet-400">Bot</span>
+              <span className="text-xs font-semibold text-[#FF3A2F]">Bot</span>
             </div>
             <p className="text-sm text-gray-200">Reacciona para obtener tu rol</p>
             <div className="flex items-center gap-2 pt-1 border-t border-gray-600/50">
@@ -236,13 +236,13 @@ export function ReactionRoles() {
         return (
           <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white">
                 B
               </div>
-              <span className="text-xs font-semibold text-violet-400">Bot</span>
+              <span className="text-xs font-semibold text-[#FF3A2F]">Bot</span>
             </div>
             <p className="text-sm text-gray-200">{rr.label || 'Selecciona tu rol'}</p>
-            <button className="px-3 py-1 rounded bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-medium">
+            <button className="px-3 py-1 rounded bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] text-white text-xs font-medium">
               {rr.emoji || '🎯'} {rr.label || 'Obtener Rol'}
             </button>
           </div>
@@ -251,10 +251,10 @@ export function ReactionRoles() {
         return (
           <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white">
                 B
               </div>
-              <span className="text-xs font-semibold text-violet-400">Bot</span>
+              <span className="text-xs font-semibold text-[#FF3A2F]">Bot</span>
             </div>
             <p className="text-sm text-gray-200">{rr.label || 'Selecciona tu rol'}</p>
             <div className="bg-[#1e1f22] rounded px-3 py-1.5 flex items-center justify-between">
@@ -286,7 +286,7 @@ export function ReactionRoles() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Reaction Roles
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -296,7 +296,7 @@ export function ReactionRoles() {
         <Button
           onClick={() => { resetForm(); setShowCreate(true) }}
           size="sm"
-          className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+          className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
         >
           <Plus className="w-4 h-4" />
           Crear Reaction Role
@@ -309,7 +309,7 @@ export function ReactionRoles() {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-            className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+            className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
           />
         </div>
       ) : reactionRoles.length === 0 ? (
@@ -341,7 +341,7 @@ export function ReactionRoles() {
                   transition={{ delay: i * 0.05 }}
                   layout
                 >
-                  <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-violet-500/30 transition-all">
+                  <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-[#FF3A2F]/30 transition-all">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -457,7 +457,7 @@ export function ReactionRoles() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-violet-400" />
+              <Sparkles className="w-5 h-5 text-[#FF3A2F]" />
               Crear Reaction Role
             </DialogTitle>
             <DialogDescription>
@@ -476,7 +476,7 @@ export function ReactionRoles() {
                     onClick={() => setFormType(key)}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
                       formType === key
-                        ? 'border-violet-500/50 bg-violet-500/10'
+                        ? 'border-[#FF3A2F]/50 bg-[#FF3A2F]/10'
                         : 'border-border/50 bg-card/50 hover:bg-accent/30'
                     }`}
                     whileHover={{ scale: 1.03 }}
@@ -560,7 +560,7 @@ export function ReactionRoles() {
                 <Switch
                   checked={formAutoRemove}
                   onCheckedChange={setFormAutoRemove}
-                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
                 />
                 <Label className="text-xs">Auto-remove</Label>
               </div>
@@ -568,7 +568,7 @@ export function ReactionRoles() {
                 <Switch
                   checked={formExclusive}
                   onCheckedChange={setFormExclusive}
-                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
                 />
                 <Label className="text-xs">Exclusivo</Label>
               </div>
@@ -602,8 +602,8 @@ export function ReactionRoles() {
                     {formType === 'reaction' && (
                       <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">B</div>
-                          <span className="text-xs font-semibold text-violet-400">Bot</span>
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white">B</div>
+                          <span className="text-xs font-semibold text-[#FF3A2F]">Bot</span>
                         </div>
                         <p className="text-sm text-gray-200">Reacciona para obtener tu rol</p>
                         <div className="flex items-center gap-2 pt-1 border-t border-gray-600/50">
@@ -617,11 +617,11 @@ export function ReactionRoles() {
                     {formType === 'button' && (
                       <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">B</div>
-                          <span className="text-xs font-semibold text-violet-400">Bot</span>
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white">B</div>
+                          <span className="text-xs font-semibold text-[#FF3A2F]">Bot</span>
                         </div>
                         <p className="text-sm text-gray-200">{formLabel || 'Selecciona tu rol'}</p>
-                        <button className="px-3 py-1 rounded bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-medium">
+                        <button className="px-3 py-1 rounded bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] text-white text-xs font-medium">
                           {formEmoji || '🎯'} {formLabel || 'Obtener Rol'}
                         </button>
                       </div>
@@ -629,8 +629,8 @@ export function ReactionRoles() {
                     {formType === 'select' && (
                       <div className="bg-[#2b2d31] rounded-lg p-3 space-y-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white">B</div>
-                          <span className="text-xs font-semibold text-violet-400">Bot</span>
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white">B</div>
+                          <span className="text-xs font-semibold text-[#FF3A2F]">Bot</span>
                         </div>
                         <p className="text-sm text-gray-200">{formLabel || 'Selecciona tu rol'}</p>
                         <div className="bg-[#1e1f22] rounded px-3 py-1.5 flex items-center justify-between">
@@ -660,7 +660,7 @@ export function ReactionRoles() {
             <Button variant="ghost" onClick={() => setShowCreate(false)}>Cancelar</Button>
             <Button
               onClick={handleCreate}
-              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
             >
               Crear
             </Button>
@@ -673,7 +673,7 @@ export function ReactionRoles() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Pencil className="w-5 h-5 text-violet-400" />
+              <Pencil className="w-5 h-5 text-[#FF3A2F]" />
               Editar Reaction Role
             </DialogTitle>
             <DialogDescription>
@@ -692,7 +692,7 @@ export function ReactionRoles() {
                     onClick={() => setEditType(key)}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
                       editType === key
-                        ? 'border-violet-500/50 bg-violet-500/10'
+                        ? 'border-[#FF3A2F]/50 bg-[#FF3A2F]/10'
                         : 'border-border/50 bg-card/50 hover:bg-accent/30'
                     }`}
                     whileHover={{ scale: 1.03 }}
@@ -769,7 +769,7 @@ export function ReactionRoles() {
                 <Switch
                   checked={editAutoRemove}
                   onCheckedChange={setEditAutoRemove}
-                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
                 />
                 <Label className="text-xs">Auto-remove</Label>
               </div>
@@ -777,7 +777,7 @@ export function ReactionRoles() {
                 <Switch
                   checked={editExclusive}
                   onCheckedChange={setEditExclusive}
-                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+                  className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
                 />
                 <Label className="text-xs">Exclusivo</Label>
               </div>
@@ -813,7 +813,7 @@ export function ReactionRoles() {
             <Button variant="ghost" onClick={() => setEditingId(null)}>Cancelar</Button>
             <Button
               onClick={handleSaveEdit}
-              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
             >
               Guardar
             </Button>

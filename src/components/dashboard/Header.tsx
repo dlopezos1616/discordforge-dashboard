@@ -47,17 +47,17 @@ export function Header() {
 
   const getServerColor = (name: string) => {
     const colors = [
-      'from-violet-500 to-fuchsia-500',
-      'from-emerald-500 to-teal-500',
-      'from-orange-500 to-red-500',
-      'from-blue-500 to-cyan-500',
+      'from-[#FF3A2F] to-[#FF6B00]',
+      'from-[#FFD700] to-[#FF6B00]',
+      'from-[#00B4D8] to-[#FF3A2F]',
+      'from-[#FF3A2F] to-[#FFD700]',
     ]
     const idx = name.length % colors.length
     return colors[idx]
   }
 
   return (
-    <header className="h-14 border-b border-border bg-card/30 backdrop-blur-xl flex items-center justify-between px-4 gap-4">
+    <header className="h-14 border-b border-white/5 bg-[#0D0D0D]/80 backdrop-blur-xl flex items-center justify-between px-4 gap-4">
       {/* Left: Section title + Server selector */}
       <div className="flex items-center gap-3">
         <AnimatePresence mode="wait">
@@ -155,7 +155,7 @@ export function Header() {
                 ].map((notif, i) => (
                   <div key={i} className="p-2 rounded-lg hover:bg-accent/50 cursor-pointer transition-colors">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
+                      <div className="w-2 h-2 rounded-full bg-[#FF3A2F] shrink-0" />
                       <p className="text-xs font-medium">{notif.title}</p>
                     </div>
                     <p className="text-[11px] text-muted-foreground ml-4">{notif.desc}</p>
@@ -172,7 +172,7 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
               <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[10px] font-bold">
+                <AvatarFallback className="bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] text-white text-[10px] font-bold">
                   {user?.username?.[0] || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -182,7 +182,7 @@ export function Header() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex items-center gap-2">
                 <Avatar className="h-6 w-6">
-                  <AvatarFallback className="bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold">
+                  <AvatarFallback className="bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] text-white text-[9px] font-bold">
                     {user?.username?.[0] || 'U'}
                   </AvatarFallback>
                 </Avatar>

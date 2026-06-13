@@ -213,7 +213,7 @@ export function PollsSystem() {
   }
 
   const statCards = [
-    { label: 'Total Encuestas', value: stats.totalPolls, icon: BarChart3, color: 'from-violet-500/20 to-fuchsia-600/10', iconColor: 'text-violet-400' },
+    { label: 'Total Encuestas', value: stats.totalPolls, icon: BarChart3, color: 'from-[#FF3A2F]/20 to-fuchsia-600/10', iconColor: 'text-[#FF3A2F]' },
     { label: 'Activas', value: stats.activePolls, icon: Vote, color: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-400' },
     { label: 'Total Votos', value: stats.totalVotes, icon: TrendingUp, color: 'from-cyan-500/20 to-cyan-600/10', iconColor: 'text-cyan-400' },
   ]
@@ -227,7 +227,7 @@ export function PollsSystem() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Encuestas
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -236,7 +236,7 @@ export function PollsSystem() {
         </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogTrigger asChild>
-            <Button className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white">
+            <Button className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white">
               <Plus className="w-4 h-4" />
               Crear Encuesta
             </Button>
@@ -244,7 +244,7 @@ export function PollsSystem() {
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Vote className="w-5 h-5 text-violet-400" />
+                <Vote className="w-5 h-5 text-[#FF3A2F]" />
                 Crear Encuesta
               </DialogTitle>
             </DialogHeader>
@@ -306,7 +306,7 @@ export function PollsSystem() {
                           variant="ghost"
                           size="sm"
                           onClick={addOption}
-                          className="h-7 text-xs gap-1 text-violet-400 hover:text-violet-300"
+                          className="h-7 text-xs gap-1 text-[#FF3A2F] hover:text-[#FF6B00]"
                         >
                           <Plus className="w-3 h-3" />
                           Añadir
@@ -430,7 +430,7 @@ export function PollsSystem() {
                 <Button
                   onClick={handleCreate}
                   disabled={!question}
-                  className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+                  className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
                 >
                   Crear Encuesta
                 </Button>
@@ -469,7 +469,7 @@ export function PollsSystem() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <PieChartIcon className="w-5 h-5 text-violet-400" />
+              <PieChartIcon className="w-5 h-5 text-[#FF3A2F]" />
               Resultados de Encuesta
             </DialogTitle>
           </DialogHeader>
@@ -519,7 +519,7 @@ export function PollsSystem() {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-              className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+              className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
             />
           </div>
         ) : polls.length === 0 ? (
@@ -540,7 +540,7 @@ export function PollsSystem() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-violet-500/30 transition-colors">
+                <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-[#FF3A2F]/30 transition-colors">
                   <CardContent className="p-4 space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
@@ -581,7 +581,7 @@ export function PollsSystem() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 text-violet-400 hover:bg-violet-500/10"
+                          className="h-8 w-8 p-0 text-[#FF3A2F] hover:bg-[#FF3A2F]/10"
                           onClick={() => {
                             setResultsPoll(poll)
                             setShowResults(true)

@@ -269,7 +269,7 @@ export function TicketSystem() {
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-violet-400" />
+            <Ticket className="w-5 h-5 text-[#FF3A2F]" />
             Sistema de Tickets
           </h2>
           <p className="text-sm text-muted-foreground mt-1">Gestiona categorías, tickets y transcripts</p>
@@ -316,7 +316,7 @@ export function TicketSystem() {
                     setCategoryDialogTab('general')
                     setCategoryDialogOpen(true)
                   }}
-                  className="gap-1.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0"
+                  className="gap-1.5 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
                 >
                   <Plus className="w-4 h-4" /> Crear Categoría
                 </Button>
@@ -325,7 +325,7 @@ export function TicketSystem() {
                 <Button
                   size="sm"
                   onClick={() => setTicketDialogOpen(true)}
-                  className="gap-1.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0"
+                  className="gap-1.5 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
                 >
                   <Plus className="w-4 h-4" /> Crear Ticket
                 </Button>
@@ -488,7 +488,7 @@ export function TicketSystem() {
                                 </TableCell>
                                 <TableCell className="text-xs">
                                   <div className="flex items-center gap-1.5">
-                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[8px] font-bold text-white shrink-0">
+                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white shrink-0">
                                       {ticket.creator.username[0]}
                                     </div>
                                     <span className="truncate max-w-[100px]">{ticket.creator.username}</span>
@@ -632,7 +632,7 @@ export function TicketSystem() {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {editCategory ? <Pencil className="w-4 h-4 text-violet-400" /> : <Plus className="w-4 h-4 text-violet-400" />}
+              {editCategory ? <Pencil className="w-4 h-4 text-[#FF3A2F]" /> : <Plus className="w-4 h-4 text-[#FF3A2F]" />}
               {editCategory ? 'Editar Categoría' : 'Crear Categoría'}
             </DialogTitle>
             <DialogDescription>
@@ -793,7 +793,7 @@ export function TicketSystem() {
               size="sm"
               onClick={handleCreateCategory}
               disabled={!catForm.name}
-              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0"
+              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
             >
               {editCategory ? 'Guardar Cambios' : 'Crear Categoría'}
             </Button>
@@ -806,7 +806,7 @@ export function TicketSystem() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Ticket className="w-4 h-4 text-violet-400" /> Crear Ticket
+              <Ticket className="w-4 h-4 text-[#FF3A2F]" /> Crear Ticket
             </DialogTitle>
             <DialogDescription>Abre un nuevo ticket de soporte</DialogDescription>
           </DialogHeader>
@@ -859,7 +859,7 @@ export function TicketSystem() {
                 setTicketForm({ subject: '', categoryId: '', description: '' })
               }}
               disabled={!ticketForm.subject || !ticketForm.categoryId}
-              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0"
+              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
             >
               Crear Ticket
             </Button>
@@ -872,7 +872,7 @@ export function TicketSystem() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-violet-400" /> Transcript del Ticket
+              <Eye className="w-4 h-4 text-[#FF3A2F]" /> Transcript del Ticket
             </DialogTitle>
             <DialogDescription>
               {selectedTranscript && `#${selectedTranscript.id.slice(-6).toUpperCase()} — ${selectedTranscript.subject || 'Sin asunto'}`}
@@ -883,7 +883,7 @@ export function TicketSystem() {
               {selectedTranscript && (
                 <>
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[10px] font-bold text-white">
                       {selectedTranscript.creator.username[0]}
                     </div>
                     <div>

@@ -231,7 +231,7 @@ export function WhitelistSystem() {
     { label: 'Pendientes', value: stats.pending, icon: Clock, color: 'from-yellow-500/20 to-yellow-600/10', iconColor: 'text-yellow-400' },
     { label: 'Aceptadas Hoy', value: stats.acceptedToday, icon: CheckCircle2, color: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-400' },
     { label: 'Rechazadas Hoy', value: stats.rejectedToday, icon: XCircle, color: 'from-red-500/20 to-red-600/10', iconColor: 'text-red-400' },
-    { label: 'Formularios', value: forms.length, icon: FileText, color: 'from-violet-500/20 to-fuchsia-600/10', iconColor: 'text-violet-400' },
+    { label: 'Formularios', value: forms.length, icon: FileText, color: 'from-[#FF3A2F]/20 to-fuchsia-600/10', iconColor: 'text-[#FF3A2F]' },
   ]
 
   return (
@@ -243,7 +243,7 @@ export function WhitelistSystem() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Sistema Whitelist
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -252,7 +252,7 @@ export function WhitelistSystem() {
         </div>
         <Dialog open={showBuilder} onOpenChange={setShowBuilder}>
           <DialogTrigger asChild>
-            <Button className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white">
+            <Button className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white">
               <Plus className="w-4 h-4" />
               Crear Formulario
             </Button>
@@ -260,7 +260,7 @@ export function WhitelistSystem() {
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-violet-400" />
+                <ClipboardList className="w-5 h-5 text-[#FF3A2F]" />
                 Crear Formulario de Whitelist
               </DialogTitle>
             </DialogHeader>
@@ -296,7 +296,7 @@ export function WhitelistSystem() {
 
               <div className="space-y-2">
                 <Label className="text-sm font-semibold flex items-center gap-1.5">
-                  <Palette className="w-4 h-4 text-violet-400" />
+                  <Palette className="w-4 h-4 text-[#FF3A2F]" />
                   Configuración del Embed
                 </Label>
                 <EmbedConfig
@@ -308,7 +308,7 @@ export function WhitelistSystem() {
 
               <div className="space-y-2">
                 <Label className="text-sm font-semibold flex items-center gap-1.5">
-                  <Eye className="w-4 h-4 text-violet-400" />
+                  <Eye className="w-4 h-4 text-[#FF3A2F]" />
                   Vista Previa
                 </Label>
                 <Card className="bg-[#313338] border-border/30 overflow-hidden">
@@ -325,7 +325,7 @@ export function WhitelistSystem() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowPreview(!showPreview)}
-                    className="gap-1 border-violet-500/30 hover:bg-violet-500/10"
+                    className="gap-1 border-[#FF3A2F]/30 hover:bg-[#FF3A2F]/10"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     {showPreview ? 'Editor' : 'Vista previa'}
@@ -334,7 +334,7 @@ export function WhitelistSystem() {
                     variant="outline"
                     size="sm"
                     onClick={addField}
-                    className="gap-1 border-violet-500/30 hover:bg-violet-500/10"
+                    className="gap-1 border-[#FF3A2F]/30 hover:bg-[#FF3A2F]/10"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Añadir campo
@@ -457,7 +457,7 @@ export function WhitelistSystem() {
                 <Button
                   onClick={handleCreateForm}
                   disabled={!formName || formFields.length === 0}
-                  className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+                  className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
                 >
                   Crear Formulario
                 </Button>
@@ -494,15 +494,15 @@ export function WhitelistSystem() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="bg-card/50 border border-border/30">
-          <TabsTrigger value="formularios" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+          <TabsTrigger value="formularios" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#FF3A2F] data-[state=active]:to-[#FF6B00] data-[state=active]:text-white">
             <FileText className="w-3.5 h-3.5" />
             Formularios
           </TabsTrigger>
-          <TabsTrigger value="solicitudes" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+          <TabsTrigger value="solicitudes" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#FF3A2F] data-[state=active]:to-[#FF6B00] data-[state=active]:text-white">
             <ClipboardList className="w-3.5 h-3.5" />
             Solicitudes
           </TabsTrigger>
-          <TabsTrigger value="staff" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-fuchsia-500 data-[state=active]:text-white">
+          <TabsTrigger value="staff" className="gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#FF3A2F] data-[state=active]:to-[#FF6B00] data-[state=active]:text-white">
             <Settings2 className="w-3.5 h-3.5" />
             Panel Staff
           </TabsTrigger>
@@ -516,7 +516,7 @@ export function WhitelistSystem() {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                  className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+                  className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
                 />
               </div>
             ) : forms.length === 0 ? (
@@ -537,7 +537,7 @@ export function WhitelistSystem() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
                   >
-                    <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-violet-500/30 transition-colors">
+                    <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-[#FF3A2F]/30 transition-colors">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
@@ -565,7 +565,7 @@ export function WhitelistSystem() {
                             </div>
                           </div>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-violet-400 hover:bg-violet-500/10">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-[#FF3A2F] hover:bg-[#FF3A2F]/10">
                               <Eye className="w-4 h-4" />
                             </Button>
                           </div>
@@ -586,7 +586,7 @@ export function WhitelistSystem() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5 text-violet-400" />
+                    <ClipboardList className="w-5 h-5 text-[#FF3A2F]" />
                     Solicitudes
                   </CardTitle>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -609,7 +609,7 @@ export function WhitelistSystem() {
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                      className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+                      className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
                     />
                   </div>
                 ) : filteredApplications.length === 0 ? (
@@ -743,7 +743,7 @@ export function WhitelistSystem() {
             <Card className="bg-card/80 backdrop-blur-sm border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="w-5 h-5 text-violet-400" />
+                  <Users className="w-5 h-5 text-[#FF3A2F]" />
                   Cola de Revisión
                 </CardTitle>
               </CardHeader>

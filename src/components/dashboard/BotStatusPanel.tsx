@@ -173,7 +173,7 @@ export function BotStatusPanel() {
     'bot:status': 'bg-blue-500/20 text-blue-400',
     'bot:memberJoined': 'bg-emerald-500/20 text-emerald-400',
     'bot:memberLeft': 'bg-red-500/20 text-red-400',
-    'bot:ticketCreated': 'bg-violet-500/20 text-violet-400',
+    'bot:ticketCreated': 'bg-[#FF3A2F]/20 text-[#FF3A2F]',
     'bot:ticketClosed': 'bg-fuchsia-500/20 text-fuchsia-400',
     'bot:autoModTriggered': 'bg-orange-500/20 text-orange-400',
     'bot:modAction': 'bg-red-500/20 text-red-400',
@@ -188,13 +188,13 @@ export function BotStatusPanel() {
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-6">
       {/* Header */}
       <motion.div variants={item}>
-        <Card className="border-0 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/5 to-transparent overflow-hidden relative">
+        <Card className="border-0 bg-gradient-to-r from-[#FF3A2F]/10 via-fuchsia-500/5 to-transparent overflow-hidden relative">
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
           <CardHeader className="relative">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-xl flex items-center gap-2">
-                  <Bot className="w-6 h-6 text-violet-400" />
+                  <Bot className="w-6 h-6 text-[#FF3A2F]" />
                   Discord Bot — Estado y Configuración
                 </CardTitle>
                 <CardDescription className="mt-1">
@@ -245,7 +245,7 @@ export function BotStatusPanel() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
-                      className="gap-2 text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
+                      className="gap-2 text-xs bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90"
                       onClick={() => {
                         window.open(INVITE_URL, '_blank')
                         toast.success('Abriendo invitación del bot...')
@@ -275,7 +275,7 @@ export function BotStatusPanel() {
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Para que el bot funcione correctamente, debes activar estos intents en el 
-                      <a href="https://discord.com/developers/applications/1514983732761854113/bot" target="_blank" rel="noopener noreferrer" className="text-violet-400 underline">Discord Developer Portal</a>:
+                      <a href="https://discord.com/developers/applications/1514983732761854113/bot" target="_blank" rel="noopener noreferrer" className="text-[#FF3A2F] underline">Discord Developer Portal</a>:
                     </p>
                     <div className="mt-2 space-y-1.5">
                       <div className="flex items-center gap-2">
@@ -303,7 +303,7 @@ export function BotStatusPanel() {
       {/* Stats */}
       <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Servidores', value: botStatus.guilds.toString(), icon: Server, color: 'from-violet-500 to-fuchsia-500' },
+          { label: 'Servidores', value: botStatus.guilds.toString(), icon: Server, color: 'from-[#FF3A2F] to-[#FF6B00]' },
           { label: 'Usuarios', value: botStatus.users.toLocaleString(), icon: Users, color: 'from-emerald-500 to-teal-500' },
           { label: 'Uptime', value: formatUptime(botStatus.uptime), icon: Clock, color: 'from-orange-500 to-red-500' },
           { label: 'Ping', value: `${botStatus.ping}ms`, icon: Zap, color: 'from-blue-500 to-cyan-500' },
@@ -358,7 +358,7 @@ export function BotStatusPanel() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Code2 className="w-4 h-4 text-violet-400" />
+                    <Code2 className="w-4 h-4 text-[#FF3A2F]" />
                     Arquitectura del Sistema
                   </CardTitle>
                   <CardDescription className="text-xs">Cómo se comunican todos los componentes</CardDescription>
@@ -367,10 +367,10 @@ export function BotStatusPanel() {
                   <div className="bg-[#1a1b26] rounded-xl p-4 font-mono text-[11px] space-y-3 text-[#a9b1d6]">
                     {/* Diagram */}
                     <div className="text-center space-y-1">
-                      <div className="inline-block bg-violet-500/20 border border-violet-500/30 rounded-lg px-4 py-2 text-violet-300">
+                      <div className="inline-block bg-[#FF3A2F]/20 border border-[#FF3A2F]/30 rounded-lg px-4 py-2 text-[#FF6B00]">
                         🖥️ Dashboard (Next.js :3000)
                       </div>
-                      <div className="text-violet-400">↕ Socket.io via XTransformPort=3003</div>
+                      <div className="text-[#FF3A2F]">↕ Socket.io via XTransformPort=3003</div>
                       <div className="inline-block bg-fuchsia-500/20 border border-fuchsia-500/30 rounded-lg px-4 py-2 text-fuchsia-300">
                         🔌 WS Bridge (:3003)
                       </div>
@@ -505,7 +505,7 @@ export function BotStatusPanel() {
               <Card className="border-l-4 border-l-violet-500">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white text-sm font-bold">1</div>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-white text-sm font-bold">1</div>
                     <div>
                       <CardTitle className="text-sm">Crear Aplicación en Discord</CardTitle>
                       <CardDescription className="text-xs">Registra tu bot en el Portal de Desarrolladores</CardDescription>
@@ -552,7 +552,7 @@ export function BotStatusPanel() {
               <Card className="border-l-4 border-l-fuchsia-500">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold">2</div>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-white text-sm font-bold">2</div>
                     <div>
                       <CardTitle className="text-sm">Configurar Variables de Entorno</CardTitle>
                       <CardDescription className="text-xs">Establece las credenciales del bot</CardDescription>
@@ -623,7 +623,7 @@ export function BotStatusPanel() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
-                      className="gap-2 text-xs bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
+                      className="gap-2 text-xs bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90"
                       onClick={() => {
                         window.open('https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8', '_blank')
                         toast.success('Abriendo invitación del bot...')
@@ -814,7 +814,7 @@ export function BotStatusPanel() {
                         <div className="space-y-1.5">
                           {cat.commands.map((cmd, j) => (
                             <div key={j} className="flex items-center gap-3 p-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors">
-                              <code className="text-[11px] font-mono text-violet-400 min-w-[200px]">{cmd.cmd}</code>
+                              <code className="text-[11px] font-mono text-[#FF3A2F] min-w-[200px]">{cmd.cmd}</code>
                               <span className="text-[11px] text-muted-foreground flex-1">{cmd.desc}</span>
                               <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-blue-500/20 text-blue-400">
                                 {cmd.perms}

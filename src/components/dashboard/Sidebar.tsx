@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Ticket, HandMetal, Code2, SmilePlus,
   ShieldCheck, Shield, Bot, ClipboardList, BarChart3,
   Gift, ScrollText, Settings, Crown, ChevronLeft, ChevronRight,
-  Sparkles, Cpu, Palette, ShieldAlert
+  Sparkles, Cpu, Palette, ShieldAlert, Flame, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from 'next-themes'
@@ -82,16 +82,17 @@ export function Sidebar() {
         initial={false}
         animate={{ width: sidebarCollapsed ? 72 : 256 }}
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-        className="relative flex flex-col h-full border-r border-border bg-card/50 backdrop-blur-xl"
+        className="relative flex flex-col h-full bg-[#0A0A0A] sidebar-forge-border overflow-hidden"
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-4 h-16 border-b border-border">
+        <div className="flex items-center gap-3 px-4 h-16 border-b border-white/5">
           <motion.div
-            className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 shrink-0"
-            whileHover={{ scale: 1.05, rotate: 5 }}
+            className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] shrink-0 relative overflow-hidden"
+            whileHover={{ scale: 1.08, rotate: 3 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Sparkles className="w-5 h-5 text-white" />
+            <Flame className="w-5 h-5 text-white relative z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#FFD700]/30 to-transparent" />
           </motion.div>
           <AnimatePresence>
             {!sidebarCollapsed && (
@@ -102,10 +103,10 @@ export function Sidebar() {
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <h1 className="text-sm font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent whitespace-nowrap">
+                <h1 className="text-sm font-bold animate-gradient-text whitespace-nowrap">
                   DiscordForge
                 </h1>
-                <p className="text-[10px] text-muted-foreground whitespace-nowrap">Management Platform</p>
+                <p className="text-[10px] text-[#FF3A2F]/60 whitespace-nowrap font-medium">Management Platform</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -121,7 +122,7 @@ export function Sidebar() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-3 mb-1.5"
+                    className="text-[10px] font-semibold uppercase tracking-wider text-[#FF3A2F]/40 px-3 mb-1.5"
                   >
                     {group.label}
                   </motion.p>
@@ -141,8 +142,8 @@ export function Sidebar() {
                         'w-full flex items-center gap-3 rounded-lg transition-all duration-200 relative group',
                         sidebarCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2',
                         isActive
-                          ? 'bg-gradient-to-r from-violet-500/20 to-fuchsia-500/10 text-violet-400'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                          ? 'bg-gradient-to-r from-[#FF3A2F]/15 to-[#FF6B00]/5 text-[#FF3A2F]'
+                          : 'text-[#888] hover:text-[#FFD700] hover:bg-white/[0.03]'
                       )}
                       whileHover={{ x: sidebarCollapsed ? 0 : 2 }}
                       whileTap={{ scale: 0.98 }}
@@ -150,11 +151,11 @@ export function Sidebar() {
                       {isActive && (
                         <motion.div
                           layoutId="sidebar-active"
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-violet-500 to-fuchsia-500"
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-gradient-to-b from-[#FF3A2F] to-[#FF6B00]"
                           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         />
                       )}
-                      <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive && 'text-violet-400')} />
+                      <Icon className={cn('w-[18px] h-[18px] shrink-0 transition-colors', isActive ? 'text-[#FF3A2F]' : 'group-hover:text-[#FFD700]')} />
                       <AnimatePresence>
                         {!sidebarCollapsed && (
                           <motion.span
@@ -167,6 +168,9 @@ export function Sidebar() {
                           </motion.span>
                         )}
                       </AnimatePresence>
+                      {isActive && !sidebarCollapsed && (
+                        <Zap className="w-3 h-3 ml-auto text-[#FF6B00] animate-pulse" />
+                      )}
                     </motion.button>
                   )
 
@@ -174,7 +178,7 @@ export function Sidebar() {
                     return (
                       <Tooltip key={item.id}>
                         <TooltipTrigger asChild>{button}</TooltipTrigger>
-                        <TooltipContent side="right" className="font-medium">{item.label}</TooltipContent>
+                        <TooltipContent side="right" className="font-medium bg-[#1A1A1A] border-white/10 text-white">{item.label}</TooltipContent>
                       </Tooltip>
                     )
                   }
@@ -182,18 +186,18 @@ export function Sidebar() {
                   return button
                 })}
               </div>
-              {group.section !== 'admin' && <Separator className="mt-3 opacity-30" />}
+              {group.section !== 'admin' && <Separator className="mt-3 opacity-10 bg-gradient-to-r from-transparent via-[#FF3A2F]/20 to-transparent" />}
             </div>
           ))}
         </div>
 
         {/* Bottom */}
-        <div className="border-t border-border p-3 space-y-2">
+        <div className="border-t border-white/5 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost" size="icon"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="shrink-0 h-9 w-9"
+              className="shrink-0 h-9 w-9 text-[#888] hover:text-[#FFD700]"
             >
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
@@ -205,10 +209,10 @@ export function Sidebar() {
                   exit={{ opacity: 0 }}
                   className="flex items-center gap-2 flex-1 min-w-0"
                 >
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                     {user.username[0]}
                   </div>
-                  <span className="text-xs font-medium truncate">{user.username}</span>
+                  <span className="text-xs font-medium truncate text-[#ccc]">{user.username}</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -216,7 +220,7 @@ export function Sidebar() {
           <Button
             variant="ghost" size="sm"
             onClick={toggleSidebar}
-            className={cn('w-full h-8', sidebarCollapsed ? 'px-0' : '')}
+            className={cn('w-full h-8 text-[#888] hover:text-[#FFD700]', sidebarCollapsed ? 'px-0' : '')}
           >
             {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : (
               <div className="flex items-center gap-2">

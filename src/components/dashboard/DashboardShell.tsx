@@ -65,11 +65,60 @@ function SectionRenderer() {
   )
 }
 
+/* Animated background particles */
+function ForgeParticles() {
+  return (
+    <div className="particles-bg">
+      {/* Ambient glow orbs */}
+      <div
+        className="absolute top-[10%] left-[15%] w-[500px] h-[500px] rounded-full opacity-[0.03]"
+        style={{
+          background: 'radial-gradient(circle, #FF3A2F, transparent 70%)',
+          animation: 'forge-pulse 6s ease-in-out infinite',
+        }}
+      />
+      <div
+        className="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] rounded-full opacity-[0.02]"
+        style={{
+          background: 'radial-gradient(circle, #FFD700, transparent 70%)',
+          animation: 'forge-pulse 8s ease-in-out infinite 2s',
+        }}
+      />
+      <div
+        className="absolute top-[50%] left-[50%] w-[600px] h-[600px] rounded-full opacity-[0.015] -translate-x-1/2 -translate-y-1/2"
+        style={{
+          background: 'radial-gradient(circle, #00B4D8, transparent 70%)',
+          animation: 'forge-pulse 10s ease-in-out infinite 4s',
+        }}
+      />
+
+      {/* Floating ember particles */}
+      {Array.from({ length: 15 }).map((_, i) => (
+        <div
+          key={i}
+          className="particle"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${60 + Math.random() * 40}%`,
+            width: `${1 + Math.random() * 2}px`,
+            height: `${1 + Math.random() * 2}px`,
+            background: i % 3 === 0 ? '#FF3A2F' : i % 3 === 1 ? '#FFD700' : '#FF6B00',
+            animationDuration: `${4 + Math.random() * 6}s`,
+            animationDelay: `${Math.random() * 5}s`,
+            opacity: 0.4 + Math.random() * 0.4,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 export function DashboardShell() {
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-[#0A0A0A] overflow-hidden relative">
+      <ForgeParticles />
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10 bg-forge-grid">
         <Header />
         <SectionRenderer />
       </div>

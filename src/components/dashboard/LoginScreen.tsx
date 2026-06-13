@@ -55,9 +55,9 @@ export function LoginScreen() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       {/* Background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-500/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#FF3A2F]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#FF6B00]/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#FF3A2F]/5 rounded-full blur-3xl" />
       </div>
 
       <motion.div
@@ -71,7 +71,7 @@ export function LoginScreen() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 mb-4"
+            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] mb-4"
           >
             <Sparkles className="w-8 h-8 text-white" />
           </motion.div>
@@ -79,7 +79,7 @@ export function LoginScreen() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent"
+            className="text-3xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FFD700] bg-clip-text text-transparent"
           >
             DiscordForge
           </motion.h1>
@@ -118,7 +118,7 @@ export function LoginScreen() {
                 transition={{ delay: 0.6 + i * 0.1 }}
                 className="flex items-center gap-3 p-2 rounded-lg"
               >
-                <feat.icon className="w-4 h-4 text-violet-400 shrink-0" />
+                <feat.icon className="w-4 h-4 text-[#FF3A2F] shrink-0" />
                 <span className="text-xs text-muted-foreground"><strong className="text-foreground">{feat.title}</strong> — {feat.desc}</span>
               </motion.div>
             ))}

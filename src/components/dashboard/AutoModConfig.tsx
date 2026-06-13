@@ -266,7 +266,7 @@ export function AutoModConfig() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Auto Moderación
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -281,13 +281,13 @@ export function AutoModConfig() {
             <Switch
               checked={masterEnabled}
               onCheckedChange={setMasterEnabled}
-              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
             />
           </div>
           <Button
             onClick={() => setShowNewRule(true)}
             size="sm"
-            className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+            className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
           >
             <Plus className="w-4 h-4" />
             Nueva Regla
@@ -319,8 +319,8 @@ export function AutoModConfig() {
       <Card className="bg-card/80 backdrop-blur-sm border-border/50">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-600/10">
-              <ShieldAlert className="w-4 h-4 text-violet-400" />
+            <div className="p-2 rounded-lg bg-gradient-to-br from-[#FF3A2F]/20 to-fuchsia-600/10">
+              <ShieldAlert className="w-4 h-4 text-[#FF3A2F]" />
             </div>
             <div>
               <CardTitle className="text-sm font-semibold">Canal de logs de AutoMod</CardTitle>
@@ -343,7 +343,7 @@ export function AutoModConfig() {
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-            className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+            className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
           />
         </div>
       ) : rules.length === 0 ? (
@@ -391,7 +391,7 @@ export function AutoModConfig() {
                           <Switch
                             checked={rule.enabled}
                             onCheckedChange={() => handleToggleRule(rule)}
-                            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+                            className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
                           />
                           <Button
                             variant="ghost"
@@ -409,7 +409,7 @@ export function AutoModConfig() {
                       <div className="flex items-center gap-4 flex-wrap">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">Umbral:</span>
-                          <Badge variant="outline" className="text-xs bg-violet-500/10 text-violet-400 border-violet-500/30">
+                          <Badge variant="outline" className="text-xs bg-[#FF3A2F]/10 text-[#FF3A2F] border-[#FF3A2F]/30">
                             {rule.threshold}
                           </Badge>
                         </div>
@@ -511,7 +511,7 @@ export function AutoModConfig() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-violet-400" />
+              <Sparkles className="w-5 h-5 text-[#FF3A2F]" />
               Nueva Regla de Auto Moderación
             </DialogTitle>
             <DialogDescription>
@@ -539,7 +539,7 @@ export function AutoModConfig() {
                     onClick={() => setNewType(rt.type)}
                     className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left ${
                       newType === rt.type
-                        ? 'border-violet-500/50 bg-violet-500/10'
+                        ? 'border-[#FF3A2F]/50 bg-[#FF3A2F]/10'
                         : 'border-border/50 bg-card/50 hover:bg-accent/30'
                     }`}
                     whileHover={{ scale: 1.02 }}
@@ -665,7 +665,7 @@ export function AutoModConfig() {
               <Switch
                 checked={newEnabled}
                 onCheckedChange={setNewEnabled}
-                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
               />
               <Label className="text-xs">Activar regla inmediatamente</Label>
             </div>
@@ -675,7 +675,7 @@ export function AutoModConfig() {
             <Button variant="ghost" onClick={() => setShowNewRule(false)}>Cancelar</Button>
             <Button
               onClick={handleCreateRule}
-              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
             >
               Crear Regla
             </Button>
@@ -688,7 +688,7 @@ export function AutoModConfig() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Pencil className="w-5 h-5 text-violet-400" />
+              <Pencil className="w-5 h-5 text-[#FF3A2F]" />
               Editar Regla
             </DialogTitle>
             <DialogDescription>
@@ -810,7 +810,7 @@ export function AutoModConfig() {
               <Switch
                 checked={editEnabled}
                 onCheckedChange={setEditEnabled}
-                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-violet-500 data-[state=checked]:to-fuchsia-500"
+                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#FF3A2F] data-[state=checked]:to-[#FF6B00]"
               />
               <Label className="text-xs">Regla activada</Label>
             </div>
@@ -820,7 +820,7 @@ export function AutoModConfig() {
             <Button variant="ghost" onClick={() => setEditingRule(null)}>Cancelar</Button>
             <Button
               onClick={handleSaveEdit}
-              className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
             >
               Guardar Cambios
             </Button>

@@ -141,7 +141,7 @@ export function SuperAdmin() {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-          className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+          className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
         />
       </div>
     )
@@ -159,7 +159,7 @@ export function SuperAdmin() {
   }
 
   const statCards = [
-    { label: 'Total Servidores', value: globalStats.totalServers, icon: ServerIcon, color: 'from-violet-500/20 to-fuchsia-600/10', iconColor: 'text-violet-400' },
+    { label: 'Total Servidores', value: globalStats.totalServers, icon: ServerIcon, color: 'from-[#FF3A2F]/20 to-fuchsia-600/10', iconColor: 'text-[#FF3A2F]' },
     { label: 'Total Usuarios', value: globalStats.totalUsers, icon: Users, color: 'from-cyan-500/20 to-cyan-600/10', iconColor: 'text-cyan-400' },
     { label: 'Total Tickets', value: globalStats.totalTickets, icon: Ticket, color: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-400' },
     { label: 'Total Logs', value: globalStats.totalLogs, icon: ScrollText, color: 'from-amber-500/20 to-amber-600/10', iconColor: 'text-amber-400' },
@@ -178,11 +178,11 @@ export function SuperAdmin() {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-3"
       >
-        <div className="p-2 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500">
+        <div className="p-2 rounded-lg bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00]">
           <Crown className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Super Admin
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -224,7 +224,7 @@ export function SuperAdmin() {
         <Card className="bg-card/80 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <ServerIcon className="w-5 h-5 text-violet-400" />
+              <ServerIcon className="w-5 h-5 text-[#FF3A2F]" />
               Servidores
             </CardTitle>
           </CardHeader>
@@ -234,7 +234,7 @@ export function SuperAdmin() {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                  className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+                  className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
                 />
               </div>
             ) : servers.length === 0 ? (
@@ -265,7 +265,7 @@ export function SuperAdmin() {
                       >
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 flex items-center justify-center text-xs font-bold">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#FF3A2F]/30 to-fuchsia-500/30 flex items-center justify-center text-xs font-bold">
                               {server.name.charAt(0).toUpperCase()}
                             </div>
                             <span className="text-sm font-medium">{server.name}</span>
@@ -289,7 +289,7 @@ export function SuperAdmin() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-violet-400 hover:bg-violet-500/10">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-[#FF3A2F] hover:bg-[#FF3A2F]/10">
                             <Eye className="w-3.5 h-3.5" />
                           </Button>
                         </TableCell>
@@ -314,7 +314,7 @@ export function SuperAdmin() {
           <Card className="bg-card/80 backdrop-blur-sm border-border/50 h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="w-5 h-5 text-violet-400" />
+                <Users className="w-5 h-5 text-[#FF3A2F]" />
                 Gestión de Usuarios
               </CardTitle>
             </CardHeader>
@@ -334,7 +334,7 @@ export function SuperAdmin() {
                   onClick={handleSearchUsers}
                   variant="outline"
                   size="sm"
-                  className="h-9 border-violet-500/30 hover:bg-violet-500/10"
+                  className="h-9 border-[#FF3A2F]/30 hover:bg-[#FF3A2F]/10"
                 >
                   Buscar
                 </Button>
@@ -345,7 +345,7 @@ export function SuperAdmin() {
                   <div className="space-y-2">
                     {foundUsers.map((u) => (
                       <div key={u.id} className="flex items-center gap-3 p-2 rounded-lg bg-background/50 border border-border/20">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 flex items-center justify-center text-xs font-bold">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#FF3A2F]/30 to-fuchsia-500/30 flex items-center justify-center text-xs font-bold">
                           {u.username.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -380,7 +380,7 @@ export function SuperAdmin() {
           <Card className="bg-card/80 backdrop-blur-sm border-border/50 h-full">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Activity className="w-5 h-5 text-violet-400" />
+                <Activity className="w-5 h-5 text-[#FF3A2F]" />
                 Salud del Sistema
               </CardTitle>
             </CardHeader>
@@ -435,7 +435,7 @@ export function SuperAdmin() {
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Zap className="w-5 h-5 text-violet-400" />
+                <Zap className="w-5 h-5 text-[#FF3A2F]" />
                 Acciones Rápidas
               </CardTitle>
             </CardHeader>
@@ -444,9 +444,9 @@ export function SuperAdmin() {
                 <Button
                   variant="outline"
                   onClick={handleSeedDatabase}
-                  className="h-auto py-4 flex-col gap-2 border-violet-500/30 hover:bg-violet-500/10"
+                  className="h-auto py-4 flex-col gap-2 border-[#FF3A2F]/30 hover:bg-[#FF3A2F]/10"
                 >
-                  <Database className="w-5 h-5 text-violet-400" />
+                  <Database className="w-5 h-5 text-[#FF3A2F]" />
                   <span className="text-xs">Seed Database</span>
                 </Button>
                 <Button
@@ -476,7 +476,7 @@ export function SuperAdmin() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
         >
-          <Card className="bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border-violet-500/30">
+          <Card className="bg-gradient-to-br from-[#FF3A2F]/10 to-[#FF6B00]/10 border-[#FF3A2F]/30">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-fuchsia-400" />
@@ -484,8 +484,8 @@ export function SuperAdmin() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-background/30 border border-violet-500/20">
-                <div className="p-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-background/30 border border-[#FF3A2F]/20">
+                <div className="p-3 rounded-xl bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00]">
                   <Lock className="w-6 h-6 text-white" />
                 </div>
                 <div>

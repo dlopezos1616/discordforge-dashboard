@@ -44,7 +44,7 @@ const logTypeConfig: Record<string, { label: string; color: string; bgColor: str
   role_remove: { label: 'Roles', color: 'text-purple-400', bgColor: 'bg-purple-500/20', icon: Shield },
   ticket_create: { label: 'Tickets', color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', icon: Ticket },
   ticket_close: { label: 'Tickets', color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', icon: Ticket },
-  whitelist_apply: { label: 'Whitelist', color: 'text-violet-400', bgColor: 'bg-violet-500/20', icon: FileCheck },
+  whitelist_apply: { label: 'Whitelist', color: 'text-[#FF3A2F]', bgColor: 'bg-[#FF3A2F]/20', icon: FileCheck },
   message_delete: { label: 'Messages', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', icon: MessageSquare },
   message_edit: { label: 'Messages', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20', icon: MessageSquare },
   reaction_add: { label: 'Reactions', color: 'text-pink-400', bgColor: 'bg-pink-500/20', icon: ThumbsUp },
@@ -143,7 +143,7 @@ export function LogsViewer() {
   }
 
   const statCards = [
-    { label: 'Total Logs', value: stats.totalLogs, icon: ScrollText, color: 'from-violet-500/20 to-fuchsia-600/10', iconColor: 'text-violet-400' },
+    { label: 'Total Logs', value: stats.totalLogs, icon: ScrollText, color: 'from-[#FF3A2F]/20 to-fuchsia-600/10', iconColor: 'text-[#FF3A2F]' },
     { label: 'Logs Hoy', value: stats.logsToday, icon: Activity, color: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-400' },
     { label: 'Tipo Más Activo', value: stats.mostActiveType === '—' ? '—' : (logTypeConfig[stats.mostActiveType]?.label || stats.mostActiveType), icon: Zap, color: 'from-amber-500/20 to-amber-600/10', iconColor: 'text-amber-400' },
   ]
@@ -158,7 +158,7 @@ export function LogsViewer() {
       >
         <div className="flex items-center gap-3">
           <div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
               Logs del Servidor
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
@@ -178,7 +178,7 @@ export function LogsViewer() {
           variant="outline"
           size="sm"
           onClick={handleExport}
-          className="gap-2 border-violet-500/30 hover:bg-violet-500/10"
+          className="gap-2 border-[#FF3A2F]/30 hover:bg-[#FF3A2F]/10"
         >
           <Download className="w-4 h-4" />
           Exportar CSV
@@ -280,7 +280,7 @@ export function LogsViewer() {
       <Card className="bg-card/80 backdrop-blur-sm border-border/50">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
-            <ScrollText className="w-5 h-5 text-violet-400" />
+            <ScrollText className="w-5 h-5 text-[#FF3A2F]" />
             Registro de Actividad
             <span className="text-xs text-muted-foreground font-normal ml-2">
               {total} registros
@@ -293,7 +293,7 @@ export function LogsViewer() {
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+                className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
               />
             </div>
           ) : logs.length === 0 ? (

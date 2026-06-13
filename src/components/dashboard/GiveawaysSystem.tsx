@@ -190,7 +190,7 @@ export function GiveawaysSystem() {
   const completedGiveaways = giveaways.filter(g => !g.isActive)
 
   const statCards = [
-    { label: 'Sorteos Activos', value: stats.activeGiveaways, icon: Gift, color: 'from-violet-500/20 to-fuchsia-600/10', iconColor: 'text-violet-400' },
+    { label: 'Sorteos Activos', value: stats.activeGiveaways, icon: Gift, color: 'from-[#FF3A2F]/20 to-fuchsia-600/10', iconColor: 'text-[#FF3A2F]' },
     { label: 'Participantes', value: stats.totalParticipants, icon: Users, color: 'from-cyan-500/20 to-cyan-600/10', iconColor: 'text-cyan-400' },
     { label: 'Premios Entregados', value: stats.totalPrizesGiven, icon: Trophy, color: 'from-amber-500/20 to-amber-600/10', iconColor: 'text-amber-400' },
   ]
@@ -204,7 +204,7 @@ export function GiveawaysSystem() {
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
             Sorteos
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -216,7 +216,7 @@ export function GiveawaysSystem() {
           if (!open) resetCreateForm()
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white">
+            <Button className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white">
               <Plus className="w-4 h-4" />
               Crear Sorteo
             </Button>
@@ -224,7 +224,7 @@ export function GiveawaysSystem() {
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Gift className="w-5 h-5 text-violet-400" />
+                <Gift className="w-5 h-5 text-[#FF3A2F]" />
                 Crear Sorteo
               </DialogTitle>
             </DialogHeader>
@@ -320,7 +320,7 @@ export function GiveawaysSystem() {
                   <Button
                     onClick={handleCreate}
                     disabled={!prize}
-                    className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+                    className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
                   >
                     Crear Sorteo
                   </Button>
@@ -340,7 +340,7 @@ export function GiveawaysSystem() {
                   {/* Giveaway info summary */}
                   <div className="space-y-2 rounded-lg border border-border/50 bg-background/30 p-4">
                     <h4 className="text-sm font-semibold flex items-center gap-2">
-                      <Gift className="w-4 h-4 text-violet-400" />
+                      <Gift className="w-4 h-4 text-[#FF3A2F]" />
                       Resumen del Sorteo
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -364,7 +364,7 @@ export function GiveawaysSystem() {
                     <Button
                       onClick={handleCreate}
                       disabled={!prize}
-                      className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white"
+                      className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
                     >
                       Crear Sorteo
                     </Button>
@@ -403,7 +403,7 @@ export function GiveawaysSystem() {
       {/* Active Giveaways */}
       <div>
         <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          <Star className="w-5 h-5 text-violet-400" />
+          <Star className="w-5 h-5 text-[#FF3A2F]" />
           Sorteos Activos
         </h3>
         {loading ? (
@@ -411,7 +411,7 @@ export function GiveawaysSystem() {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-              className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full"
+              className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
             />
           </div>
         ) : activeGiveaways.length === 0 ? (
@@ -430,8 +430,8 @@ export function GiveawaysSystem() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
               >
-                <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-violet-500/30 transition-colors overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-violet-500 to-fuchsia-500" />
+                <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-[#FF3A2F]/30 transition-colors overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00]" />
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -525,7 +525,7 @@ export function GiveawaysSystem() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 text-xs gap-1 text-violet-400 hover:bg-violet-500/10"
+                          className="h-8 text-xs gap-1 text-[#FF3A2F] hover:bg-[#FF3A2F]/10"
                           onClick={() => handleReroll(giveaway.id)}
                         >
                           <RefreshCw className="w-3.5 h-3.5" />
