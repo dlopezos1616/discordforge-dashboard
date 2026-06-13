@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Token de acceso no encontrado. Inicia sesión de nuevo.' }, { status: 401 })
     }
 
-    // Fetch guilds directly from Discord API (not from cookie)
-    const guildsResponse = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+    // Fetch guilds from Discord API with member counts
+    const guildsResponse = await fetch('https://discord.com/api/v10/users/@me/guilds?with_counts=true', {
       headers: { Authorization: `${tokenType} ${accessToken}` },
     })
 
@@ -42,12 +42,23 @@ export async function GET(request: NextRequest) {
 
     const allGuilds = await guildsResponse.json()
 
-    // Filter guilds where user has admin permissions
-    const adminGuilds = allGuilds.filter((g: any) => {
-      const perms = Number(g.permissions)
-      // ADMINISTRATOR (0x8) or MANAGE_GUILD (0x20) or owner
-      return g.owner || (perms & 0x8) === 0x8 || (perms & 0x20) === 0x20
-    })
+    // Filter guilds where user has admin permissions and add member count data
+    const adminGuilds = allGuilds
+      .filter((g: any) => {
+        const perms = Number(g.permissions)
+        // ADMINISTRATOR (0x8) or MANAGE_GUILD (0x20) or owner
+        return g.owner || (perms & 0x8) === 0x8 || (perms & 0x20) === 0x20
+      })
+      .map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        icon: g.icon || null,
+        owner: g.owner,
+        permissions: g.permissions,
+        features: g.features || [],
+        approximate_member_count: g.approximate_member_count || 0,
+        approximate_presence_count: g.approximate_presence_count || 0,
+      }))
 
     return NextResponse.json({
       guilds: adminGuilds,

@@ -19,6 +19,8 @@ interface DiscordGuild {
   owner: boolean
   permissions: number
   features: string[]
+  approximate_member_count: number
+  approximate_presence_count: number
 }
 
 export function ServerSelectPage() {
@@ -68,6 +70,7 @@ export function ServerSelectPage() {
           discordId: guild.id,
           name: guild.name,
           icon: guild.icon,
+          memberCount: guild.approximate_member_count || 0,
           ownerId: guild.owner ? (user as Record<string, unknown>)?.discordId || 'unknown' : 'unknown',
         }),
       })
@@ -224,7 +227,7 @@ export function ServerSelectPage() {
                         )}
                       </div>
                       <p className="text-xs text-[#888]">
-                        {guild.owner ? 'Propietario' : 'Administrador'}
+                        {guild.owner ? 'Propietario' : 'Administrador'} • {guild.approximate_member_count?.toLocaleString() || '?'} miembros
                       </p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-[#888] group-hover:text-[#FF6600] group-hover:translate-x-1 transition-all shrink-0" />

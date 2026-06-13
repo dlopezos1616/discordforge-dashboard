@@ -5,13 +5,15 @@ import { motion } from 'framer-motion'
 import {
   Users, Ticket, Shield, BarChart3, Activity, Clock,
   TrendingUp, TrendingDown, AlertCircle, CheckCircle2,
-  XCircle, Eye
+  XCircle, Eye, RefreshCw, Zap, Crown, MessageSquare,
+  ShieldCheck, ShieldAlert
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { useEffect, useState, useCallback } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell
@@ -21,15 +23,45 @@ interface ServerStats {
   openTickets: number
   closedTickets: number
   totalMembers: number
+  onlineMembers?: number
   moderationCount: number
   activePolls: number
   activeGiveaways: number
   whitelistPending: number
   logsToday: number
+  totalLogs?: number
   chartData: { date: string; joins: number; leaves: number; tickets: number }[]
   ticketsByCategory: { name: string; emoji: string; _count: { tickets: number } }[]
   recentLogs: { type: string; description: string; createdAt: string; user?: { username: string } }[]
   modActions: { type: string; reason: string | null; createdAt: string; moderator: { username: string }; target: { username: string } }[]
+  healthMetrics?: {
+    automod: number
+    activity: number
+    security: number
+    engagement: number
+  }
+  discordData?: {
+    approximate_member_count: number
+    approximate_presence_count: number
+    boost_count: number
+    boost_tier: number
+    emoji_count: number
+    role_count: number
+    description: string | null
+    banner: string | null
+  } | null
+  serverInfo?: {
+    name: string
+    icon: string | null
+    boostCount: number
+    boostTier: number
+    emojiCount: number
+    roleCount: number
+    automodRules: number
+    totalAutomodRules: number
+    hasVerification: boolean
+    raidProtectionEnabled: boolean
+  }
 }
 
 const container = {
@@ -71,16 +103,44 @@ export function DashboardHome() {
   const { currentServer } = useAppStore()
   const [stats, setStats] = useState<ServerStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchStats = useCallback(async () => {
+    if (!currentServer) return
+    try {
+      const res = await fetch(`/api/stats?serverId=${currentServer.id}`)
+      const data = await res.json()
+      setStats(data)
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [currentServer])
+
+  const handleRefresh = async () => {
+    if (refreshing) return
+    setRefreshing(true)
+    // First refresh from Discord
+    try {
+      await fetch('/api/servers/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverId: currentServer?.id }),
+      })
+    } catch {
+      // ignore
+    }
+    // Then fetch updated stats
+    await fetchStats()
+  }
 
   useEffect(() => {
     if (!currentServer) return
-    let cancelled = false
-    fetch(`/api/stats?serverId=${currentServer.id}`)
-      .then(r => r.json())
-      .then(data => { if (!cancelled) { setStats(data); setLoading(false) } })
-      .catch(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [currentServer])
+    setLoading(true)
+    fetchStats()
+  }, [currentServer, fetchStats])
 
   if (!currentServer) {
     return (
@@ -106,28 +166,120 @@ export function DashboardHome() {
     )
   }
 
+  const healthMetrics = stats.healthMetrics || { automod: 0, activity: 0, security: 0, engagement: 0 }
+  const serverInfo = stats.serverInfo
+  const discordData = stats.discordData
+  const onlineMembers = stats.onlineMembers || discordData?.approximate_presence_count || 0
+
   const statCards = [
-    { label: 'Miembros', value: stats.totalMembers.toLocaleString(), icon: Users, color: 'from-[#FF6600] to-[#DC2626]', change: '+12%', up: true },
-    { label: 'Tickets Abiertos', value: stats.openTickets.toString(), icon: Ticket, color: 'from-[#FFD700] to-[#FF6600]', change: `${stats.closedTickets} cerrados`, up: true },
-    { label: 'Moderaciones', value: stats.moderationCount.toString(), icon: Shield, color: 'from-[#DC2626] to-[#FF8C00]', change: 'Hoy', up: false },
-    { label: 'Whitelist Pendiente', value: stats.whitelistPending.toString(), icon: AlertCircle, color: 'from-[#00B4D8] to-[#FF6600]', change: `${stats.activePolls} encuestas`, up: true },
+    {
+      label: 'Miembros',
+      value: stats.totalMembers.toLocaleString(),
+      subValue: onlineMembers > 0 ? `${onlineMembers.toLocaleString()} en línea` : undefined,
+      icon: Users,
+      color: 'from-[#FF6600] to-[#DC2626]',
+      change: stats.totalMembers > 0 ? 'Activos' : 'Sin datos',
+      up: stats.totalMembers > 0,
+    },
+    {
+      label: 'Tickets Abiertos',
+      value: stats.openTickets.toString(),
+      subValue: stats.closedTickets > 0 ? `${stats.closedTickets} cerrados` : undefined,
+      icon: Ticket,
+      color: 'from-[#FFD700] to-[#FF6600]',
+      change: `${stats.closedTickets} cerrados`,
+      up: true,
+    },
+    {
+      label: 'Moderaciones',
+      value: stats.moderationCount.toString(),
+      icon: Shield,
+      color: 'from-[#DC2626] to-[#FF8C00]',
+      change: `${stats.logsToday} logs hoy`,
+      up: false,
+    },
+    {
+      label: 'Whitelist Pendiente',
+      value: stats.whitelistPending.toString(),
+      icon: AlertCircle,
+      color: 'from-[#00B4D8] to-[#FF6600]',
+      change: `${stats.activePolls} encuestas`,
+      up: true,
+    },
   ]
 
   const pieData = stats.ticketsByCategory.map(cat => ({ name: cat.name, value: cat._count.tickets }))
 
+  const boostTierLabels = ['Sin Boost', 'Nivel 1', 'Nivel 2', 'Nivel 3']
+
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-6">
-      {/* Welcome banner */}
+      {/* Welcome banner with server info */}
       <motion.div variants={item}>
         <Card className="border-0 overflow-hidden relative forge-card-premium" style={{ background: 'linear-gradient(135deg, rgba(255,102,0,0.08) 0%, rgba(255,58,47,0.04) 50%, transparent 100%)' }}>
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
-          {/* Subtle flame accent */}
           <div className="absolute -right-10 -top-10 w-40 h-40 opacity-[0.04] pointer-events-none" style={{ background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #DC2626 30%, #FF8C00 60%, transparent 100%)', clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)' }} />
           <CardHeader className="relative">
-            <CardTitle className="text-xl">
-              ¡Bienvenido a <span className="animate-gradient-text">{currentServer.name}</span>!
-            </CardTitle>
-            <CardDescription>Resumen de la actividad del servidor</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">
+                  ¡Bienvenido a <span className="animate-gradient-text">{currentServer.name}</span>!
+                </CardTitle>
+                <CardDescription>Resumen de la actividad del servidor</CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="text-[#888] hover:text-[#FF6600] hover:bg-[#FF6600]/10 gap-1.5 shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing ? 'Actualizando...' : 'Actualizar'}
+              </Button>
+            </div>
+            {/* Server quick info bar */}
+            {serverInfo && (
+              <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-white/5">
+                {discordData && discordData.boost_count > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#FF6600]">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>{discordData.boost_count} boosts</span>
+                    <span className="text-[#888]">({boostTierLabels[discordData.boost_tier] || 'Nivel 0'})</span>
+                  </div>
+                )}
+                {serverInfo.emojiCount > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#888]">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>{serverInfo.emojiCount} emojis</span>
+                  </div>
+                )}
+                {serverInfo.roleCount > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#888]">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>{serverInfo.roleCount} roles</span>
+                  </div>
+                )}
+                {serverInfo.automodRules > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>{serverInfo.automodRules} reglas AutoMod</span>
+                  </div>
+                )}
+                {serverInfo.raidProtectionEnabled && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#00B4D8]">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>AntiRaid activo</span>
+                  </div>
+                )}
+                {serverInfo.hasVerification && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#FFD700]">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Verificación activa</span>
+                  </div>
+                )}
+              </div>
+            )}
           </CardHeader>
         </Card>
       </motion.div>
@@ -147,6 +299,9 @@ export function DashboardHome() {
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
                     <p className="text-2xl font-bold mt-1">{stat.value}</p>
+                    {stat.subValue && (
+                      <p className="text-[11px] text-[#00B4D8] mt-0.5">{stat.subValue}</p>
+                    )}
                     <div className="flex items-center gap-1 mt-1">
                       {stat.up ? (
                         <TrendingUp className="w-3 h-3 text-emerald-400" />
@@ -218,32 +373,42 @@ export function DashboardHome() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {pieData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              {pieData.length > 0 && pieData.some(d => d.value > 0) ? (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={3}
+                        dataKey="value"
+                      >
+                        {pieData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="grid grid-cols-2 gap-1 mt-2">
+                    {stats.ticketsByCategory.slice(0, 6).map((cat, i) => (
+                      <div key={cat.name} className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                        <span className="text-[10px] text-muted-foreground truncate">{cat.emoji} {cat.name}</span>
+                      </div>
                     ))}
-                  </Pie>
-                  <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="grid grid-cols-2 gap-1 mt-2">
-                {stats.ticketsByCategory.slice(0, 6).map((cat, i) => (
-                  <div key={cat.name} className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-[10px] text-muted-foreground truncate">{cat.emoji} {cat.name}</span>
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[200px] text-center">
+                  <Ticket className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-xs text-muted-foreground">Sin categorías de tickets</p>
+                  <p className="text-[10px] text-muted-foreground/60">Crea categorías desde la sección de Tickets</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -258,29 +423,40 @@ export function DashboardHome() {
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Clock className="w-4 h-4 text-emerald-400" />
                 Actividad Reciente
+                {stats.totalLogs !== undefined && (
+                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-muted/50">{stats.totalLogs} total</Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {stats.recentLogs.map((log, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent/30 transition-colors"
-                    >
-                      <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 ${logTypeColors[log.type] || 'bg-muted text-muted-foreground'}`}>
-                        {log.type}
-                      </Badge>
-                      <p className="text-xs flex-1 truncate">{log.description}</p>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {new Date(log.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
+                {stats.recentLogs.length > 0 ? (
+                  <div className="space-y-2">
+                    {stats.recentLogs.map((log, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent/30 transition-colors"
+                      >
+                        <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 ${logTypeColors[log.type] || 'bg-muted text-muted-foreground'}`}>
+                          {log.type}
+                        </Badge>
+                        <p className="text-xs flex-1 truncate">{log.description}</p>
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {new Date(log.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-48 text-center">
+                    <Clock className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                    <p className="text-xs text-muted-foreground">Sin actividad reciente</p>
+                    <p className="text-[10px] text-muted-foreground/60">La actividad aparecerá cuando el bot esté activo</p>
+                  </div>
+                )}
               </ScrollArea>
             </CardContent>
           </Card>
@@ -297,57 +473,70 @@ export function DashboardHome() {
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-64">
-                <div className="space-y-2">
-                  {stats.modActions.map((action, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 border ${modTypeColors[action.type] || 'bg-muted text-muted-foreground'}`}>
-                          {action.type.toUpperCase()}
-                        </Badge>
-                        <span className="text-[10px] text-muted-foreground">
-                          {new Date(action.createdAt).toLocaleDateString('es-ES')}
-                        </span>
-                      </div>
-                      <p className="text-xs">{action.moderator.username} → {action.target.username}</p>
-                      {action.reason && <p className="text-[11px] text-muted-foreground mt-0.5">Razón: {action.reason}</p>}
-                    </motion.div>
-                  ))}
-                </div>
+                {stats.modActions.length > 0 ? (
+                  <div className="space-y-2">
+                    {stats.modActions.map((action, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 border ${modTypeColors[action.type] || 'bg-muted text-muted-foreground'}`}>
+                            {action.type.toUpperCase()}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(action.createdAt).toLocaleDateString('es-ES')}
+                          </span>
+                        </div>
+                        <p className="text-xs">{action.moderator.username} → {action.target.username}</p>
+                        {action.reason && <p className="text-[11px] text-muted-foreground mt-0.5">Razón: {action.reason}</p>}
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-48 text-center">
+                    <Shield className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                    <p className="text-xs text-muted-foreground">Sin acciones de moderación</p>
+                    <p className="text-[10px] text-muted-foreground/60">Las acciones aparecerán cuando se moderen usuarios</p>
+                  </div>
+                )}
               </ScrollArea>
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
-      {/* Server health */}
+      {/* Server health - now with real computed metrics */}
       <motion.div variants={item}>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-cyan-400" />
               Salud del Servidor
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-[#FF6600]/10 text-[#FF6600]">En tiempo real</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Auto-Mod', value: 85, color: 'bg-[#FF6600]' },
-                { label: 'Actividad', value: 72, color: 'bg-[#FFD700]' },
-                { label: 'Seguridad', value: 94, color: 'bg-[#00B4D8]' },
-                { label: 'Engagement', value: 68, color: 'bg-[#DC2626]' },
+                { label: 'Auto-Mod', value: healthMetrics.automod, color: 'bg-[#FF6600]', icon: ShieldCheck, desc: activeAutomodDesc(healthMetrics.automod) },
+                { label: 'Actividad', value: healthMetrics.activity, color: 'bg-[#FFD700]', icon: Activity, desc: activityDesc(healthMetrics.activity) },
+                { label: 'Seguridad', value: healthMetrics.security, color: 'bg-[#00B4D8]', icon: ShieldAlert, desc: securityDesc(healthMetrics.security) },
+                { label: 'Engagement', value: healthMetrics.engagement, color: 'bg-[#DC2626]', icon: Zap, desc: engagementDesc(healthMetrics.engagement) },
               ].map(metric => (
                 <div key={metric.label} className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-xs text-muted-foreground">{metric.label}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <metric.icon className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{metric.label}</span>
+                    </div>
                     <span className="text-xs font-semibold">{metric.value}%</span>
                   </div>
                   <Progress value={metric.value} className="h-2" />
+                  <p className="text-[9px] text-muted-foreground/60">{metric.desc}</p>
                 </div>
               ))}
             </div>
@@ -356,4 +545,32 @@ export function DashboardHome() {
       </motion.div>
     </motion.div>
   )
+}
+
+function activeAutomodDesc(value: number): string {
+  if (value >= 80) return 'AutoMod y AntiRaid activos'
+  if (value >= 50) return 'Protección parcial activa'
+  if (value > 0) return 'Protección básica'
+  return 'Sin protección AutoMod'
+}
+
+function activityDesc(value: number): string {
+  if (value >= 70) return 'Servidor muy activo'
+  if (value >= 40) return 'Actividad moderada'
+  if (value > 0) return 'Baja actividad'
+  return 'Sin actividad registrada'
+}
+
+function securityDesc(value: number): string {
+  if (value >= 75) return 'Seguridad completa'
+  if (value >= 50) return 'Buena seguridad'
+  if (value > 0) return 'Seguridad parcial'
+  return 'Sin medidas de seguridad'
+}
+
+function engagementDesc(value: number): string {
+  if (value >= 70) return 'Alta participación'
+  if (value >= 40) return 'Participación moderada'
+  if (value > 0) return 'Baja participación'
+  return 'Sin engagement registrado'
 }
