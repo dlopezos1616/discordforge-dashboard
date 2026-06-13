@@ -41,7 +41,7 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 }
 
-const COLORS = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#6366F1', '#14B8A6', '#F97316', '#6B7280']
+const COLORS = ['#FF6600', '#FFD700', '#FF3A2F', '#FF8C00', '#00B4D8', '#EC4899', '#10B981', '#F97316', '#6366F1', '#14B8A6']
 
 const logTypeColors: Record<string, string> = {
   join: 'bg-emerald-500/20 text-emerald-400',
@@ -107,10 +107,10 @@ export function DashboardHome() {
   }
 
   const statCards = [
-    { label: 'Miembros', value: stats.totalMembers.toLocaleString(), icon: Users, color: 'from-[#FF3A2F] to-[#FF6B00]', change: '+12%', up: true },
-    { label: 'Tickets Abiertos', value: stats.openTickets.toString(), icon: Ticket, color: 'from-emerald-500 to-teal-500', change: `${stats.closedTickets} cerrados`, up: true },
-    { label: 'Moderaciones', value: stats.moderationCount.toString(), icon: Shield, color: 'from-orange-500 to-red-500', change: 'Hoy', up: false },
-    { label: 'Whitelist Pendiente', value: stats.whitelistPending.toString(), icon: AlertCircle, color: 'from-blue-500 to-cyan-500', change: `${stats.activePolls} encuestas`, up: true },
+    { label: 'Miembros', value: stats.totalMembers.toLocaleString(), icon: Users, color: 'from-[#FF6600] to-[#FF3A2F]', change: '+12%', up: true },
+    { label: 'Tickets Abiertos', value: stats.openTickets.toString(), icon: Ticket, color: 'from-[#FFD700] to-[#FF6600]', change: `${stats.closedTickets} cerrados`, up: true },
+    { label: 'Moderaciones', value: stats.moderationCount.toString(), icon: Shield, color: 'from-[#FF3A2F] to-[#FF8C00]', change: 'Hoy', up: false },
+    { label: 'Whitelist Pendiente', value: stats.whitelistPending.toString(), icon: AlertCircle, color: 'from-[#00B4D8] to-[#FF6600]', change: `${stats.activePolls} encuestas`, up: true },
   ]
 
   const pieData = stats.ticketsByCategory.map(cat => ({ name: cat.name, value: cat._count.tickets }))
@@ -119,11 +119,13 @@ export function DashboardHome() {
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-6">
       {/* Welcome banner */}
       <motion.div variants={item}>
-        <Card className="border-0 bg-gradient-to-r from-[#FF3A2F]/10 via-[#FF6B00]/5 to-transparent overflow-hidden relative">
+        <Card className="border-0 overflow-hidden relative forge-card-premium" style={{ background: 'linear-gradient(135deg, rgba(255,102,0,0.08) 0%, rgba(255,58,47,0.04) 50%, transparent 100%)' }}>
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+          {/* Subtle flame accent */}
+          <div className="absolute -right-10 -top-10 w-40 h-40 opacity-[0.04] pointer-events-none" style={{ background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #FF3A2F 30%, #FF8C00 60%, transparent 100%)', clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)' }} />
           <CardHeader className="relative">
             <CardTitle className="text-xl">
-              ¡Bienvenido a <span className="bg-gradient-to-r from-[#FF3A2F] to-[#FFD700] bg-clip-text text-transparent">{currentServer.name}</span>!
+              ¡Bienvenido a <span className="animate-gradient-text">{currentServer.name}</span>!
             </CardTitle>
             <CardDescription>Resumen de la actividad del servidor</CardDescription>
           </CardHeader>
@@ -139,7 +141,7 @@ export function DashboardHome() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
           >
-            <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 overflow-hidden">
+            <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 overflow-hidden forge-card-premium">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
@@ -149,14 +151,17 @@ export function DashboardHome() {
                       {stat.up ? (
                         <TrendingUp className="w-3 h-3 text-emerald-400" />
                       ) : (
-                        <TrendingDown className="w-3 h-3 text-red-400" />
+                        <TrendingDown className="w-3 h-3 text-[#FF6600]" />
                       )}
                       <span className="text-[11px] text-muted-foreground">{stat.change}</span>
                     </div>
                   </div>
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity`}>
+                  <motion.div
+                    className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center opacity-80 group-hover:opacity-100 transition-all shadow-[0_0_12px_rgba(255,102,0,0.15)] group-hover:shadow-[0_0_16px_rgba(255,102,0,0.25)]`}
+                    whileHover={{ rotate: 5, scale: 1.1 }}
+                  >
                     <stat.icon className="w-5 h-5 text-white" />
-                  </div>
+                  </motion.div>
                 </div>
               </CardContent>
             </Card>
@@ -171,7 +176,7 @@ export function DashboardHome() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#FF3A2F]" />
+                <Activity className="w-4 h-4 text-[#FF6600]" />
                 Actividad del Servidor
               </CardTitle>
               <CardDescription>Últimos 7 días</CardDescription>
@@ -181,8 +186,8 @@ export function DashboardHome() {
                 <AreaChart data={stats.chartData}>
                   <defs>
                     <linearGradient id="colorJoins" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#FF6600" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#FF6600" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorLeaves" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
@@ -195,7 +200,7 @@ export function DashboardHome() {
                   <RechartsTooltip
                     contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
                   />
-                  <Area type="monotone" dataKey="joins" stroke="#8B5CF6" fill="url(#colorJoins)" strokeWidth={2} name="Entradas" />
+                  <Area type="monotone" dataKey="joins" stroke="#FF6600" fill="url(#colorJoins)" strokeWidth={2} name="Entradas" />
                   <Area type="monotone" dataKey="leaves" stroke="#EF4444" fill="url(#colorLeaves)" strokeWidth={2} name="Salidas" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -332,10 +337,10 @@ export function DashboardHome() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Auto-Mod', value: 85, color: 'bg-[#FF3A2F]' },
-                { label: 'Actividad', value: 72, color: 'bg-emerald-500' },
-                { label: 'Seguridad', value: 94, color: 'bg-cyan-500' },
-                { label: 'Engagement', value: 68, color: 'bg-fuchsia-500' },
+                { label: 'Auto-Mod', value: 85, color: 'bg-[#FF6600]' },
+                { label: 'Actividad', value: 72, color: 'bg-[#FFD700]' },
+                { label: 'Seguridad', value: 94, color: 'bg-[#00B4D8]' },
+                { label: 'Engagement', value: 68, color: 'bg-[#FF3A2F]' },
               ].map(metric => (
                 <div key={metric.label} className="space-y-2">
                   <div className="flex justify-between">

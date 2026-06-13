@@ -42,11 +42,13 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --color-forge-red: #FF3A2F;
+  --color-forge-orange: #FF6600;
   --color-forge-gold: #FFD700;
   --color-forge-teal: #00B4D8;
-  --color-forge-orange: #FF6B00;
   --color-forge-dark: #0D0D0D;
   --color-forge-card: #141414;
+  --color-forge-ember: #FF4500;
+  --color-forge-flame: #FF8C00;
 }
 
 :root {
@@ -91,7 +93,7 @@
   --card-foreground: #F0F0F0;
   --popover: #111111;
   --popover-foreground: #F0F0F0;
-  --primary: #FF3A2F;
+  --primary: #FF6600;
   --primary-foreground: #FFFFFF;
   --secondary: #1A1A1A;
   --secondary-foreground: #F0F0F0;
@@ -102,20 +104,20 @@
   --destructive: #FF3A2F;
   --border: rgba(255, 255, 255, 0.06);
   --input: rgba(255, 255, 255, 0.08);
-  --ring: #FF3A2F;
-  --chart-1: #FF3A2F;
+  --ring: #FF6600;
+  --chart-1: #FF6600;
   --chart-2: #FFD700;
   --chart-3: #00B4D8;
-  --chart-4: #FF6B00;
-  --chart-5: #FFEB3B;
+  --chart-4: #FF3A2F;
+  --chart-5: #FF8C00;
   --sidebar: #0D0D0D;
   --sidebar-foreground: #F0F0F0;
-  --sidebar-primary: #FF3A2F;
+  --sidebar-primary: #FF6600;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #1A1A1A;
   --sidebar-accent-foreground: #F0F0F0;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: #FF3A2F;
+  --sidebar-border: rgba(255, 102, 0, 0.15);
+  --sidebar-ring: #FF6600;
 }
 
 @layer base {
@@ -127,7 +129,9 @@
   }
 }
 
-/* Custom scrollbar - forge style */
+/* ==========================================
+   CUSTOM SCROLLBAR - FORGE STYLE
+   ========================================== */
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
@@ -135,32 +139,32 @@
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 58, 47, 0.2);
+  background: rgba(255, 102, 0, 0.2);
   border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 58, 47, 0.4);
+  background: rgba(255, 102, 0, 0.4);
 }
 
-/* Grid background pattern */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 102, 0, 0.2) transparent;
+}
+
+/* ==========================================
+   FORGE GRID PATTERNS
+   ========================================== */
 .bg-grid-white\/5 {
   background-size: 40px 40px;
   background-image: linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
 }
 
-/* Forge ambient background grid */
 .bg-forge-grid {
   background-size: 50px 50px;
   background-image:
-    linear-gradient(to right, rgba(255, 58, 47, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 58, 47, 0.03) 1px, transparent 1px);
-}
-
-/* Smooth transitions */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 58, 47, 0.2) transparent;
+    linear-gradient(to right, rgba(255, 102, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 102, 0, 0.04) 1px, transparent 1px);
 }
 
 /* ==========================================
@@ -203,13 +207,62 @@
 
 /* Card hover lift effect */
 @keyframes card-lift {
-  0% { transform: translateY(0); box-shadow: 0 0 0 rgba(255, 58, 47, 0); }
-  100% { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 58, 47, 0.15); }
+  0% { transform: translateY(0); box-shadow: 0 0 0 rgba(255, 102, 0, 0); }
+  100% { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 102, 0, 0.15); }
 }
 
-/* Animated gradient text */
+/* Flame wave - for sidebar and borders */
+@keyframes flame-wave {
+  0%, 100% { opacity: 0.6; }
+  25% { opacity: 1; }
+  50% { opacity: 0.8; }
+  75% { opacity: 0.4; }
+}
+
+/* Neon flicker - for glowing elements */
+@keyframes neon-flicker {
+  0%, 100% { opacity: 1; }
+  5% { opacity: 0.85; }
+  10% { opacity: 1; }
+  15% { opacity: 0.9; }
+  20% { opacity: 1; }
+  50% { opacity: 1; }
+  55% { opacity: 0.88; }
+  60% { opacity: 1; }
+}
+
+/* Flame border animation */
+@keyframes flame-border {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Float hover effect */
+@keyframes float-hover {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Ember rise - particles rising from bottom */
+@keyframes ember-rise {
+  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-100vh) translateX(calc(var(--drift, 0) * 1px)) scale(0); opacity: 0; }
+}
+
+/* Rotating glow */
+@keyframes rotate-glow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ==========================================
+   ANIMATED GRADIENT TEXT
+   ========================================== */
 .animate-gradient-text {
-  background: linear-gradient(135deg, #FF3A2F, #FFD700, #FF6B00, #FF3A2F);
+  background: linear-gradient(135deg, #FF6600, #FFD700, #FF3A2F, #FF8C00, #FF6600);
   background-size: 300% 300%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -217,7 +270,19 @@
   animation: gradient-shift 4s ease infinite;
 }
 
-/* Forge glow background effect */
+/* Animated gradient text - white variant */
+.animate-gradient-text-white {
+  background: linear-gradient(135deg, #FF6600, #FFFFFF, #FFD700, #FF6600);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 5s ease infinite;
+}
+
+/* ==========================================
+   FORGE GLOW EFFECTS
+   ========================================== */
 .forge-glow {
   position: relative;
 }
@@ -229,7 +294,7 @@
   width: 120%;
   height: 120%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse at center, rgba(255, 58, 47, 0.15) 0%, rgba(255, 107, 0, 0.08) 30%, transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(255, 102, 0, 0.15) 0%, rgba(255, 58, 47, 0.08) 30%, transparent 70%);
   animation: forge-pulse 4s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
@@ -242,19 +307,52 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .forge-card:hover {
-  border-color: rgba(255, 58, 47, 0.3);
-  box-shadow: 0 0 20px rgba(255, 58, 47, 0.08), 0 0 40px rgba(255, 107, 0, 0.04);
-  transform: translateY(-1px);
+  border-color: rgba(255, 102, 0, 0.3);
+  box-shadow: 0 0 20px rgba(255, 102, 0, 0.08), 0 0 40px rgba(255, 58, 47, 0.04);
+  transform: translateY(-2px);
+}
+
+/* Premium card with animated gradient border */
+.forge-card-premium {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+.forge-card-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, #FF6600, #FFD700, #FF3A2F, #FF8C00);
+  background-size: 300% 300%;
+  animation: gradient-shift 4s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.forge-card-premium:hover::before {
+  opacity: 1;
+}
+.forge-card-premium:hover {
+  box-shadow: 0 0 30px rgba(255, 102, 0, 0.12), 0 0 60px rgba(255, 58, 47, 0.06);
+  transform: translateY(-2px);
 }
 
 /* Shimmer loading effect */
 .shimmer {
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 58, 47, 0.05) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 102, 0, 0.05) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: shimmer-red-gold 2s ease-in-out infinite;
 }
 
-/* Floating particles container */
+/* ==========================================
+   PARTICLE SYSTEMS
+   ========================================== */
 .particles-bg {
   position: fixed;
   top: 0;
@@ -266,7 +364,6 @@
   overflow: hidden;
 }
 
-/* Individual particle */
 .particle {
   position: absolute;
   width: 2px;
@@ -275,7 +372,19 @@
   animation: ember-float linear infinite;
 }
 
-/* Animated sidebar gradient border */
+/* Rising ember particle */
+.ember-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  animation: ember-rise linear infinite;
+  filter: blur(0.5px);
+}
+
+/* ==========================================
+   SIDEBAR STYLES
+   ========================================== */
 .sidebar-forge-border {
   border-right: 1px solid transparent;
   background-clip: padding-box;
@@ -288,5 +397,106 @@
   right: 0;
   bottom: 0;
   width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(255, 58, 47, 0.3), rgba(255, 215, 0, 0.2), rgba(0, 180, 216, 0.15), transparent);
+  background: linear-gradient(180deg, transparent, rgba(255, 102, 0, 0.4), rgba(255, 215, 0, 0.2), rgba(255, 58, 47, 0.3), transparent);
+  animation: flame-wave 3s ease-in-out infinite;
+}
+
+/* ==========================================
+   GLASS MORPHISM UTILITIES
+   ========================================== */
+.glass {
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-strong {
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-forge {
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 102, 0, 0.1);
+}
+
+/* ==========================================
+   NEON GLOW UTILITIES
+   ========================================== */
+.neon-orange {
+  box-shadow: 0 0 10px rgba(255, 102, 0, 0.3), 0 0 20px rgba(255, 102, 0, 0.15), 0 0 40px rgba(255, 102, 0, 0.05);
+}
+
+.neon-orange-text {
+  text-shadow: 0 0 10px rgba(255, 102, 0, 0.5), 0 0 20px rgba(255, 102, 0, 0.25);
+}
+
+.neon-red {
+  box-shadow: 0 0 10px rgba(255, 58, 47, 0.3), 0 0 20px rgba(255, 58, 47, 0.15), 0 0 40px rgba(255, 58, 47, 0.05);
+}
+
+.neon-gold {
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.15), 0 0 40px rgba(255, 215, 0, 0.05);
+}
+
+/* ==========================================
+   FLAME BACKGROUND ACCENT
+   ========================================== */
+.flame-bg-accent {
+  position: relative;
+  overflow: hidden;
+}
+.flame-bg-accent::before {
+  content: '';
+  position: absolute;
+  bottom: -50%;
+  left: -10%;
+  right: -10%;
+  height: 100%;
+  background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255, 102, 0, 0.06) 0%, rgba(255, 58, 47, 0.03) 40%, transparent 70%);
+  animation: forge-pulse 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Flame shape accent (abstract, derived from logo) */
+.flame-shape-accent {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.03;
+}
+.flame-shape-accent::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #FF3A2F 30%, #FF8C00 60%, transparent 100%);
+  clip-path: polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%);
+}
+
+/* ==========================================
+   ANIMATED BORDER GRADIENT
+   ========================================== */
+.border-gradient-animated {
+  position: relative;
+  overflow: hidden;
+}
+.border-gradient-animated::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, #FF6600, #FFD700, #FF3A2F, #FF8C00, #FF6600);
+  background-size: 400% 400%;
+  animation: gradient-shift 6s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
 }

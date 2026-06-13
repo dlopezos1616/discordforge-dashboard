@@ -21,6 +21,7 @@ import { SuperAdmin } from '@/components/dashboard/SuperAdmin'
 import { BotStatusPanel } from '@/components/dashboard/BotStatusPanel'
 import { BotCustomization } from '@/components/dashboard/BotCustomization'
 import { AntiRaidSystem } from '@/components/dashboard/AntiRaidSystem'
+import { useMemo, useState, useEffect } from 'react'
 
 function SectionRenderer() {
   const { currentSection } = useAppStore()
@@ -49,10 +50,10 @@ function SectionRenderer() {
     <AnimatePresence mode="wait">
       <motion.div
         key={currentSection}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -8 }}
-        transition={{ duration: 0.2 }}
+        initial={{ opacity: 0, y: 12, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -8, scale: 0.99 }}
+        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         className="flex-1 overflow-auto"
       >
         {sections[currentSection] || (
@@ -65,47 +66,128 @@ function SectionRenderer() {
   )
 }
 
-/* Animated background particles */
+/* Enhanced animated background with flame-themed particles and glows */
 function ForgeParticles() {
+  // Only render on client to avoid hydration mismatch with Math.random()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
+  // Generate stable particle positions using useMemo
+  const particles = useMemo(() => {
+    return Array.from({ length: 25 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: 50 + Math.random() * 50,
+      size: 1 + Math.random() * 2.5,
+      color: i % 4 === 0 ? '#FF6600' : i % 4 === 1 ? '#FFD700' : i % 4 === 2 ? '#FF3A2F' : '#FF8C00',
+      duration: 4 + Math.random() * 8,
+      delay: Math.random() * 6,
+      opacity: 0.3 + Math.random() * 0.5,
+      drift: -30 + Math.random() * 60,
+    }))
+  }, [])
+
+  // Rising embers from bottom
+  const risingEmbers = useMemo(() => {
+    return Array.from({ length: 12 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      size: 1 + Math.random() * 2,
+      color: i % 3 === 0 ? '#FF6600' : i % 3 === 1 ? '#FF3A2F' : '#FFD700',
+      duration: 8 + Math.random() * 12,
+      delay: Math.random() * 8,
+      drift: -40 + Math.random() * 80,
+    }))
+  }, [])
+
+  if (!mounted) return null
+
   return (
     <div className="particles-bg">
-      {/* Ambient glow orbs */}
+      {/* Large ambient glow orbs */}
       <div
-        className="absolute top-[10%] left-[15%] w-[500px] h-[500px] rounded-full opacity-[0.03]"
+        className="absolute top-[5%] left-[10%] w-[600px] h-[600px] rounded-full opacity-[0.04]"
         style={{
-          background: 'radial-gradient(circle, #FF3A2F, transparent 70%)',
+          background: 'radial-gradient(circle, #FF6600, transparent 70%)',
           animation: 'forge-pulse 6s ease-in-out infinite',
         }}
       />
       <div
-        className="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] rounded-full opacity-[0.02]"
+        className="absolute bottom-[10%] right-[5%] w-[500px] h-[500px] rounded-full opacity-[0.03]"
         style={{
           background: 'radial-gradient(circle, #FFD700, transparent 70%)',
           animation: 'forge-pulse 8s ease-in-out infinite 2s',
         }}
       />
       <div
-        className="absolute top-[50%] left-[50%] w-[600px] h-[600px] rounded-full opacity-[0.015] -translate-x-1/2 -translate-y-1/2"
+        className="absolute top-[40%] left-[40%] w-[700px] h-[700px] rounded-full opacity-[0.02]"
+        style={{
+          background: 'radial-gradient(circle, #FF3A2F, transparent 70%)',
+          animation: 'forge-pulse 10s ease-in-out infinite 4s',
+        }}
+      />
+      {/* Teal accent glow */}
+      <div
+        className="absolute top-[70%] right-[30%] w-[400px] h-[400px] rounded-full opacity-[0.015]"
         style={{
           background: 'radial-gradient(circle, #00B4D8, transparent 70%)',
-          animation: 'forge-pulse 10s ease-in-out infinite 4s',
+          animation: 'forge-pulse 12s ease-in-out infinite 3s',
+        }}
+      />
+
+      {/* Flame shape accent - abstract derived from logo, very subtle */}
+      <div
+        className="absolute -bottom-[10%] right-[10%] w-[500px] h-[600px] opacity-[0.02] pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #FF3A2F 30%, #FF8C00 60%, transparent 100%)',
+          clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)',
+          animation: 'forge-pulse 8s ease-in-out infinite 1s',
+        }}
+      />
+      {/* Second flame shape accent, different position */}
+      <div
+        className="absolute -top-[5%] left-[60%] w-[300px] h-[400px] opacity-[0.015] pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 35% 65% at 50% 55%, #FF8C00 0%, #FFD700 25%, #FF6600 50%, transparent 100%)',
+          clipPath: 'polygon(50% 0%, 72% 20%, 88% 45%, 82% 70%, 65% 88%, 50% 100%, 35% 88%, 18% 70%, 12% 45%, 28% 20%)',
+          animation: 'forge-pulse 10s ease-in-out infinite 5s',
         }}
       />
 
       {/* Floating ember particles */}
-      {Array.from({ length: 15 }).map((_, i) => (
+      {particles.map(p => (
         <div
-          key={i}
+          key={`p-${p.id}`}
           className="particle"
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${60 + Math.random() * 40}%`,
-            width: `${1 + Math.random() * 2}px`,
-            height: `${1 + Math.random() * 2}px`,
-            background: i % 3 === 0 ? '#FF3A2F' : i % 3 === 1 ? '#FFD700' : '#FF6B00',
-            animationDuration: `${4 + Math.random() * 6}s`,
-            animationDelay: `${Math.random() * 5}s`,
-            opacity: 0.4 + Math.random() * 0.4,
+            left: `${p.left}%`,
+            top: `${p.top}%`,
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            background: p.color,
+            animationDuration: `${p.duration}s`,
+            animationDelay: `${p.delay}s`,
+            opacity: p.opacity,
+            boxShadow: `0 0 ${p.size * 2}px ${p.color}40`,
+          }}
+        />
+      ))}
+
+      {/* Rising ember particles from bottom */}
+      {risingEmbers.map(e => (
+        <div
+          key={`e-${e.id}`}
+          className="ember-particle"
+          style={{
+            left: `${e.left}%`,
+            bottom: '-5px',
+            width: `${e.size}px`,
+            height: `${e.size}px`,
+            background: e.color,
+            animationDuration: `${e.duration}s`,
+            animationDelay: `${e.delay}s`,
+            ['--drift' as string]: e.drift,
+            boxShadow: `0 0 ${e.size * 3}px ${e.color}60`,
           }}
         />
       ))}
@@ -118,7 +200,7 @@ export function DashboardShell() {
     <div className="flex h-screen bg-[#0A0A0A] overflow-hidden relative">
       <ForgeParticles />
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 relative z-10 bg-forge-grid">
+      <div className="flex-1 flex flex-col min-w-0 relative z-10 bg-forge-grid flame-bg-accent">
         <Header />
         <SectionRenderer />
       </div>
