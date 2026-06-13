@@ -1,0 +1,638 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useAppStore } from '@/lib/store'
+     6→import {
+     7→  BarChart3, Plus, Vote, CheckCircle2, X, Calendar,
+     8→  ToggleLeft, BarChartHorizontal, PieChart as PieChartIcon, TrendingUp, Settings2, Eye
+     9→} from 'lucide-react'
+    10→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    11→import { Button } from '@/components/ui/button'
+    12→import { Input } from '@/components/ui/input'
+    13→import { Badge } from '@/components/ui/badge'
+    14→import {
+    15→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    16→} from '@/components/ui/select'
+    17→import { Label } from '@/components/ui/label'
+    18→import { Switch } from '@/components/ui/switch'
+    19→import { ScrollArea } from '@/components/ui/scroll-area'
+    20→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+    21→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    22→import { toast } from 'sonner'
+    23→import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+    24→import { ChannelSelector } from '@/components/shared/ChannelSelector'
+    25→import { EmbedConfig, EmbedPreview, defaultEmbedConfig, type EmbedConfigData } from '@/components/shared/EmbedConfig'
+    26→
+    27→interface PollData {
+    28→  id: string
+    29→  question: string
+    30→  options: string
+    31→  type: string
+    32→  allowMultiple: boolean
+    33→  isActive: boolean
+    34→  endsAt: string | null
+    35→  createdAt: string
+    36→  channelId: string | null
+    37→  votes: { id: string; userId: string; option: string; user: { username: string } }[]
+    38→}
+    39→
+    40→interface PollStats {
+    41→  totalPolls: number
+    42→  activePolls: number
+    43→  totalVotes: number
+    44→}
+    45→
+    46→const typeLabels: Record<string, string> = {
+    47→  yesno: 'Sí/No',
+    48→  multiple: 'Múltiples opciones',
+    49→  anonymous: 'Anónima',
+    50→  public: 'Pública',
+    51→}
+    52→
+    53→const typeColors: Record<string, string> = {
+    54→  yesno: 'bg-green-500/20 text-green-400 border-green-500/30',
+    55→  multiple: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    56→  anonymous: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    57→  public: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    58→}
+    59→
+    60→const chartColors = ['#8b5cf6', '#d946ef', '#06b6d4', '#f59e0b', '#ef4444', '#10b981', '#ec4899', '#6366f1']
+    61→
+    62→export function PollsSystem() {
+    63→  const { currentServer } = useAppStore()
+    64→  const [polls, setPolls] = useState<PollData[]>([])
+    65→  const [stats, setStats] = useState<PollStats>({ totalPolls: 0, activePolls: 0, totalVotes: 0 })
+    66→  const [loading, setLoading] = useState(true)
+    67→
+    68→  // Create poll dialog
+    69→  const [showCreate, setShowCreate] = useState(false)
+    70→  const [question, setQuestion] = useState('')
+    71→  const [pollType, setPollType] = useState('yesno')
+    72→  const [options, setOptions] = useState<string[]>(['Sí', 'No'])
+    73→  const [allowMultiple, setAllowMultiple] = useState(false)
+    74→  const [endDate, setEndDate] = useState('')
+    75→  const [channelId, setChannelId] = useState<string | null>(null)
+    76→  const [embedConfig, setEmbedConfig] = useState<EmbedConfigData>(defaultEmbedConfig)
+    77→
+    78→  // Results dialog
+    79→  const [showResults, setShowResults] = useState(false)
+    80→  const [resultsPoll, setResultsPoll] = useState<PollData | null>(null)
+    81→
+    82→  const fetchData = useCallback(async () => {
+    83→    if (!currentServer) return
+    84→    setLoading(true)
+    85→    try {
+    86→      const res = await fetch(`/api/polls?serverId=${currentServer.id}`)
+    87→      const data = await res.json()
+    88→      if (data.polls) {
+    89→        setPolls(data.polls)
+    90→        setStats(data.stats)
+    91→      }
+    92→    } catch {
+    93→      toast.error('Error al cargar encuestas')
+    94→    } finally {
+    95→      setLoading(false)
+    96→    }
+    97→  }, [currentServer])
+    98→
+    99→  useEffect(() => {
+   100→    fetchData()
+   101→  }, [fetchData])
+   102→
+   103→  const handleCreate = async () => {
+   104→    if (!currentServer || !question) {
+   105→      toast.error('La pregunta es obligatoria')
+   106→      return
+   107→    }
+   108→    try {
+   109→      const res = await fetch('/api/polls', {
+   110→        method: 'POST',
+   111→        headers: { 'Content-Type': 'application/json' },
+   112→        body: JSON.stringify({
+   113→          action: 'create',
+   114→          serverId: currentServer.id,
+   115→          question,
+   116→          options: pollType === 'yesno' ? ['Sí', 'No'] : options,
+   117→          type: pollType,
+   118→          allowMultiple,
+   119→          endsAt: endDate || null,
+   120→          channelId,
+   121→          embedConfig,
+   122→        }),
+   123→      })
+   124→      const data = await res.json()
+   125→      if (data.poll) {
+   126→        toast.success('Encuesta creada exitosamente')
+   127→        setShowCreate(false)
+   128→        setQuestion('')
+   129→        setPollType('yesno')
+   130→        setOptions(['Sí', 'No'])
+   131→        setAllowMultiple(false)
+   132→        setEndDate('')
+   133→        setChannelId(null)
+   134→        setEmbedConfig(defaultEmbedConfig)
+   135→        fetchData()
+   136→      } else {
+   137→        toast.error(data.error || 'Error al crear encuesta')
+   138→      }
+   139→    } catch {
+   140→      toast.error('Error de conexión')
+   141→    }
+   142→  }
+   143→
+   144→  const handleClose = async (pollId: string) => {
+   145→    try {
+   146→      const res = await fetch('/api/polls', {
+   147→        method: 'POST',
+   148→        headers: { 'Content-Type': 'application/json' },
+   149→        body: JSON.stringify({ action: 'close', pollId }),
+   150→      })
+   151→      const data = await res.json()
+   152→      if (data.poll) {
+   153→        toast.success('Encuesta cerrada')
+   154→        fetchData()
+   155→      }
+   156→    } catch {
+   157→      toast.error('Error al cerrar encuesta')
+   158→    }
+   159→  }
+   160→
+   161→  const addOption = () => {
+   162→    setOptions([...options, `Opción ${options.length + 1}`])
+   163→  }
+   164→
+   165→  const removeOption = (idx: number) => {
+   166→    if (options.length <= 2) {
+   167→      toast.error('Mínimo 2 opciones')
+   168→      return
+   169→    }
+   170→    setOptions(options.filter((_, i) => i !== idx))
+   171→  }
+   172→
+   173→  const updateOption = (idx: number, value: string) => {
+   174→    setOptions(options.map((o, i) => i === idx ? value : o))
+   175→  }
+   176→
+   177→  const getVoteDistribution = (poll: PollData) => {
+   178→    const parsedOptions: string[] = JSON.parse(poll.options || '[]')
+   179→    const voteCounts: Record<string, number> = {}
+   180→    parsedOptions.forEach(opt => { voteCounts[opt] = 0 })
+   181→    poll.votes.forEach(v => {
+   182→      if (voteCounts[v.option] !== undefined) {
+   183→        voteCounts[v.option]++
+   184→      } else {
+   185→        voteCounts[v.option] = 1
+   186→      }
+   187→    })
+   188→    const total = poll.votes.length || 1
+   189→    return parsedOptions.map((opt, i) => ({
+   190→      name: opt,
+   191→      votes: voteCounts[opt] || 0,
+   192→      percentage: Math.round(((voteCounts[opt] || 0) / total) * 100),
+   193→      color: chartColors[i % chartColors.length],
+   194→    }))
+   195→  }
+   196→
+   197→  const getPieData = (poll: PollData) => {
+   198→    const parsedOptions: string[] = JSON.parse(poll.options || '[]')
+   199→    const voteCounts: Record<string, number> = {}
+   200→    parsedOptions.forEach(opt => { voteCounts[opt] = 0 })
+   201→    poll.votes.forEach(v => {
+   202→      if (voteCounts[v.option] !== undefined) {
+   203→        voteCounts[v.option]++
+   204→      } else {
+   205→        voteCounts[v.option] = 1
+   206→      }
+   207→    })
+   208→    return parsedOptions.map((opt, i) => ({
+   209→      name: opt,
+   210→      value: voteCounts[opt] || 0,
+   211→      color: chartColors[i % chartColors.length],
+   212→    }))
+   213→  }
+   214→
+   215→  const statCards = [
+   216→    { label: 'Total Encuestas', value: stats.totalPolls, icon: BarChart3, color: 'from-[#FF3A2F]/20 to-fuchsia-600/10', iconColor: 'text-[#FF3A2F]' },
+   217→    { label: 'Activas', value: stats.activePolls, icon: Vote, color: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-400' },
+   218→    { label: 'Total Votos', value: stats.totalVotes, icon: TrendingUp, color: 'from-cyan-500/20 to-cyan-600/10', iconColor: 'text-cyan-400' },
+   219→  ]
+   220→
+   221→  return (
+   222→    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+   223→      {/* Header */}
+   224→      <motion.div
+   225→        initial={{ opacity: 0, y: -10 }}
+   226→        animate={{ opacity: 1, y: 0 }}
+   227→        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+   228→      >
+   229→        <div>
+   230→          <h2 className="text-2xl font-bold bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] bg-clip-text text-transparent">
+   231→            Encuestas
+   232→          </h2>
+   233→          <p className="text-sm text-muted-foreground mt-1">
+   234→            Gestiona encuestas y votaciones del servidor
+   235→          </p>
+   236→        </div>
+   237→        <Dialog open={showCreate} onOpenChange={setShowCreate}>
+   238→          <DialogTrigger asChild>
+   239→            <Button className="gap-2 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white">
+   240→              <Plus className="w-4 h-4" />
+   241→              Crear Encuesta
+   242→            </Button>
+   243→          </DialogTrigger>
+   244→          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+   245→            <DialogHeader>
+   246→              <DialogTitle className="flex items-center gap-2">
+   247→                <Vote className="w-5 h-5 text-[#FF3A2F]" />
+   248→                Crear Encuesta
+   249→              </DialogTitle>
+   250→            </DialogHeader>
+   251→            <div className="space-y-4 mt-4">
+   252→              {/* Basic Poll Config */}
+   253→              <div className="space-y-2">
+   254→                <Label className="text-xs font-medium text-muted-foreground">Pregunta</Label>
+   255→                <Input
+   256→                  placeholder="¿Cuál es tu pregunta?"
+   257→                  value={question}
+   258→                  onChange={(e) => setQuestion(e.target.value)}
+   259→                  className="bg-background/50"
+   260→                />
+   261→              </div>
+   262→
+   263→              <div className="space-y-2">
+   264→                <Label className="text-xs font-medium text-muted-foreground">Canal de destino</Label>
+   265→                <ChannelSelector
+   266→                  value={channelId}
+   267→                  onValueChange={setChannelId}
+   268→                  placeholder="Selecciona el canal donde se enviará la encuesta..."
+   269→                />
+   270→              </div>
+   271→
+   272→              <div className="space-y-2">
+   273→                <Label className="text-xs font-medium text-muted-foreground">Tipo</Label>
+   274→                <Select value={pollType} onValueChange={setPollType}>
+   275→                  <SelectTrigger className="bg-background/50">
+   276→                    <SelectValue />
+   277→                  </SelectTrigger>
+   278→                  <SelectContent>
+   279→                    <SelectItem value="yesno">Sí/No</SelectItem>
+   280→                    <SelectItem value="multiple">Múltiples opciones</SelectItem>
+   281→                    <SelectItem value="anonymous">Anónima</SelectItem>
+   282→                    <SelectItem value="public">Pública</SelectItem>
+   283→                  </SelectContent>
+   284→                </Select>
+   285→              </div>
+   286→
+   287→              {/* Tabs: Config & Preview */}
+   288→              <Tabs defaultValue="config" className="w-full">
+   289→                <TabsList className="w-full">
+   290→                  <TabsTrigger value="config" className="flex-1 gap-1.5">
+   291→                    <Settings2 className="w-3.5 h-3.5" />
+   292→                    Config
+   293→                  </TabsTrigger>
+   294→                  <TabsTrigger value="preview" className="flex-1 gap-1.5">
+   295→                    <Eye className="w-3.5 h-3.5" />
+   296→                    Vista Previa
+   297→                  </TabsTrigger>
+   298→                </TabsList>
+   299→
+   300→                <TabsContent value="config" className="space-y-4 mt-4">
+   301→                  {pollType !== 'yesno' && (
+   302→                    <div className="space-y-2">
+   303→                      <div className="flex items-center justify-between">
+   304→                        <Label className="text-xs font-medium text-muted-foreground">Opciones</Label>
+   305→                        <Button
+   306→                          variant="ghost"
+   307→                          size="sm"
+   308→                          onClick={addOption}
+   309→                          className="h-7 text-xs gap-1 text-[#FF3A2F] hover:text-[#FF6B00]"
+   310→                        >
+   311→                          <Plus className="w-3 h-3" />
+   312→                          Añadir
+   313→                        </Button>
+   314→                      </div>
+   315→                      <div className="space-y-1.5">
+   316→                        {options.map((opt, idx) => (
+   317→                          <div key={idx} className="flex items-center gap-2">
+   318→                            <Input
+   319→                              value={opt}
+   320→                              onChange={(e) => updateOption(idx, e.target.value)}
+   321→                              className="bg-background/50 h-8 text-sm"
+   322→                            />
+   323→                            <Button
+   324→                              variant="ghost"
+   325→                              size="sm"
+   326→                              className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+   327→                              onClick={() => removeOption(idx)}
+   328→                            >
+   329→                              <X className="w-3.5 h-3.5" />
+   330→                            </Button>
+   331→                          </div>
+   332→                        ))}
+   333→                      </div>
+   334→                    </div>
+   335→                  )}
+   336→
+   337→                  <div className="flex items-center gap-3">
+   338→                    <Switch
+   339→                      checked={allowMultiple}
+   340→                      onCheckedChange={setAllowMultiple}
+   341→                    />
+   342→                    <Label className="text-sm">Permitir votos múltiples</Label>
+   343→                  </div>
+   344→
+   345→                  <div className="space-y-2">
+   346→                    <Label className="text-xs font-medium text-muted-foreground">Fecha de fin (opcional)</Label>
+   347→                    <Input
+   348→                      type="datetime-local"
+   349→                      value={endDate}
+   350→                      onChange={(e) => setEndDate(e.target.value)}
+   351→                      className="bg-background/50"
+   352→                    />
+   353→                  </div>
+   354→
+   355→                  {/* Embed Configuration */}
+   356→                  <div className="space-y-3 pt-2 border-t border-border/50">
+   357→                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+   358→                      Configuración del Embed
+   359→                    </Label>
+   360→                    <EmbedConfig
+   361→                      config={embedConfig}
+   362→                      onChange={setEmbedConfig}
+   363→                      showChannelSelector={false}
+   364→                    />
+   365→                  </div>
+   366→                </TabsContent>
+   367→
+   368→                <TabsContent value="preview" className="mt-4">
+   369→                  <div className="space-y-3">
+   370→                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+   371→                      Vista Previa del Embed
+   372→                    </Label>
+   373→                    <div className="rounded-lg border border-border/50 p-4 bg-background/30">
+   374→                      <EmbedPreview config={embedConfig} />
+   375→                    </div>
+   376→                    {question && (
+   377→                      <div className="rounded-lg border border-border/50 p-4 bg-background/30 space-y-2">
+   378→                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+   379→                          Vista Previa de la Encuesta
+   380→                        </Label>
+   381→                        <div className="flex gap-0 max-w-lg">
+   382→                          <div
+   383→                            className="w-1 rounded-l-md shrink-0"
+   384→                            style={{ backgroundColor: embedConfig.color || '#8b5cf6' }}
+   385→                          />
+   386→                          <div className="flex-1 bg-[#2b2d31] rounded-r-md p-3 space-y-2">
+   387→                            {embedConfig.authorName && (
+   388→                              <div className="flex items-center gap-2">
+   389→                                {embedConfig.authorIconUrl && (
+   390→                                  <img src={embedConfig.authorIconUrl} alt="" className="w-5 h-5 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+   391→                                )}
+   392→                                <span className="font-semibold text-xs text-white">{embedConfig.authorName}</span>
+   393→                              </div>
+   394→                            )}
+   395→                            <h3 className="font-bold text-white">{embedConfig.title || question}</h3>
+   396→                            {embedConfig.description && (
+   397→                              <p className="text-[#dbdee1] text-sm whitespace-pre-wrap">{embedConfig.description}</p>
+   398→                            )}
+   399→                            <div className="space-y-1.5 pt-1">
+   400→                              {(pollType === 'yesno' ? ['Sí', 'No'] : options).map((opt, i) => (
+   401→                                <div key={i} className="bg-[#1e1f22] rounded-md px-3 py-1.5 text-sm text-[#dbdee1] border border-white/5">
+   402→                                  {opt}
+   403→                                </div>
+   404→                              ))}
+   405→                            </div>
+   406→                            {(embedConfig.footerText || embedConfig.showTimestamp) && (
+   407→                              <div className="flex items-center gap-2 mt-2 pt-1 border-t border-white/5">
+   408→                                {embedConfig.footerIconUrl && (
+   409→                                  <img src={embedConfig.footerIconUrl} alt="" className="w-4 h-4 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+   410→                                )}
+   411→                                <span className="text-[10px] text-[#dbdee1]">
+   412→                                  {embedConfig.footerText}
+   413→                                  {embedConfig.footerText && embedConfig.showTimestamp && ' • '}
+   414→                                  {embedConfig.showTimestamp && 'Hoy a las ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+   415→                                </span>
+   416→                              </div>
+   417→                            )}
+   418→                          </div>
+   419→                        </div>
+   420→                      </div>
+   421→                    )}
+   422→                  </div>
+   423→                </TabsContent>
+   424→              </Tabs>
+   425→
+   426→              <div className="flex justify-end gap-2 pt-2">
+   427→                <Button variant="outline" onClick={() => setShowCreate(false)}>
+   428→                  Cancelar
+   429→                </Button>
+   430→                <Button
+   431→                  onClick={handleCreate}
+   432→                  disabled={!question}
+   433→                  className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white"
+   434→                >
+   435→                  Crear Encuesta
+   436→                </Button>
+   437→              </div>
+   438→            </div>
+   439→          </DialogContent>
+   440→        </Dialog>
+   441→      </motion.div>
+   442→
+   443→      {/* Stats */}
+   444→      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+   445→        {statCards.map((stat, i) => (
+   446→          <motion.div
+   447→            key={stat.label}
+   448→            initial={{ opacity: 0, y: 20 }}
+   449→            animate={{ opacity: 1, y: 0 }}
+   450→            transition={{ delay: i * 0.1 }}
+   451→          >
+   452→            <Card className={`bg-gradient-to-br ${stat.color} border-0`}>
+   453→              <CardContent className="p-4 flex items-center gap-3">
+   454→                <div className={`p-2 rounded-lg bg-black/20 ${stat.iconColor}`}>
+   455→                  <stat.icon className="w-5 h-5" />
+   456→                </div>
+   457→                <div>
+   458→                  <p className="text-2xl font-bold">{stat.value}</p>
+   459→                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+   460→                </div>
+   461→              </CardContent>
+   462→            </Card>
+   463→          </motion.div>
+   464→        ))}
+   465→      </div>
+   466→
+   467→      {/* Results Dialog */}
+   468→      <Dialog open={showResults} onOpenChange={setShowResults}>
+   469→        <DialogContent className="max-w-lg">
+   470→          <DialogHeader>
+   471→            <DialogTitle className="flex items-center gap-2">
+   472→              <PieChartIcon className="w-5 h-5 text-[#FF3A2F]" />
+   473→              Resultados de Encuesta
+   474→            </DialogTitle>
+   475→          </DialogHeader>
+   476→          {resultsPoll && (
+   477→            <div className="space-y-4 mt-4">
+   478→              <h3 className="font-semibold">{resultsPoll.question}</h3>
+   479→              <div className="h-64">
+   480→                <ResponsiveContainer width="100%" height="100%">
+   481→                  <PieChart>
+   482→                    <Pie
+   483→                      data={getPieData(resultsPoll)}
+   484→                      cx="50%"
+   485→                      cy="50%"
+   486→                      innerRadius={50}
+   487→                      outerRadius={90}
+   488→                      paddingAngle={3}
+   489→                      dataKey="value"
+   490→                    >
+   491→                      {getPieData(resultsPoll).map((entry, index) => (
+   492→                        <Cell key={`cell-${index}`} fill={entry.color} />
+   493→                      ))}
+   494→                    </Pie>
+   495→                    <Tooltip
+   496→                      contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+   497→                    />
+   498→                  </PieChart>
+   499→                </ResponsiveContainer>
+   500→              </div>
+   501→              <div className="space-y-2">
+   502→                {getPieData(resultsPoll).map((entry, i) => (
+   503→                  <div key={i} className="flex items-center gap-2 text-sm">
+   504→                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+   505→                    <span className="flex-1">{entry.name}</span>
+   506→                    <span className="font-mono font-bold">{entry.value}</span>
+   507→                  </div>
+   508→                ))}
+   509→              </div>
+   510→            </div>
+   511→          )}
+   512→        </DialogContent>
+   513→      </Dialog>
+   514→
+   515→      {/* Polls List */}
+   516→      <div className="space-y-3">
+   517→        {loading ? (
+   518→          <div className="flex items-center justify-center py-12">
+   519→            <motion.div
+   520→              animate={{ rotate: 360 }}
+   521→              transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+   522→              className="w-8 h-8 border-2 border-[#FF3A2F] border-t-transparent rounded-full"
+   523→            />
+   524→          </div>
+   525→        ) : polls.length === 0 ? (
+   526→          <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+   527→            <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+   528→              <Vote className="w-10 h-10 mb-2 opacity-50" />
+   529→              <p className="text-sm">No hay encuestas</p>
+   530→              <p className="text-xs mt-1">Crea una con el botón de arriba</p>
+   531→            </CardContent>
+   532→          </Card>
+   533→        ) : (
+   534→          polls.map((poll, i) => {
+   535→            const distribution = getVoteDistribution(poll)
+   536→            return (
+   537→              <motion.div
+   538→                key={poll.id}
+   539→                initial={{ opacity: 0, y: 20 }}
+   540→                animate={{ opacity: 1, y: 0 }}
+   541→                transition={{ delay: i * 0.05 }}
+   542→              >
+   543→                <Card className="bg-card/80 backdrop-blur-sm border-border/50 hover:border-[#FF3A2F]/30 transition-colors">
+   544→                  <CardContent className="p-4 space-y-4">
+   545→                    <div className="flex items-start justify-between gap-3">
+   546→                      <div className="flex-1 min-w-0">
+   547→                        <div className="flex items-center gap-2 flex-wrap">
+   548→                          <h3 className="font-semibold text-sm">{poll.question}</h3>
+   549→                          <Badge variant="outline" className={`text-xs ${typeColors[poll.type] || ''}`}>
+   550→                            {typeLabels[poll.type] || poll.type}
+   551→                          </Badge>
+   552→                          {poll.isActive ? (
+   553→                            <Badge variant="outline" className="text-xs bg-green-500/15 text-green-400 border-green-500/30">
+   554→                              Activa
+   555→                            </Badge>
+   556→                          ) : (
+   557→                            <Badge variant="outline" className="text-xs bg-gray-500/15 text-gray-400 border-gray-500/30">
+   558→                              Cerrada
+   559→                            </Badge>
+   560→                          )}
+   561→                          {poll.allowMultiple && (
+   562→                            <Badge variant="outline" className="text-xs bg-blue-500/15 text-blue-400 border-blue-500/30">
+   563→                              Multi-voto
+   564→                            </Badge>
+   565→                          )}
+   566→                        </div>
+   567→                        <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+   568→                          <span className="flex items-center gap-1">
+   569→                            <Vote className="w-3 h-3" />
+   570→                            {poll.votes.length} votos
+   571→                          </span>
+   572→                          {poll.endsAt && (
+   573→                            <span className="flex items-center gap-1">
+   574→                              <Calendar className="w-3 h-3" />
+   575→                              {new Date(poll.endsAt).toLocaleDateString('es-ES')}
+   576→                            </span>
+   577→                          )}
+   578→                        </div>
+   579→                      </div>
+   580→                      <div className="flex gap-1">
+   581→                        <Button
+   582→                          variant="ghost"
+   583→                          size="sm"
+   584→                          className="h-8 w-8 p-0 text-[#FF3A2F] hover:bg-[#FF3A2F]/10"
+   585→                          onClick={() => {
+   586→                            setResultsPoll(poll)
+   587→                            setShowResults(true)
+   588→                          }}
+   589→                        >
+   590→                          <PieChartIcon className="w-4 h-4" />
+   591→                        </Button>
+   592→                        {poll.isActive && (
+   593→                          <Button
+   594→                            variant="ghost"
+   595→                            size="sm"
+   596→                            className="h-8 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+   597→                            onClick={() => handleClose(poll.id)}
+   598→                          >
+   599→                            Cerrar
+   600→                          </Button>
+   601→                        )}
+   602→                      </div>
+   603→                    </div>
+   604→
+   605→                    {/* Vote Distribution Bars */}
+   606→                    <div className="space-y-2">
+   607→                      {distribution.map((d, j) => (
+   608→                        <div key={j} className="space-y-1">
+   609→                          <div className="flex items-center justify-between text-xs">
+   610→                            <span className="flex items-center gap-1.5">
+   611→                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
+   612→                              {d.name}
+   613→                            </span>
+   614→                            <span className="font-mono">{d.votes} ({d.percentage}%)</span>
+   615→                          </div>
+   616→                          <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+   617→                            <motion.div
+   618→                              initial={{ width: 0 }}
+   619→                              animate={{ width: `${d.percentage}%` }}
+   620→                              transition={{ duration: 0.8, delay: j * 0.1 }}
+   621→                              className="h-full rounded-full"
+   622→                              style={{ backgroundColor: d.color }}
+   623→                            />
+   624→                          </div>
+   625→                        </div>
+   626→                      ))}
+   627→                    </div>
+   628→                  </CardContent>
+   629→                </Card>
+   630→              </motion.div>
+   631→            )
+   632→          })
+   633→        )}
+   634→      </div>
+   635→    </div>
+   636→  )
+   637→}
+   638→

@@ -1,0 +1,963 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { useAppStore } from '@/lib/store'
+     6→     6→import {
+     7→     7→  Ticket, Plus, Pencil, Trash2, Eye, UserPlus, XCircle,
+     8→     8→  Hash, Clock, CheckCircle2, AlertCircle, Users, Archive,
+     9→     9→  MessageSquare, ChevronRight, Search, Filter, ToggleLeft, ToggleRight,
+    10→    10→  FolderOpen, ListFilter
+    11→    11→} from 'lucide-react'
+    12→    12→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    13→    13→import { Button } from '@/components/ui/button'
+    14→    14→import { Input } from '@/components/ui/input'
+    15→    15→import { Textarea } from '@/components/ui/textarea'
+    16→    16→import { Badge } from '@/components/ui/badge'
+    17→    17→import { Switch } from '@/components/ui/switch'
+    18→    18→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    19→    19→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+    20→    20→import { ScrollArea } from '@/components/ui/scroll-area'
+    21→    21→import { Separator } from '@/components/ui/separator'
+    22→    22→import { Label } from '@/components/ui/label'
+    23→    23→import {
+    24→    24→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    25→    25→} from '@/components/ui/table'
+    26→    26→import {
+    27→    27→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    28→    28→} from '@/components/ui/select'
+    29→    29→import { toast } from 'sonner'
+    30→    30→import { ChannelSelector } from '@/components/shared/ChannelSelector'
+    31→    31→import { EmbedConfig, EmbedPreview, defaultEmbedConfig, type EmbedConfigData } from '@/components/shared/EmbedConfig'
+    32→    32→
+    33→    33→// Types
+    34→    34→interface TicketCategory {
+    35→    35→  id: string
+    36→    36→  name: string
+    37→    37→  emoji: string
+    38→    38→  color: string
+    39→    39→  description: string | null
+    40→    40→  staffRoleId: string | null
+    41→    41→  customMessage: string | null
+    42→    42→  channelId: string | null
+    43→    43→  embedConfig: EmbedConfigData | null
+    44→    44→  position: number
+    45→    45→  isActive: boolean
+    46→    46→  _count: { tickets: number }
+    47→    47→}
+    48→    48→
+    49→    49→interface TicketItem {
+    50→    50→  id: string
+    51→    51→  subject: string | null
+    52→    52→  status: string
+    53→    53→  createdAt: string
+    54→    54→  closedAt: string | null
+    55→    55→  category: { id: string; name: string; emoji: string; color: string }
+    56→    56→  creator: { username: string; avatar: string | null }
+    57→    57→  transcript?: { id: string; messageCount: number; createdAt: string } | null
+    58→    58→}
+    59→    59→
+    60→    60→const container = {
+    61→    61→  hidden: { opacity: 0 },
+    62→    62→  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
+    63→    63→}
+    64→    64→
+    65→    65→const item = {
+    66→    66→  hidden: { opacity: 0, y: 20 },
+    67→    67→  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    68→    68→}
+    69→    69→
+    70→    70→const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType; bg: string }> = {
+    71→    71→  open: { label: 'Abierto', color: 'text-emerald-400', icon: AlertCircle, bg: 'bg-emerald-500/15 border-emerald-500/30' },
+    72→    72→  claimed: { label: 'Reclamado', color: 'text-amber-400', icon: UserPlus, bg: 'bg-amber-500/15 border-amber-500/30' },
+    73→    73→  closed: { label: 'Cerrado', color: 'text-zinc-400', icon: CheckCircle2, bg: 'bg-zinc-500/15 border-zinc-500/30' },
+    74→    74→}
+    75→    75→
+    76→    76→const defaultCatForm = {
+    77→    77→  name: '',
+    78→    78→  emoji: '🎫',
+    79→    79→  color: '#5865F2',
+    80→    80→  description: '',
+    81→    81→  customMessage: '',
+    82→    82→  channelId: '' as string,
+    83→    83→  embedConfig: defaultEmbedConfig as EmbedConfigData,
+    84→    84→}
+    85→    85→
+    86→    86→export function TicketSystem() {
+    87→    87→  const { currentServer } = useAppStore()
+    88→    88→  const [categories, setCategories] = useState<TicketCategory[]>([])
+    89→    89→  const [tickets, setTickets] = useState<TicketItem[]>([])
+    90→    90→  const [loading, setLoading] = useState(true)
+    91→    91→  const [activeTab, setActiveTab] = useState('categories')
+    92→    92→  const [searchQuery, setSearchQuery] = useState('')
+    93→    93→
+    94→    94→  // Dialogs
+    95→    95→  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
+    96→    96→  const [ticketDialogOpen, setTicketDialogOpen] = useState(false)
+    97→    97→  const [editCategory, setEditCategory] = useState<TicketCategory | null>(null)
+    98→    98→  const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false)
+    99→    99→  const [selectedTranscript, setSelectedTranscript] = useState<TicketItem | null>(null)
+   100→   100→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+   101→   101→  const [deleteTarget, setDeleteTarget] = useState<{ type: 'category' | 'ticket'; id: string } | null>(null)
+   102→   102→
+   103→   103→  // Category dialog tab
+   104→   104→  const [categoryDialogTab, setCategoryDialogTab] = useState('general')
+   105→   105→
+   106→   106→  // Form state
+   107→   107→  const [catForm, setCatForm] = useState(defaultCatForm)
+   108→   108→  const [ticketForm, setTicketForm] = useState({ subject: '', categoryId: '', description: '' })
+   109→   109→
+   110→   110→  const fetchData = useCallback(async () => {
+   111→   111→    if (!currentServer) return
+   112→   112→    setLoading(true)
+   113→   113→    try {
+   114→   114→      const res = await fetch(`/api/tickets?serverId=${currentServer.id}`)
+   115→   115→      const data = await res.json()
+   116→   116→      setCategories(data.categories || [])
+   117→   117→      setTickets(data.tickets || [])
+   118→   118→    } catch (err) {
+   119→   119→      console.error('Failed to fetch tickets:', err)
+   120→   120→    } finally {
+   121→   121→      setLoading(false)
+   122→   122→    }
+   123→   123→  }, [currentServer])
+   124→   124→
+   125→   125→  useEffect(() => {
+   126→   126→    fetchData()
+   127→   127→  }, [fetchData])
+   128→   128→
+   129→   129→  const openTickets = tickets.filter(t => t.status === 'open').length
+   130→   130→  const closedTickets = tickets.filter(t => t.status === 'closed').length
+   131→   131→  const claimedTickets = tickets.filter(t => t.status === 'claimed').length
+   132→   132→
+   133→   133→  const handleCreateCategory = async () => {
+   134→   134→    if (!currentServer || !catForm.name) return
+   135→   135→    try {
+   136→   136→      const res = await fetch('/api/tickets', {
+   137→   137→        method: 'POST',
+   138→   138→        headers: { 'Content-Type': 'application/json' },
+   139→   139→        body: JSON.stringify({
+   140→   140→          serverId: currentServer.id,
+   141→   141→          name: catForm.name,
+   142→   142→          emoji: catForm.emoji,
+   143→   143→          color: catForm.color,
+   144→   144→          description: catForm.description,
+   145→   145→          customMessage: catForm.customMessage,
+   146→   146→          channelId: catForm.channelId || null,
+   147→   147→          embedConfig: catForm.embedConfig,
+   148→   148→        }),
+   149→   149→      })
+   150→   150→      if (res.ok) {
+   151→   151→        toast.success('Categoría creada exitosamente')
+   152→   152→        setCategoryDialogOpen(false)
+   153→   153→        setCatForm(defaultCatForm)
+   154→   154→        setEditCategory(null)
+   155→   155→        setCategoryDialogTab('general')
+   156→   156→        fetchData()
+   157→   157→      }
+   158→   158→    } catch {
+   159→   159→      toast.error('Error al crear categoría')
+   160→   160→    }
+   161→   161→  }
+   162→   162→
+   163→   163→  const handleToggleCategory = async (cat: TicketCategory) => {
+   164→   164→    if (!currentServer) return
+   165→   165→    try {
+   166→   166→      const res = await fetch('/api/tickets', {
+   167→   167→        method: 'PATCH',
+   168→   168→        headers: { 'Content-Type': 'application/json' },
+   169→   169→        body: JSON.stringify({ serverId: currentServer.id, categoryId: cat.id, isActive: !cat.isActive }),
+   170→   170→      })
+   171→   171→      if (res.ok) {
+   172→   172→        toast.success(cat.isActive ? 'Categoría desactivada' : 'Categoría activada')
+   173→   173→        fetchData()
+   174→   174→      }
+   175→   175→    } catch {
+   176→   176→      toast.error('Error al actualizar categoría')
+   177→   177→    }
+   178→   178→  }
+   179→   179→
+   180→   180→  const handleDeleteItem = async () => {
+   181→   181→    if (!deleteTarget || !currentServer) return
+   182→   182→    try {
+   183→   183→      const res = await fetch(`/api/tickets?serverId=${currentServer.id}&${deleteTarget.type}Id=${deleteTarget.id}`, {
+   184→   184→        method: 'DELETE',
+   185→   185→      })
+   186→   186→      if (res.ok) {
+   187→   187→        toast.success(deleteTarget.type === 'category' ? 'Categoría eliminada' : 'Ticket eliminado')
+   188→   188→        fetchData()
+   189→   189→      }
+   190→   190→    } catch {
+   191→   191→      toast.error('Error al eliminar')
+   192→   192→    }
+   193→   193→    setDeleteDialogOpen(false)
+   194→   194→    setDeleteTarget(null)
+   195→   195→  }
+   196→   196→
+   197→   197→  const handleTicketAction = async (ticketId: string, action: string) => {
+   198→   198→    if (!currentServer) return
+   199→   199→    try {
+   200→   200→      const res = await fetch('/api/tickets', {
+   201→   201→        method: 'PATCH',
+   202→   202→        headers: { 'Content-Type': 'application/json' },
+   203→   203→        body: JSON.stringify({ serverId: currentServer.id, ticketId, action }),
+   204→   204→      })
+   205→   205→      if (res.ok) {
+   206→   206→        toast.success(
+   207→   207→          action === 'claim' ? 'Ticket reclamado' :
+   208→   208→          action === 'close' ? 'Ticket cerrado' :
+   209→   209→          'Acción completada'
+   210→   210→        )
+   211→   211→        fetchData()
+   212→   212→      }
+   213→   213→    } catch {
+   214→   214→      toast.error('Error al procesar la acción')
+   215→   215→    }
+   216→   216→  }
+   217→   217→
+   218→   218→  const openEditCategory = (cat: TicketCategory) => {
+   219→   219→    setEditCategory(cat)
+   220→   220→    setCatForm({
+   221→   221→      name: cat.name,
+   222→   222→      emoji: cat.emoji,
+   223→   223→      color: cat.color,
+   224→   224→      description: cat.description || '',
+   225→   225→      customMessage: cat.customMessage || '',
+   226→   226→      channelId: cat.channelId || '',
+   227→   227→      embedConfig: cat.embedConfig || defaultEmbedConfig,
+   228→   228→    })
+   229→   229→    setCategoryDialogTab('general')
+   230→   230→    setCategoryDialogOpen(true)
+   231→   231→  }
+   232→   232→
+   233→   233→  const filteredTickets = tickets.filter(t => {
+   234→   234→    if (!searchQuery) return true
+   235→   235→    const q = searchQuery.toLowerCase()
+   236→   236→    return (
+   237→   237→      t.subject?.toLowerCase().includes(q) ||
+   238→   238→      t.creator.username.toLowerCase().includes(q) ||
+   239→   239→      t.category.name.toLowerCase().includes(q) ||
+   240→   240→      t.id.toLowerCase().includes(q)
+   241→   241→    )
+   242→   242→  })
+   243→   243→
+   244→   244→  const closedTicketsWithTranscripts = tickets.filter(t => t.status === 'closed')
+   245→   245→
+   246→   246→  // Loading skeleton
+   247→   247→  if (loading) {
+   248→   248→    return (
+   249→   249→      <div className="space-y-6 p-6">
+   250→   250→        <div className="flex items-center justify-between">
+   251→   251→          <div className="h-8 w-48 rounded-lg bg-card/50 animate-pulse" />
+   252→   252→          <div className="flex gap-2">
+   253→   253→            <div className="h-8 w-24 rounded-lg bg-card/50 animate-pulse" />
+   254→   254→            <div className="h-8 w-24 rounded-lg bg-card/50 animate-pulse" />
+   255→   255→          </div>
+   256→   256→        </div>
+   257→   257→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   258→   258→          {[...Array(6)].map((_, i) => (
+   259→   259→            <div key={i} className="h-40 rounded-xl bg-card/50 animate-pulse" />
+   260→   260→          ))}
+   261→   261→        </div>
+   262→   262→      </div>
+   263→   263→    )
+   264→   264→  }
+   265→   265→
+   266→   266→  return (
+   267→   267→    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-4 md:p-6">
+   268→   268→      {/* Header */}
+   269→   269→      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+   270→   270→        <div>
+   271→   271→          <h2 className="text-xl font-bold flex items-center gap-2">
+   272→   272→            <Ticket className="w-5 h-5 text-[#FF3A2F]" />
+   273→   273→            Sistema de Tickets
+   274→   274→          </h2>
+   275→   275→          <p className="text-sm text-muted-foreground mt-1">Gestiona categorías, tickets y transcripts</p>
+   276→   276→        </div>
+   277→   277→        <div className="flex items-center gap-2 flex-wrap">
+   278→   278→          <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 gap-1.5 px-3 py-1">
+   279→   279→            <AlertCircle className="w-3 h-3" /> {openTickets} Abiertos
+   280→   280→          </Badge>
+   281→   281→          <Badge variant="secondary" className="bg-amber-500/15 text-amber-400 border border-amber-500/30 gap-1.5 px-3 py-1">
+   282→   282→            <UserPlus className="w-3 h-3" /> {claimedTickets} Reclamados
+   283→   283→          </Badge>
+   284→   284→          <Badge variant="secondary" className="bg-zinc-500/15 text-zinc-400 border border-zinc-500/30 gap-1.5 px-3 py-1">
+   285→   285→            <CheckCircle2 className="w-3 h-3" /> {closedTickets} Cerrados
+   286→   286→          </Badge>
+   287→   287→          <Badge variant="outline" className="gap-1.5 px-3 py-1">
+   288→   288→            <Hash className="w-3 h-3" /> {tickets.length} Total
+   289→   289→          </Badge>
+   290→   290→        </div>
+   291→   291→      </motion.div>
+   292→   292→
+   293→   293→      {/* Tabs */}
+   294→   294→      <motion.div variants={item}>
+   295→   295→        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+   296→   296→          <div className="flex items-center justify-between gap-4 flex-wrap">
+   297→   297→            <TabsList className="bg-card/50 border border-border">
+   298→   298→              <TabsTrigger value="categories" className="gap-1.5 text-xs">
+   299→   299→                <FolderOpen className="w-3.5 h-3.5" /> Categorías
+   300→   300→              </TabsTrigger>
+   301→   301→              <TabsTrigger value="tickets" className="gap-1.5 text-xs">
+   302→   302→                <MessageSquare className="w-3.5 h-3.5" /> Tickets
+   303→   303→              </TabsTrigger>
+   304→   304→              <TabsTrigger value="transcripts" className="gap-1.5 text-xs">
+   305→   305→                <Archive className="w-3.5 h-3.5" /> Transcripts
+   306→   306→              </TabsTrigger>
+   307→   307→            </TabsList>
+   308→   308→
+   309→   309→            <div className="flex items-center gap-2">
+   310→   310→              {activeTab === 'categories' && (
+   311→   311→                <Button
+   312→   312→                  size="sm"
+   313→   313→                  onClick={() => {
+   314→   314→                    setEditCategory(null)
+   315→   315→                    setCatForm(defaultCatForm)
+   316→   316→                    setCategoryDialogTab('general')
+   317→   317→                    setCategoryDialogOpen(true)
+   318→   318→                  }}
+   319→   319→                  className="gap-1.5 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
+   320→   320→                >
+   321→   321→                  <Plus className="w-4 h-4" /> Crear Categoría
+   322→   322→                </Button>
+   323→   323→              )}
+   324→   324→              {activeTab === 'tickets' && (
+   325→   325→                <Button
+   326→   326→                  size="sm"
+   327→   327→                  onClick={() => setTicketDialogOpen(true)}
+   328→   328→                  className="gap-1.5 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
+   329→   329→                >
+   330→   330→                  <Plus className="w-4 h-4" /> Crear Ticket
+   331→   331→                </Button>
+   332→   332→              )}
+   333→   333→              {activeTab === 'tickets' && (
+   334→   334→                <div className="relative">
+   335→   335→                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+   336→   336→                  <Input
+   337→   337→                    placeholder="Buscar tickets..."
+   338→   338→                    value={searchQuery}
+   339→   339→                    onChange={e => setSearchQuery(e.target.value)}
+   340→   340→                    className="pl-8 h-8 w-48 text-xs"
+   341→   341→                  />
+   342→   342→                </div>
+   343→   343→              )}
+   344→   344→            </div>
+   345→   345→          </div>
+   346→   346→
+   347→   347→          {/* Categories Tab */}
+   348→   348→          <TabsContent value="categories" className="mt-0">
+   349→   349→            {categories.length === 0 ? (
+   350→   350→              <Card className="border-dashed">
+   351→   351→                <CardContent className="flex flex-col items-center justify-center py-16">
+   352→   352→                  <FolderOpen className="w-12 h-12 text-muted-foreground/30 mb-3" />
+   353→   353→                  <p className="text-sm text-muted-foreground">No hay categorías de tickets</p>
+   354→   354→                  <p className="text-xs text-muted-foreground/60 mt-1">Crea una categoría para empezar</p>
+   355→   355→                </CardContent>
+   356→   356→              </Card>
+   357→   357→            ) : (
+   358→   358→              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+   359→   359→                <AnimatePresence mode="popLayout">
+   360→   360→                  {categories.map((cat, i) => (
+   361→   361→                    <motion.div
+   362→   362→                      key={cat.id}
+   363→   363→                      layout
+   364→   364→                      initial={{ opacity: 0, scale: 0.9 }}
+   365→   365→                      animate={{ opacity: 1, scale: 1 }}
+   366→   366→                      exit={{ opacity: 0, scale: 0.9 }}
+   367→   367→                      transition={{ duration: 0.3, delay: i * 0.05 }}
+   368→   368→                    >
+   369→   369→                      <Card className="group relative overflow-hidden border-border/50 hover:border-border transition-all duration-300 hover:shadow-lg">
+   370→   370→                        {/* Color accent bar */}
+   371→   371→                        <div
+   372→   372→                          className="absolute top-0 left-0 right-0 h-1"
+   373→   373→                          style={{ background: `linear-gradient(90deg, ${cat.color}, ${cat.color}88)` }}
+   374→   374→                        />
+   375→   375→                        <CardContent className="p-4 pt-5">
+   376→   376→                          <div className="flex items-start justify-between mb-3">
+   377→   377→                            <div className="flex items-center gap-2">
+   378→   378→                              <span className="text-2xl">{cat.emoji}</span>
+   379→   379→                              <div>
+   380→   380→                                <h3 className="font-semibold text-sm">{cat.name}</h3>
+   381→   381→                                <div className="flex items-center gap-1 mt-0.5">
+   382→   382→                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+   383→   383→                                  <span className="text-[10px] text-muted-foreground">{cat._count.tickets} tickets</span>
+   384→   384→                                </div>
+   385→   385→                              </div>
+   386→   386→                            </div>
+   387→   387→                            <div className="flex items-center gap-1">
+   388→   388→                              <Switch
+   389→   389→                                checked={cat.isActive}
+   390→   390→                                onCheckedChange={() => handleToggleCategory(cat)}
+   391→   391→                                className="scale-75"
+   392→   392→                              />
+   393→   393→                            </div>
+   394→   394→                          </div>
+   395→   395→                          {cat.description && (
+   396→   396→                            <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{cat.description}</p>
+   397→   397→                          )}
+   398→   398→                          {cat.customMessage && (
+   399→   399→                            <p className="text-[10px] text-muted-foreground/60 mb-3 line-clamp-1 italic">
+   400→   400→                              &quot;{cat.customMessage}&quot;
+   401→   401→                            </p>
+   402→   402→                          )}
+   403→   403→                          {cat.channelId && (
+   404→   404→                            <div className="flex items-center gap-1 mb-2">
+   405→   405→                              <Hash className="w-3 h-3 text-muted-foreground" />
+   406→   406→                              <span className="text-[10px] text-muted-foreground">Canal configurado</span>
+   407→   407→                            </div>
+   408→   408→                          )}
+   409→   409→                          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+   410→   410→                            <Badge variant="secondary" className={`text-[9px] ${cat.isActive ? 'bg-emerald-500/15 text-emerald-400' : 'bg-zinc-500/15 text-zinc-400'}`}>
+   411→   411→                              {cat.isActive ? 'Activa' : 'Inactiva'}
+   412→   412→                            </Badge>
+   413→   413→                            <div className="flex items-center gap-1">
+   414→   414→                              <Button
+   415→   415→                                variant="ghost"
+   416→   416→                                size="icon"
+   417→   417→                                className="h-7 w-7"
+   418→   418→                                onClick={() => openEditCategory(cat)}
+   419→   419→                              >
+   420→   420→                                <Pencil className="w-3 h-3" />
+   421→   421→                              </Button>
+   422→   422→                              <Button
+   423→   423→                                variant="ghost"
+   424→   424→                                size="icon"
+   425→   425→                                className="h-7 w-7 text-destructive hover:text-destructive"
+   426→   426→                                onClick={() => {
+   427→   427→                                  setDeleteTarget({ type: 'category', id: cat.id })
+   428→   428→                                  setDeleteDialogOpen(true)
+   429→   429→                                }}
+   430→   430→                              >
+   431→   431→                                <Trash2 className="w-3 h-3" />
+   432→   432→                              </Button>
+   433→   433→                            </div>
+   434→   434→                          </div>
+   435→   435→                        </CardContent>
+   436→   436→                      </Card>
+   437→   437→                    </motion.div>
+   438→   438→                  ))}
+   439→   439→                </AnimatePresence>
+   440→   440→              </div>
+   441→   441→            )}
+   442→   442→          </TabsContent>
+   443→   443→
+   444→   444→          {/* Tickets Tab */}
+   445→   445→          <TabsContent value="tickets" className="mt-0">
+   446→   446→            <Card>
+   447→   447→              <CardContent className="p-0">
+   448→   448→                <ScrollArea className="max-h-[600px]">
+   449→   449→                  <Table>
+   450→   450→                    <TableHeader>
+   451→   451→                      <TableRow className="hover:bg-transparent">
+   452→   452→                        <TableHead className="w-[80px] text-xs">ID</TableHead>
+   453→   453→                        <TableHead className="text-xs">Asunto</TableHead>
+   454→   454→                        <TableHead className="text-xs">Creador</TableHead>
+   455→   455→                        <TableHead className="text-xs">Categoría</TableHead>
+   456→   456→                        <TableHead className="text-xs">Estado</TableHead>
+   457→   457→                        <TableHead className="text-xs">Fecha</TableHead>
+   458→   458→                        <TableHead className="text-xs text-right">Acciones</TableHead>
+   459→   459→                      </TableRow>
+   460→   460→                    </TableHeader>
+   461→   461→                    <TableBody>
+   462→   462→                      <AnimatePresence>
+   463→   463→                        {filteredTickets.length === 0 ? (
+   464→   464→                          <TableRow>
+   465→   465→                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+   466→   466→                              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+   467→   467→                              <p className="text-sm">No se encontraron tickets</p>
+   468→   468→                            </TableCell>
+   469→   469→                          </TableRow>
+   470→   470→                        ) : (
+   471→   471→                          filteredTickets.map((ticket, i) => {
+   472→   472→                            const status = statusConfig[ticket.status] || statusConfig.open
+   473→   473→                            const StatusIcon = status.icon
+   474→   474→                            return (
+   475→   475→                              <motion.tr
+   476→   476→                                key={ticket.id}
+   477→   477→                                initial={{ opacity: 0, x: -10 }}
+   478→   478→                                animate={{ opacity: 1, x: 0 }}
+   479→   479→                                exit={{ opacity: 0, x: 10 }}
+   480→   480→                                transition={{ delay: i * 0.03 }}
+   481→   481→                                className="border-b border-border/50 hover:bg-accent/30 transition-colors"
+   482→   482→                              >
+   483→   483→                                <TableCell className="font-mono text-[10px] text-muted-foreground">
+   484→   484→                                  #{ticket.id.slice(-6).toUpperCase()}
+   485→   485→                                </TableCell>
+   486→   486→                                <TableCell className="text-xs font-medium max-w-[200px] truncate">
+   487→   487→                                  {ticket.subject || 'Sin asunto'}
+   488→   488→                                </TableCell>
+   489→   489→                                <TableCell className="text-xs">
+   490→   490→                                  <div className="flex items-center gap-1.5">
+   491→   491→                                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white shrink-0">
+   492→   492→                                      {ticket.creator.username[0]}
+   493→   493→                                    </div>
+   494→   494→                                    <span className="truncate max-w-[100px]">{ticket.creator.username}</span>
+   495→   495→                                  </div>
+   496→   496→                                </TableCell>
+   497→   497→                                <TableCell className="text-xs">
+   498→   498→                                  <div className="flex items-center gap-1.5">
+   499→   499→                                    <span>{ticket.category.emoji}</span>
+   500→   500→                                    <span className="truncate max-w-[100px]">{ticket.category.name}</span>
+   501→   501→                                  </div>
+   502→   502→                                </TableCell>
+   503→   503→                                <TableCell>
+   504→   504→                                  <Badge variant="secondary" className={`text-[10px] gap-1 border ${status.bg} ${status.color}`}>
+   505→   505→                                    <StatusIcon className="w-2.5 h-2.5" />
+   506→   506→                                    {status.label}
+   507→   507→                                  </Badge>
+   508→   508→                                </TableCell>
+   509→   509→                                <TableCell className="text-[10px] text-muted-foreground">
+   510→   510→                                  {new Date(ticket.createdAt).toLocaleDateString('es-ES', {
+   511→   511→                                    day: '2-digit', month: 'short', year: '2-digit'
+   512→   512→                                  })}
+   513→   513→                                </TableCell>
+   514→   514→                                <TableCell className="text-right">
+   515→   515→                                  <div className="flex items-center justify-end gap-1">
+   516→   516→                                    {ticket.status === 'open' && (
+   517→   517→                                      <Button
+   518→   518→                                        variant="ghost"
+   519→   519→                                        size="sm"
+   520→   520→                                        className="h-7 text-[10px] gap-1 text-amber-400 hover:text-amber-300"
+   521→   521→                                        onClick={() => handleTicketAction(ticket.id, 'claim')}
+   522→   522→                                      >
+   523→   523→                                        <UserPlus className="w-3 h-3" /> Reclamar
+   524→   524→                                      </Button>
+   525→   525→                                    )}
+   526→   526→                                    {(ticket.status === 'open' || ticket.status === 'claimed') && (
+   527→   527→                                      <Button
+   528→   528→                                        variant="ghost"
+   529→   529→                                        size="sm"
+   530→   530→                                        className="h-7 text-[10px] gap-1 text-zinc-400 hover:text-zinc-300"
+   531→   531→                                        onClick={() => handleTicketAction(ticket.id, 'close')}
+   532→   532→                                      >
+   533→   533→                                        <XCircle className="w-3 h-3" /> Cerrar
+   534→   534→                                      </Button>
+   535→   535→                                    )}
+   536→   536→                                    <Button
+   537→   537→                                      variant="ghost"
+   538→   538→                                      size="icon"
+   539→   539→                                      className="h-7 w-7 text-destructive hover:text-destructive"
+   540→   540→                                      onClick={() => {
+   541→   541→                                        setDeleteTarget({ type: 'ticket', id: ticket.id })
+   542→   542→                                        setDeleteDialogOpen(true)
+   543→   543→                                      }}
+   544→   544→                                    >
+   545→   545→                                      <Trash2 className="w-3 h-3" />
+   546→   546→                                    </Button>
+   547→   547→                                  </div>
+   548→   548→                                </TableCell>
+   549→   549→                              </motion.tr>
+   550→   550→                            )
+   551→   551→                          })
+   552→   552→                        )}
+   553→   553→                      </AnimatePresence>
+   554→   554→                    </TableBody>
+   555→   555→                  </Table>
+   556→   556→                </ScrollArea>
+   557→   557→              </CardContent>
+   558→   558→            </Card>
+   559→   559→          </TabsContent>
+   560→   560→
+   561→   561→          {/* Transcripts Tab */}
+   562→   562→          <TabsContent value="transcripts" className="mt-0">
+   563→   563→            {closedTicketsWithTranscripts.length === 0 ? (
+   564→   564→              <Card className="border-dashed">
+   565→   565→                <CardContent className="flex flex-col items-center justify-center py-16">
+   566→   566→                  <Archive className="w-12 h-12 text-muted-foreground/30 mb-3" />
+   567→   567→                  <p className="text-sm text-muted-foreground">No hay transcripts disponibles</p>
+   568→   568→                  <p className="text-xs text-muted-foreground/60 mt-1">Los transcripts aparecerán cuando se cierren tickets</p>
+   569→   569→                </CardContent>
+   570→   570→              </Card>
+   571→   571→            ) : (
+   572→   572→              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+   573→   573→                <AnimatePresence>
+   574→   574→                  {closedTicketsWithTranscripts.map((ticket, i) => (
+   575→   575→                    <motion.div
+   576→   576→                      key={ticket.id}
+   577→   577→                      initial={{ opacity: 0, y: 15 }}
+   578→   578→                      animate={{ opacity: 1, y: 0 }}
+   579→   579→                      exit={{ opacity: 0, y: -15 }}
+   580→   580→                      transition={{ delay: i * 0.05 }}
+   581→   581→                    >
+   582→   582→                      <Card className="group hover:shadow-lg transition-all duration-300 border-border/50">
+   583→   583→                        <CardContent className="p-4">
+   584→   584→                          <div className="flex items-center gap-2 mb-2">
+   585→   585→                            <div
+   586→   586→                              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+   587→   587→                              style={{ backgroundColor: ticket.category.color + '20' }}
+   588→   588→                            >
+   589→   589→                              {ticket.category.emoji}
+   590→   590→                            </div>
+   591→   591→                            <div className="flex-1 min-w-0">
+   592→   592→                              <p className="text-xs font-medium truncate">{ticket.subject || 'Sin asunto'}</p>
+   593→   593→                              <p className="text-[10px] text-muted-foreground">
+   594→   594→                                #{ticket.id.slice(-6).toUpperCase()} • {ticket.category.name}
+   595→   595→                              </p>
+   596→   596→                            </div>
+   597→   597→                          </div>
+   598→   598→                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-3">
+   599→   599→                            <Clock className="w-3 h-3" />
+   600→   600→                            <span>
+   601→   601→                              Cerrado: {new Date(ticket.closedAt || ticket.createdAt).toLocaleDateString('es-ES', {
+   602→   602→                                day: '2-digit', month: 'short', year: '2-digit'
+   603→   603→                              })}
+   604→   604→                            </span>
+   605→   605→                            <span>•</span>
+   606→   606→                            <span>{ticket.creator.username}</span>
+   607→   607→                          </div>
+   608→   608→                          <Button
+   609→   609→                            variant="outline"
+   610→   610→                            size="sm"
+   611→   611→                            className="w-full gap-1.5 text-xs"
+   612→   612→                            onClick={() => {
+   613→   613→                              setSelectedTranscript(ticket)
+   614→   614→                              setTranscriptDialogOpen(true)
+   615→   615→                            }}
+   616→   616→                          >
+   617→   617→                            <Eye className="w-3.5 h-3.5" /> Ver Transcript
+   618→   618→                          </Button>
+   619→   619→                        </CardContent>
+   620→   620→                      </Card>
+   621→   621→                    </motion.div>
+   622→   622→                  ))}
+   623→   623→                </AnimatePresence>
+   624→   624→              </div>
+   625→   625→            )}
+   626→   626→          </TabsContent>
+   627→   627→        </Tabs>
+   628→   628→      </motion.div>
+   629→   629→
+   630→   630→      {/* Create/Edit Category Dialog */}
+   631→   631→      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+   632→   632→        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+   633→   633→          <DialogHeader>
+   634→   634→            <DialogTitle className="flex items-center gap-2">
+   635→   635→              {editCategory ? <Pencil className="w-4 h-4 text-[#FF3A2F]" /> : <Plus className="w-4 h-4 text-[#FF3A2F]" />}
+   636→   636→              {editCategory ? 'Editar Categoría' : 'Crear Categoría'}
+   637→   637→            </DialogTitle>
+   638→   638→            <DialogDescription>
+   639→   639→              {editCategory ? 'Modifica los detalles de la categoría' : 'Configura una nueva categoría de tickets'}
+   640→   640→            </DialogDescription>
+   641→   641→          </DialogHeader>
+   642→   642→
+   643→   643→          <Tabs value={categoryDialogTab} onValueChange={setCategoryDialogTab} className="w-full">
+   644→   644→            <TabsList className="w-full bg-card/50 border border-border mb-2">
+   645→   645→              <TabsTrigger value="general" className="flex-1 text-xs gap-1.5">
+   646→   646→                <FolderOpen className="w-3 h-3" /> General
+   647→   647→              </TabsTrigger>
+   648→   648→              <TabsTrigger value="embed" className="flex-1 text-xs gap-1.5">
+   649→   649→                <MessageSquare className="w-3 h-3" /> Embed
+   650→   650→              </TabsTrigger>
+   651→   651→              <TabsTrigger value="preview" className="flex-1 text-xs gap-1.5">
+   652→   652→                <Eye className="w-3 h-3" /> Vista Previa
+   653→   653→              </TabsTrigger>
+   654→   654→            </TabsList>
+   655→   655→
+   656→   656→            {/* General Tab */}
+   657→   657→            <TabsContent value="general" className="mt-0">
+   658→   658→              <div className="space-y-4 py-2">
+   659→   659→                <div className="grid grid-cols-3 gap-3">
+   660→   660→                  <div className="col-span-1">
+   661→   661→                    <Label className="text-xs">Emoji</Label>
+   662→   662→                    <Input
+   663→   663→                      value={catForm.emoji}
+   664→   664→                      onChange={e => setCatForm(f => ({ ...f, emoji: e.target.value }))}
+   665→   665→                      className="h-9 text-center text-lg"
+   666→   666→                      maxLength={4}
+   667→   667→                    />
+   668→   668→                  </div>
+   669→   669→                  <div className="col-span-2">
+   670→   670→                    <Label className="text-xs">Nombre</Label>
+   671→   671→                    <Input
+   672→   672→                      value={catForm.name}
+   673→   673→                      onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))}
+   674→   674→                      placeholder="Nombre de la categoría"
+   675→   675→                      className="h-9"
+   676→   676→                    />
+   677→   677→                  </div>
+   678→   678→                </div>
+   679→   679→                <div>
+   680→   680→                  <Label className="text-xs">Color</Label>
+   681→   681→                  <div className="flex items-center gap-2">
+   682→   682→                    <input
+   683→   683→                      type="color"
+   684→   684→                      value={catForm.color}
+   685→   685→                      onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))}
+   686→   686→                      className="w-9 h-9 rounded-lg border border-border cursor-pointer"
+   687→   687→                    />
+   688→   688→                    <Input
+   689→   689→                      value={catForm.color}
+   690→   690→                      onChange={e => setCatForm(f => ({ ...f, color: e.target.value }))}
+   691→   691→                      className="h-9 font-mono text-xs"
+   692→   692→                      maxLength={7}
+   693→   693→                    />
+   694→   694→                  </div>
+   695→   695→                </div>
+   696→   696→                <div>
+   697→   697→                  <Label className="text-xs flex items-center gap-1.5">
+   698→   698→                    <Hash className="w-3 h-3" />
+   699→   699→                    Canal del Panel de Tickets
+   700→   700→                  </Label>
+   701→   701→                  <ChannelSelector
+   702→   702→                    value={catForm.channelId || null}
+   703→   703→                    onValueChange={(channelId) => setCatForm(f => ({ ...f, channelId }))}
+   704→   704→                    placeholder="Selecciona el canal donde se enviará el panel..."
+   705→   705→                  />
+   706→   706→                  <p className="text-[10px] text-muted-foreground mt-1">
+   707→   707→                    El bot enviará el mensaje del panel de tickets a este canal
+   708→   708→                  </p>
+   709→   709→                </div>
+   710→   710→                <div>
+   711→   711→                  <Label className="text-xs">Descripción</Label>
+   712→   712→                  <Textarea
+   713→   713→                    value={catForm.description}
+   714→   714→                    onChange={e => setCatForm(f => ({ ...f, description: e.target.value }))}
+   715→   715→                    placeholder="Descripción breve de la categoría..."
+   716→   716→                    className="min-h-[60px] text-xs resize-none"
+   717→   717→                  />
+   718→   718→                </div>
+   719→   719→                <div>
+   720→   720→                  <Label className="text-xs">Mensaje Personalizado</Label>
+   721→   721→                  <Textarea
+   722→   722→                    value={catForm.customMessage}
+   723→   723→                    onChange={e => setCatForm(f => ({ ...f, customMessage: e.target.value }))}
+   724→   724→                    placeholder="Mensaje que se envía al abrir un ticket..."
+   725→   725→                    className="min-h-[60px] text-xs resize-none"
+   726→   726→                  />
+   727→   727→                </div>
+   728→   728→              </div>
+   729→   729→            </TabsContent>
+   730→   730→
+   731→   731→            {/* Embed Configuration Tab */}
+   732→   732→            <TabsContent value="embed" className="mt-0">
+   733→   733→              <div className="py-2">
+   734→   734→                <p className="text-xs text-muted-foreground mb-4">
+   735→   735→                  Configura cómo se verá el embed del panel de tickets enviado por el bot.
+   736→   736→                  El canal de destino se configura en la pestaña General.
+   737→   737→                </p>
+   738→   738→                <EmbedConfig
+   739→   739→                  config={catForm.embedConfig}
+   740→   740→                  onChange={(embedConfig) => setCatForm(f => ({ ...f, embedConfig }))}
+   741→   741→                  showChannelSelector={false}
+   742→   742→                />
+   743→   743→              </div>
+   744→   744→            </TabsContent>
+   745→   745→
+   746→   746→            {/* Preview Tab */}
+   747→   747→            <TabsContent value="preview" className="mt-0">
+   748→   748→              <div className="py-2 space-y-4">
+   749→   749→                <div>
+   750→   750→                  <Label className="text-xs font-medium text-muted-foreground mb-3 block">Vista previa del Embed</Label>
+   751→   751→                  <div className="rounded-lg bg-[#313338] p-4">
+   752→   752→                    <EmbedPreview config={catForm.embedConfig} />
+   753→   753→                  </div>
+   754→   754→                </div>
+   755→   755→                <Separator className="opacity-50" />
+   756→   756→                <div>
+   757→   757→                  <Label className="text-xs font-medium text-muted-foreground mb-2 block">Resumen de Configuración</Label>
+   758→   758→                  <div className="space-y-1.5">
+   759→   759→                    <div className="flex items-center justify-between text-xs">
+   760→   760→                      <span className="text-muted-foreground">Canal</span>
+   761→   761→                      <span className="font-medium">{catForm.channelId ? 'Configurado' : 'No seleccionado'}</span>
+   762→   762→                    </div>
+   763→   763→                    <div className="flex items-center justify-between text-xs">
+   764→   764→                      <span className="text-muted-foreground">Título del Embed</span>
+   765→   765→                      <span className="font-medium">{catForm.embedConfig.title || 'Sin título'}</span>
+   766→   766→                    </div>
+   767→   767→                    <div className="flex items-center justify-between text-xs">
+   768→   768→                      <span className="text-muted-foreground">Color</span>
+   769→   769→                      <div className="flex items-center gap-1.5">
+   770→   770→                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: catForm.embedConfig.color }} />
+   771→   771→                        <span className="font-mono text-[10px]">{catForm.embedConfig.color}</span>
+   772→   772→                      </div>
+   773→   773→                    </div>
+   774→   774→                    <div className="flex items-center justify-between text-xs">
+   775→   775→                      <span className="text-muted-foreground">Campos</span>
+   776→   776→                      <span className="font-medium">{catForm.embedConfig.fields.length}</span>
+   777→   777→                    </div>
+   778→   778→                    <div className="flex items-center justify-between text-xs">
+   779→   779→                      <span className="text-muted-foreground">Imagen</span>
+   780→   780→                      <span className="font-medium">{catForm.embedConfig.imageUrl ? 'Configurada' : 'Sin imagen'}</span>
+   781→   781→                    </div>
+   782→   782→                  </div>
+   783→   783→                </div>
+   784→   784→              </div>
+   785→   785→            </TabsContent>
+   786→   786→          </Tabs>
+   787→   787→
+   788→   788→          <DialogFooter className="mt-4">
+   789→   789→            <Button variant="outline" size="sm" onClick={() => setCategoryDialogOpen(false)}>
+   790→   790→              Cancelar
+   791→   791→            </Button>
+   792→   792→            <Button
+   793→   793→              size="sm"
+   794→   794→              onClick={handleCreateCategory}
+   795→   795→              disabled={!catForm.name}
+   796→   796→              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
+   797→   797→            >
+   798→   798→              {editCategory ? 'Guardar Cambios' : 'Crear Categoría'}
+   799→   799→            </Button>
+   800→   800→          </DialogFooter>
+   801→   801→        </DialogContent>
+   802→   802→      </Dialog>
+   803→   803→
+   804→   804→      {/* Create Ticket Dialog */}
+   805→   805→      <Dialog open={ticketDialogOpen} onOpenChange={setTicketDialogOpen}>
+   806→   806→        <DialogContent className="sm:max-w-md">
+   807→   807→          <DialogHeader>
+   808→   808→            <DialogTitle className="flex items-center gap-2">
+   809→   809→              <Ticket className="w-4 h-4 text-[#FF3A2F]" /> Crear Ticket
+   810→   810→            </DialogTitle>
+   811→   811→            <DialogDescription>Abre un nuevo ticket de soporte</DialogDescription>
+   812→   812→          </DialogHeader>
+   813→   813→          <div className="space-y-4 py-2">
+   814→   814→            <div>
+   815→   815→              <Label className="text-xs">Categoría</Label>
+   816→   816→              <Select value={ticketForm.categoryId} onValueChange={v => setTicketForm(f => ({ ...f, categoryId: v }))}>
+   817→   817→                <SelectTrigger className="h-9">
+   818→   818→                  <SelectValue placeholder="Seleccionar categoría" />
+   819→   819→                </SelectTrigger>
+   820→   820→                <SelectContent>
+   821→   821→                  {categories.filter(c => c.isActive).map(cat => (
+   822→   822→                    <SelectItem key={cat.id} value={cat.id}>
+   823→   823→                      <span className="flex items-center gap-1.5">
+   824→   824→                        <span>{cat.emoji}</span> {cat.name}
+   825→   825→                      </span>
+   826→   826→                    </SelectItem>
+   827→   827→                  ))}
+   828→   828→                </SelectContent>
+   829→   829→              </Select>
+   830→   830→            </div>
+   831→   831→            <div>
+   832→   832→              <Label className="text-xs">Asunto</Label>
+   833→   833→              <Input
+   834→   834→                value={ticketForm.subject}
+   835→   835→                onChange={e => setTicketForm(f => ({ ...f, subject: e.target.value }))}
+   836→   836→                placeholder="Asunto del ticket"
+   837→   837→                className="h-9"
+   838→   838→              />
+   839→   839→            </div>
+   840→   840→            <div>
+   841→   841→              <Label className="text-xs">Descripción</Label>
+   842→   842→              <Textarea
+   843→   843→                value={ticketForm.description}
+   844→   844→                onChange={e => setTicketForm(f => ({ ...f, description: e.target.value }))}
+   845→   845→                placeholder="Describe tu problema o consulta..."
+   846→   846→                className="min-h-[80px] text-xs resize-none"
+   847→   847→              />
+   848→   848→            </div>
+   849→   849→          </div>
+   850→   850→          <DialogFooter>
+   851→   851→            <Button variant="outline" size="sm" onClick={() => setTicketDialogOpen(false)}>
+   852→   852→              Cancelar
+   853→   853→            </Button>
+   854→   854→            <Button
+   855→   855→              size="sm"
+   856→   856→              onClick={() => {
+   857→   857→                toast.success('Ticket creado exitosamente')
+   858→   858→                setTicketDialogOpen(false)
+   859→   859→                setTicketForm({ subject: '', categoryId: '', description: '' })
+   860→   860→              }}
+   861→   861→              disabled={!ticketForm.subject || !ticketForm.categoryId}
+   862→   862→              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
+   863→   863→            >
+   864→   864→              Crear Ticket
+   865→   865→            </Button>
+   866→   866→          </DialogFooter>
+   867→   867→        </DialogContent>
+   868→   868→      </Dialog>
+   869→   869→
+   870→   870→      {/* Transcript Viewer Dialog */}
+   871→   871→      <Dialog open={transcriptDialogOpen} onOpenChange={setTranscriptDialogOpen}>
+   872→   872→        <DialogContent className="sm:max-w-lg">
+   873→   873→          <DialogHeader>
+   874→   874→            <DialogTitle className="flex items-center gap-2">
+   875→   875→              <Eye className="w-4 h-4 text-[#FF3A2F]" /> Transcript del Ticket
+   876→   876→            </DialogTitle>
+   877→   877→            <DialogDescription>
+   878→   878→              {selectedTranscript && `#${selectedTranscript.id.slice(-6).toUpperCase()} — ${selectedTranscript.subject || 'Sin asunto'}`}
+   879→   879→            </DialogDescription>
+   880→   880→          </DialogHeader>
+   881→   881→          <div className="space-y-3">
+   882→   882→            <div className="bg-[#2F3136] rounded-lg p-4 space-y-3 min-h-[200px]">
+   883→   883→              {selectedTranscript && (
+   884→   884→                <>
+   885→   885→                  <div className="flex items-center gap-2 mb-4">
+   886→   886→                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[10px] font-bold text-white">
+   887→   887→                      {selectedTranscript.creator.username[0]}
+   888→   888→                    </div>
+   889→   889→                    <div>
+   890→   890→                      <p className="text-xs font-semibold text-white">{selectedTranscript.creator.username}</p>
+   891→   891→                      <p className="text-[10px] text-gray-400">
+   892→   892→                        {new Date(selectedTranscript.createdAt).toLocaleString('es-ES')}
+   893→   893→                      </p>
+   894→   894→                    </div>
+   895→   895→                  </div>
+   896→   896→                  <div className="pl-10 space-y-2">
+   897→   897→                    <div className="bg-[#36393F] rounded-lg p-3">
+   898→   898→                      <p className="text-xs text-gray-300">
+   899→   899→                        Hola, tengo un problema: {selectedTranscript.subject || 'Sin asunto'}
+   900→   900→                      </p>
+   901→   901→                    </div>
+   902→   902→                    <div className="flex items-center gap-2">
+   903→   903→                      <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-[8px] font-bold text-white">
+   904→   904→                        S
+   905→   905→                      </div>
+   906→   906→                      <div className="bg-[#36393F] rounded-lg p-3 flex-1">
+   907→   907→                        <p className="text-[10px] font-semibold text-emerald-400">Staff</p>
+   908→   908→                        <p className="text-xs text-gray-300">Hola, vamos a revisar tu caso. Un momento por favor.</p>
+   909→   909→                      </div>
+   910→   910→                    </div>
+   911→   911→                    <div className="flex items-center gap-2">
+   912→   912→                      <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-[8px] font-bold text-white">
+   913→   913→                        S
+   914→   914→                      </div>
+   915→   915→                      <div className="bg-[#36393F] rounded-lg p-3 flex-1">
+   916→   916→                        <p className="text-[10px] font-semibold text-emerald-400">Staff</p>
+   917→   917→                        <p className="text-xs text-gray-300">Tu caso ha sido resuelto. Cerrando ticket...</p>
+   918→   918→                      </div>
+   919→   919→                    </div>
+   920→   920→                  </div>
+   921→   921→                  <div className="pl-10 mt-2">
+   922→   922→                    <p className="text-[10px] text-gray-500 italic">
+   923→   923→                      🔒 Ticket cerrado por Staff — {new Date(selectedTranscript.closedAt || selectedTranscript.createdAt).toLocaleString('es-ES')}
+   924→   924→                    </p>
+   925→   925→                  </div>
+   926→   926→                </>
+   927→   927→              )}
+   928→   928→            </div>
+   929→   929→          </div>
+   930→   930→          <DialogFooter>
+   931→   931→            <Button variant="outline" size="sm" onClick={() => setTranscriptDialogOpen(false)}>
+   932→   932→              Cerrar
+   933→   933→            </Button>
+   934→   934→          </DialogFooter>
+   935→   935→        </DialogContent>
+   936→   936→      </Dialog>
+   937→   937→
+   938→   938→      {/* Delete Confirmation Dialog */}
+   939→   939→      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+   940→   940→        <DialogContent className="sm:max-w-sm">
+   941→   941→          <DialogHeader>
+   942→   942→            <DialogTitle className="flex items-center gap-2 text-destructive">
+   943→   943→              <Trash2 className="w-4 h-4" /> Confirmar Eliminación
+   944→   944→            </DialogTitle>
+   945→   945→            <DialogDescription>
+   946→   946→              ¿Estás seguro de que quieres eliminar este {deleteTarget?.type === 'category' ? 'categoría' : 'ticket'}?
+   947→   947→              Esta acción no se puede deshacer.
+   948→   948→            </DialogDescription>
+   949→   949→          </DialogHeader>
+   950→   950→          <DialogFooter>
+   951→   951→            <Button variant="outline" size="sm" onClick={() => setDeleteDialogOpen(false)}>
+   952→   952→              Cancelar
+   953→   953→            </Button>
+   954→   954→            <Button variant="destructive" size="sm" onClick={handleDeleteItem}>
+   955→   955→              Eliminar
+   956→   956→            </Button>
+   957→   957→          </DialogFooter>
+   958→   958→        </DialogContent>
+   959→   959→      </Dialog>
+   960→   960→    </motion.div>
+   961→   961→  )
+   962→   962→}
+   963→   963→

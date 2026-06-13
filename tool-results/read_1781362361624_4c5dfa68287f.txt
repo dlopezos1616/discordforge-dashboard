@@ -1,0 +1,959 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useAppStore } from '@/lib/store'
+     6→import {
+     7→  Shield, ShieldAlert, ShieldCheck, Lock, Unlock, AlertTriangle,
+     8→  Users, UserPlus, Bot, Fingerprint, Clock, Eye, CheckCircle2,
+     9→  XCircle, Activity, Zap, Swords, Loader2, Save, RotateCcw,
+    10→  Hash, UserX, ScanEye
+    11→} from 'lucide-react'
+    12→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    13→import { Button } from '@/components/ui/button'
+    14→import { Input } from '@/components/ui/input'
+    15→import { Badge } from '@/components/ui/badge'
+    16→import { Switch } from '@/components/ui/switch'
+    17→import { Slider } from '@/components/ui/slider'
+    18→import { Label } from '@/components/ui/label'
+    19→import { Separator } from '@/components/ui/separator'
+    20→import {
+    21→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    22→} from '@/components/ui/select'
+    23→import {
+    24→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+    25→} from '@/components/ui/dialog'
+    26→import { ScrollArea } from '@/components/ui/scroll-area'
+    27→import { Skeleton } from '@/components/ui/skeleton'
+    28→import { toast } from 'sonner'
+    29→import { ChannelSelector } from '@/components/shared/ChannelSelector'
+    30→
+    31→// ─── Types ───────────────────────────────────────────────────────────────────
+    32→
+    33→interface AntiRaidConfig {
+    34→  id: string
+    35→  serverId: string
+    36→  enabled: boolean
+    37→  joinRateThreshold: number
+    38→  accountAgeHours: number
+    39→  requireAvatar: boolean
+    40→  similarUsernameCheck: boolean
+    41→  raidAction: string
+    42→  autoLockdown: boolean
+    43→  alertChannelId: string | null
+    44→  quarantineRoleId: string | null
+    45→  staffRoleId: string | null
+    46→  isLockedDown: boolean
+    47→  lockdownAt: string | null
+    48→  totalRaidsDetected: number
+    49→  lastRaidAt: string | null
+    50→  createdAt: string
+    51→  updatedAt: string
+    52→}
+    53→
+    54→interface RaidEvent {
+    55→  id: string
+    56→  serverId: string
+    57→  type: string
+    58→  joinsDetected: number
+    59→  action: string
+    60→  isResolved: boolean
+    61→  resolvedAt: string | null
+    62→  details: string
+    63→  createdAt: string
+    64→}
+    65→
+    66→// ─── Animation Variants ─────────────────────────────────────────────────────
+    67→
+    68→const container = {
+    69→  hidden: { opacity: 0 },
+    70→  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+    71→}
+    72→
+    73→const item = {
+    74→  hidden: { opacity: 0, y: 20 },
+    75→  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    76→}
+    77→
+    78→// ─── Constants ───────────────────────────────────────────────────────────────
+    79→
+    80→const raidTypeConfig: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
+    81→  join_burst: { label: 'Ráfaga de uniones', icon: UserPlus, color: 'text-orange-400', bg: 'bg-orange-500/15 border-orange-500/30' },
+    82→  bot_raid: { label: 'Raid de bots', icon: Bot, color: 'text-red-400', bg: 'bg-red-500/15 border-red-500/30' },
+    83→  similar_names: { label: 'Nombres similares', icon: Fingerprint, color: 'text-purple-400', bg: 'bg-purple-500/15 border-purple-500/30' },
+    84→  manual: { label: 'Manual', icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-500/15 border-yellow-500/30' },
+    85→}
+    86→
+    87→const raidActionOptions = [
+    88→  { value: 'alert', label: 'Solo Alertar', icon: AlertTriangle, description: 'Solo envía una alerta al canal configurado' },
+    89→  { value: 'kick', label: 'Expulsar', icon: UserX, description: 'Expulsa automáticamente a los usuarios sospechosos' },
+    90→  { value: 'ban', label: 'Banear', icon: ShieldAlert, description: 'Banea automáticamente a los usuarios sospechosos' },
+    91→  { value: 'quarantine', label: 'Cuarentena', icon: Lock, description: 'Aísla a los usuarios con el rol de cuarentena' },
+    92→  { value: 'verify', label: 'Verificación', icon: ScanEye, description: 'Requiere verificación adicional para los nuevos usuarios' },
+    93→]
+    94→
+    95→const defaultConfig: AntiRaidConfig = {
+    96→  id: '',
+    97→  serverId: '',
+    98→  enabled: false,
+    99→  joinRateThreshold: 5,
+   100→  accountAgeHours: 24,
+   101→  requireAvatar: false,
+   102→  similarUsernameCheck: false,
+   103→  raidAction: 'alert',
+   104→  autoLockdown: false,
+   105→  alertChannelId: null,
+   106→  quarantineRoleId: null,
+   107→  staffRoleId: null,
+   108→  isLockedDown: false,
+   109→  lockdownAt: null,
+   110→  totalRaidsDetected: 0,
+   111→  lastRaidAt: null,
+   112→  createdAt: '',
+   113→  updatedAt: '',
+   114→}
+   115→
+   116→// ─── Helper ──────────────────────────────────────────────────────────────────
+   117→
+   118→function formatRelativeTime(dateStr: string | null): string {
+   119→  if (!dateStr) return 'Nunca'
+   120→  const diff = Date.now() - new Date(dateStr).getTime()
+   121→  const minutes = Math.floor(diff / 60000)
+   122→  if (minutes < 1) return 'Ahora mismo'
+   123→  if (minutes < 60) return `Hace ${minutes} min`
+   124→  const hours = Math.floor(minutes / 60)
+   125→  if (hours < 24) return `Hace ${hours}h`
+   126→  const days = Math.floor(hours / 24)
+   127→  return `Hace ${days}d`
+   128→}
+   129→
+   130→function formatDate(dateStr: string | null): string {
+   131→  if (!dateStr) return '—'
+   132→  return new Date(dateStr).toLocaleDateString('es-ES', {
+   133→    day: '2-digit',
+   134→    month: 'short',
+   135→    year: 'numeric',
+   136→    hour: '2-digit',
+   137→    minute: '2-digit',
+   138→  })
+   139→}
+   140→
+   141→// ─── Component ───────────────────────────────────────────────────────────────
+   142→
+   143→export function AntiRaidSystem() {
+   144→  const { currentServer } = useAppStore()
+   145→  const [config, setConfig] = useState<AntiRaidConfig>(defaultConfig)
+   146→  const [events, setEvents] = useState<RaidEvent[]>([])
+   147→  const [loading, setLoading] = useState(true)
+   148→  const [saving, setSaving] = useState(false)
+   149→  const [lockdownLoading, setLockdownLoading] = useState(false)
+   150→  const [resolvingEventId, setResolvingEventId] = useState<string | null>(null)
+   151→
+   152→  // Confirm dialog for lockdown
+   153→  const [lockdownDialogOpen, setLockdownDialogOpen] = useState(false)
+   154→
+   155→  // ─── Fetch Data ──────────────────────────────────────────────────────────
+   156→
+   157→  const fetchData = useCallback(async () => {
+   158→    if (!currentServer) return
+   159→    setLoading(true)
+   160→    try {
+   161→      const res = await fetch(`/api/antiraid?serverId=${currentServer.id}`)
+   162→      const data = await res.json()
+   163→      if (data.config) {
+   164→        setConfig(data.config)
+   165→      }
+   166→      if (data.events) {
+   167→        setEvents(data.events)
+   168→      }
+   169→    } catch {
+   170→      toast.error('Error al cargar la configuración de AntiRaid')
+   171→    } finally {
+   172→      setLoading(false)
+   173→    }
+   174→  }, [currentServer])
+   175→
+   176→  useEffect(() => {
+   177→    fetchData()
+   178→  }, [fetchData])
+   179→
+   180→  // ─── Save Config ─────────────────────────────────────────────────────────
+   181→
+   182→  const handleSaveConfig = async () => {
+   183→    if (!currentServer) return
+   184→    setSaving(true)
+   185→    try {
+   186→      const method = config.id ? 'PATCH' : 'POST'
+   187→      const body: Record<string, unknown> = {
+   188→        serverId: currentServer.id,
+   189→        enabled: config.enabled,
+   190→        joinRateThreshold: config.joinRateThreshold,
+   191→        accountAgeHours: config.accountAgeHours,
+   192→        requireAvatar: config.requireAvatar,
+   193→        similarUsernameCheck: config.similarUsernameCheck,
+   194→        raidAction: config.raidAction,
+   195→        autoLockdown: config.autoLockdown,
+   196→        alertChannelId: config.alertChannelId,
+   197→        quarantineRoleId: config.quarantineRoleId,
+   198→        staffRoleId: config.staffRoleId,
+   199→      }
+   200→
+   201→      const res = await fetch('/api/antiraid', {
+   202→        method,
+   203→        headers: { 'Content-Type': 'application/json' },
+   204→        body: JSON.stringify(body),
+   205→      })
+   206→      const data = await res.json()
+   207→      if (data.config) {
+   208→        setConfig(data.config)
+   209→        toast.success('Configuración guardada correctamente')
+   210→      } else {
+   211→        toast.error(data.error || 'Error al guardar la configuración')
+   212→      }
+   213→    } catch {
+   214→      toast.error('Error de conexión al guardar')
+   215→    } finally {
+   216→      setSaving(false)
+   217→    }
+   218→  }
+   219→
+   220→  // ─── Toggle Lockdown ─────────────────────────────────────────────────────
+   221→
+   222→  const handleToggleLockdown = async () => {
+   223→    if (!currentServer) return
+   224→    setLockdownLoading(true)
+   225→    try {
+   226→      const res = await fetch('/api/antiraid?action=lockdown', {
+   227→        method: 'POST',
+   228→        headers: { 'Content-Type': 'application/json' },
+   229→        body: JSON.stringify({ serverId: currentServer.id }),
+   230→      })
+   231→      const data = await res.json()
+   232→      if (data.config) {
+   233→        setConfig(prev => ({
+   234→          ...prev,
+   235→          isLockedDown: data.config.isLockedDown,
+   236→          lockdownAt: data.config.lockdownAt,
+   237→        }))
+   238→        toast.success(
+   239→          data.config.isLockedDown
+   240→            ? '🔒 Lockdown activado — El servidor está protegido'
+   241→            : '🔓 Lockdown desactivado — El servidor está abierto'
+   242→        )
+   243→      } else {
+   244→        toast.error(data.error || 'Error al cambiar el estado de lockdown')
+   245→      }
+   246→    } catch {
+   247→      toast.error('Error de conexión al cambiar lockdown')
+   248→    } finally {
+   249→      setLockdownLoading(false)
+   250→      setLockdownDialogOpen(false)
+   251→    }
+   252→  }
+   253→
+   254→  // ─── Resolve Raid Event ──────────────────────────────────────────────────
+   255→
+   256→  const handleResolveEvent = async (eventId: string) => {
+   257→    if (!currentServer) return
+   258→    setResolvingEventId(eventId)
+   259→    try {
+   260→      const res = await fetch('/api/antiraid?action=resolve', {
+   261→        method: 'POST',
+   262→        headers: { 'Content-Type': 'application/json' },
+   263→        body: JSON.stringify({ serverId: currentServer.id, eventId }),
+   264→      })
+   265→      const data = await res.json()
+   266→      if (data.success) {
+   267→        setEvents(prev =>
+   268→          prev.map(e => (e.id === eventId ? { ...e, isResolved: true, resolvedAt: new Date().toISOString() } : e))
+   269→        )
+   270→        toast.success('Evento de raid resuelto')
+   271→      } else {
+   272→        toast.error(data.error || 'Error al resolver el evento')
+   273→      }
+   274→    } catch {
+   275→      toast.error('Error de conexión al resolver evento')
+   276→    } finally {
+   277→      setResolvingEventId(null)
+   278→    }
+   279→  }
+   280→
+   281→  // ─── Master Toggle ───────────────────────────────────────────────────────
+   282→
+   283→  const handleMasterToggle = async (enabled: boolean) => {
+   284→    if (!currentServer) return
+   285→    const prevEnabled = config.enabled
+   286→    setConfig(prev => ({ ...prev, enabled }))
+   287→    try {
+   288→      const res = await fetch('/api/antiraid', {
+   289→        method: 'PATCH',
+   290→        headers: { 'Content-Type': 'application/json' },
+   291→        body: JSON.stringify({ serverId: currentServer.id, enabled }),
+   292→      })
+   293→      const data = await res.json()
+   294→      if (data.config) {
+   295→        setConfig(data.config)
+   296→        toast.success(enabled ? '🛡️ AntiRaid activado' : 'AntiRaid desactivado')
+   297→      } else {
+   298→        setConfig(prev => ({ ...prev, enabled: prevEnabled }))
+   299→        toast.error('Error al cambiar estado de AntiRaid')
+   300→      }
+   301→    } catch {
+   302→      setConfig(prev => ({ ...prev, enabled: prevEnabled }))
+   303→      toast.error('Error de conexión')
+   304→    }
+   305→  }
+   306→
+   307→  // ─── Status Badge ────────────────────────────────────────────────────────
+   308→
+   309→  const getStatusBadge = () => {
+   310→    if (config.isLockedDown) {
+   311→      return (
+   312→        <Badge className="bg-red-500/20 text-red-400 border border-red-500/40 gap-1.5 px-3 py-1 text-sm font-semibold animate-pulse">
+   313→          <Lock className="w-3.5 h-3.5" />
+   314→          Lockdown Activo
+   315→        </Badge>
+   316→      )
+   317→    }
+   318→    if (config.enabled) {
+   319→      return (
+   320→        <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 gap-1.5 px-3 py-1 text-sm font-semibold">
+   321→          <ShieldCheck className="w-3.5 h-3.5" />
+   322→          Activo
+   323→        </Badge>
+   324→      )
+   325→    }
+   326→    return (
+   327→      <Badge className="bg-zinc-500/20 text-zinc-400 border border-zinc-500/40 gap-1.5 px-3 py-1 text-sm font-semibold">
+   328→        <XCircle className="w-3.5 h-3.5" />
+   329→        Desactivado
+   330→      </Badge>
+   331→    )
+   332→  }
+   333→
+   334→  // ─── Loading State ───────────────────────────────────────────────────────
+   335→
+   336→  if (loading) {
+   337→    return (
+   338→      <div className="space-y-6 p-4 md:p-6">
+   339→        <div className="flex items-center justify-between">
+   340→          <Skeleton className="h-10 w-48" />
+   341→          <Skeleton className="h-8 w-24" />
+   342→        </div>
+   343→        <Skeleton className="h-32 w-full rounded-xl" />
+   344→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   345→          <Skeleton className="h-80 w-full rounded-xl" />
+   346→          <Skeleton className="h-80 w-full rounded-xl" />
+   347→        </div>
+   348→        <Skeleton className="h-64 w-full rounded-xl" />
+   349→      </div>
+   350→    )
+   351→  }
+   352→
+   353→  // ─── No Server ───────────────────────────────────────────────────────────
+   354→
+   355→  if (!currentServer) {
+   356→    return (
+   357→      <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-3">
+   358→        <Shield className="w-12 h-12 opacity-40" />
+   359→        <p className="text-lg">Selecciona un servidor para configurar AntiRaid</p>
+   360→      </div>
+   361→    )
+   362→  }
+   363→
+   364→  // ─── Unresolved raids count ──────────────────────────────────────────────
+   365→
+   366→  const unresolvedRaids = events.filter(e => !e.isResolved).length
+   367→
+   368→  // ─── Render ──────────────────────────────────────────────────────────────
+   369→
+   370→  return (
+   371→    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-4 md:p-6">
+   372→      {/* ── Header Section ──────────────────────────────────────────────── */}
+   373→      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+   374→        <div className="flex items-center gap-4">
+   375→          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500/20 to-red-600/10 border border-rose-500/20">
+   376→            <Shield className="w-6 h-6 text-rose-400" />
+   377→          </div>
+   378→          <div>
+   379→            <h1 className="text-2xl font-bold tracking-tight">🛡️ AntiRaid</h1>
+   380→            <p className="text-sm text-muted-foreground">Protección contra ataques al servidor</p>
+   381→          </div>
+   382→        </div>
+   383→        <div className="flex items-center gap-3">
+   384→          {getStatusBadge()}
+   385→          <div className="flex items-center gap-2 bg-background/60 border rounded-lg px-3 py-1.5">
+   386→            <Label htmlFor="master-toggle" className="text-sm font-medium cursor-pointer">
+   387→              {config.enabled ? 'Activado' : 'Desactivado'}
+   388→            </Label>
+   389→            <Switch
+   390→              id="master-toggle"
+   391→              checked={config.enabled}
+   392→              onCheckedChange={handleMasterToggle}
+   393→            />
+   394→          </div>
+   395→        </div>
+   396→      </motion.div>
+   397→
+   398→      {/* ── Emergency Actions Bar ───────────────────────────────────────── */}
+   399→      <motion.div variants={item}>
+   400→        <Card className={`relative overflow-hidden border-2 ${config.isLockedDown ? 'border-red-500/60' : 'border-rose-500/30'}`}>
+   401→          {/* Red gradient overlay */}
+   402→          <div className={`absolute inset-0 bg-gradient-to-r ${config.isLockedDown ? 'from-red-600/15 via-red-500/10 to-rose-600/15' : 'from-rose-600/10 via-rose-500/5 to-red-600/10'} pointer-events-none`} />
+   403→          {/* Pulsing border glow when locked down */}
+   404→          {config.isLockedDown && (
+   405→            <div className="absolute inset-0 rounded-lg ring-2 ring-red-500/30 animate-pulse pointer-events-none" />
+   406→          )}
+   407→
+   408→          <CardHeader className="relative pb-3">
+   409→            <div className="flex items-center gap-2">
+   410→              {config.isLockedDown ? (
+   411→                <Lock className="w-5 h-5 text-red-400" />
+   412→              ) : (
+   413→                <ShieldAlert className="w-5 h-5 text-rose-400" />
+   414→              )}
+   415→              <CardTitle className="text-lg">
+   416→                {config.isLockedDown ? '🔒 Servidor en Lockdown' : '⚠️ Acciones de Emergencia'}
+   417→              </CardTitle>
+   418→            </div>
+   419→            <CardDescription>
+   420→              {config.isLockedDown
+   421→                ? 'El servidor está bloqueado. Los nuevos usuarios no pueden unirse.'
+   422→                : 'Activa lockdown en caso de emergencia para proteger el servidor.'}
+   423→            </CardDescription>
+   424→          </CardHeader>
+   425→
+   426→          <CardContent className="relative space-y-4">
+   427→            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+   428→              <Button
+   429→                onClick={() => setLockdownDialogOpen(true)}
+   430→                disabled={lockdownLoading || !config.enabled}
+   431→                className={`gap-2 font-semibold px-6 ${
+   432→                  config.isLockedDown
+   433→                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+   434→                    : 'bg-red-600 hover:bg-red-700 text-white'
+   435→                }`}
+   436→                size="lg"
+   437→              >
+   438→                {lockdownLoading ? (
+   439→                  <Loader2 className="w-4 h-4 animate-spin" />
+   440→                ) : config.isLockedDown ? (
+   441→                  <Unlock className="w-4 h-4" />
+   442→                ) : (
+   443→                  <Lock className="w-4 h-4" />
+   444→                )}
+   445→                {config.isLockedDown ? '🔓 Desactivar Lockdown' : '🔒 Activar Lockdown'}
+   446→              </Button>
+   447→
+   448→              <div className="flex items-center gap-6">
+   449→                <div className="flex items-center gap-2">
+   450→                  <div className={`w-2.5 h-2.5 rounded-full ${config.isLockedDown ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
+   451→                  <span className="text-sm text-muted-foreground">
+   452→                    {config.isLockedDown ? 'Bloqueado' : 'Abierto'}
+   453→                  </span>
+   454→                </div>
+   455→
+   456→                <div className="flex items-center gap-2">
+   457→                  <Activity className="w-4 h-4 text-muted-foreground" />
+   458→                  <span className="text-sm text-muted-foreground">
+   459→                    📊 Estado del Servidor:{' '}
+   460→                    <span className={config.isLockedDown ? 'text-red-400 font-semibold' : 'text-emerald-400 font-semibold'}>
+   461→                      {config.isLockedDown ? 'En Lockdown' : 'Normal'}
+   462→                    </span>
+   463→                  </span>
+   464→                </div>
+   465→
+   466→                {config.isLockedDown && config.lockdownAt && (
+   467→                  <div className="flex items-center gap-1.5 text-sm text-red-400/80">
+   468→                    <Clock className="w-3.5 h-3.5" />
+   469→                    Desde {formatRelativeTime(config.lockdownAt)}
+   470→                  </div>
+   471→                )}
+   472→              </div>
+   473→            </div>
+   474→
+   475→            {unresolvedRaids > 0 && (
+   476→              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+   477→                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+   478→                <span className="text-sm text-red-300">
+   479→                  ¡Atención! Hay <strong>{unresolvedRaids}</strong> raid{unresolvedRaids > 1 ? 's' : ''} sin resolver
+   480→                </span>
+   481→              </div>
+   482→            )}
+   483→          </CardContent>
+   484→        </Card>
+   485→      </motion.div>
+   486→
+   487→      {/* ── Main Grid: Detection + Actions ──────────────────────────────── */}
+   488→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   489→        {/* ── Detection Settings Card ─────────────────────────────────── */}
+   490→        <motion.div variants={item}>
+   491→          <Card className="h-full">
+   492→            <CardHeader>
+   493→              <div className="flex items-center gap-2">
+   494→                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-600/10">
+   495→                  <ScanEye className="w-4 h-4 text-amber-400" />
+   496→                </div>
+   497→                <div>
+   498→                  <CardTitle className="text-lg">Detección</CardTitle>
+   499→                  <CardDescription>Configura los umbrales de detección de raids</CardDescription>
+   500→                </div>
+   501→              </div>
+   502→            </CardHeader>
+   503→            <CardContent className="space-y-6">
+   504→              {/* Join Rate Threshold */}
+   505→              <div className="space-y-3">
+   506→                <div className="flex items-center justify-between">
+   507→                  <Label className="text-sm font-medium flex items-center gap-2">
+   508→                    <Users className="w-4 h-4 text-orange-400" />
+   509→                    Umbral de uniones
+   510→                  </Label>
+   511→                  <Badge variant="secondary" className="font-mono text-sm">
+   512→                    {config.joinRateThreshold} uniones/min
+   513→                  </Badge>
+   514→                </div>
+   515→                <Slider
+   516→                  value={[config.joinRateThreshold]}
+   517→                  onValueChange={([v]) => setConfig(prev => ({ ...prev, joinRateThreshold: v }))}
+   518→                  min={1}
+   519→                  max={20}
+   520→                  step={1}
+   521→                  className="w-full"
+   522→                />
+   523→                <p className="text-xs text-muted-foreground">
+   524→                  Cantidad de uniones por minuto necesarias para activar la alerta de raid
+   525→                </p>
+   526→              </div>
+   527→
+   528→              <Separator />
+   529→
+   530→              {/* Account Age Filter */}
+   531→              <div className="space-y-3">
+   532→                <div className="flex items-center justify-between">
+   533→                  <Label className="text-sm font-medium flex items-center gap-2">
+   534→                    <Clock className="w-4 h-4 text-cyan-400" />
+   535→                    Filtro de edad de cuenta
+   536→                  </Label>
+   537→                  <Badge variant="secondary" className="font-mono text-sm">
+   538→                    {config.accountAgeHours === 0 ? 'Desactivado' : config.accountAgeHours >= 24
+   539→                      ? `${Math.floor(config.accountAgeHours / 24)}d ${config.accountAgeHours % 24}h`
+   540→                      : `${config.accountAgeHours}h`}
+   541→                  </Badge>
+   542→                </div>
+   543→                <Slider
+   544→                  value={[config.accountAgeHours]}
+   545→                  onValueChange={([v]) => setConfig(prev => ({ ...prev, accountAgeHours: v }))}
+   546→                  min={0}
+   547→                  max={168}
+   548→                  step={1}
+   549→                  className="w-full"
+   550→                />
+   551→                <p className="text-xs text-muted-foreground">
+   552→                  Marcar cuentas con menos de X horas de antigüedad como sospechosas (0 = desactivado, máx 7 días)
+   553→                </p>
+   554→              </div>
+   555→
+   556→              <Separator />
+   557→
+   558→              {/* Require Avatar */}
+   559→              <div className="flex items-center justify-between">
+   560→                <div className="space-y-0.5">
+   561→                  <Label className="text-sm font-medium flex items-center gap-2">
+   562→                    <Eye className="w-4 h-4 text-green-400" />
+   563→                    Requerir avatar
+   564→                  </Label>
+   565→                  <p className="text-xs text-muted-foreground">
+   566→                    Los usuarios sin avatar serán marcados como sospechosos
+   567→                  </p>
+   568→                </div>
+   569→                <Switch
+   570→                  checked={config.requireAvatar}
+   571→                  onCheckedChange={(v) => setConfig(prev => ({ ...prev, requireAvatar: v }))}
+   572→                />
+   573→              </div>
+   574→
+   575→              <Separator />
+   576→
+   577→              {/* Similar Username Check */}
+   578→              <div className="flex items-center justify-between">
+   579→                <div className="space-y-0.5">
+   580→                  <Label className="text-sm font-medium flex items-center gap-2">
+   581→                    <Fingerprint className="w-4 h-4 text-purple-400" />
+   582→                    Nombres similares
+   583→                  </Label>
+   584→                  <p className="text-xs text-muted-foreground">
+   585→                    Detectar patrones de nombres de usuario similares
+   586→                  </p>
+   587→                </div>
+   588→                <Switch
+   589→                  checked={config.similarUsernameCheck}
+   590→                  onCheckedChange={(v) => setConfig(prev => ({ ...prev, similarUsernameCheck: v }))}
+   591→                />
+   592→              </div>
+   593→            </CardContent>
+   594→          </Card>
+   595→        </motion.div>
+   596→
+   597→        {/* ── Actions on Raid Card ─────────────────────────────────────── */}
+   598→        <motion.div variants={item}>
+   599→          <Card className="h-full">
+   600→            <CardHeader>
+   601→              <div className="flex items-center gap-2">
+   602→                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-red-500/20 to-rose-600/10">
+   603→                  <Swords className="w-4 h-4 text-red-400" />
+   604→                </div>
+   605→                <div>
+   606→                  <CardTitle className="text-lg">Acción en Raid</CardTitle>
+   607→                  <CardDescription>Define qué hacer cuando se detecte un raid</CardDescription>
+   608→                </div>
+   609→              </div>
+   610→            </CardHeader>
+   611→            <CardContent className="space-y-5">
+   612→              {/* Raid Action */}
+   613→              <div className="space-y-2">
+   614→                <Label className="text-sm font-medium">Acción al detectar raid</Label>
+   615→                <Select
+   616→                  value={config.raidAction}
+   617→                  onValueChange={(v) => setConfig(prev => ({ ...prev, raidAction: v }))}
+   618→                >
+   619→                  <SelectTrigger className="bg-background/50">
+   620→                    <SelectValue />
+   621→                  </SelectTrigger>
+   622→                  <SelectContent>
+   623→                    {raidActionOptions.map(opt => {
+   624→                      const Icon = opt.icon
+   625→                      return (
+   626→                        <SelectItem key={opt.value} value={opt.value}>
+   627→                          <span className="flex items-center gap-2">
+   628→                            <Icon className="w-4 h-4 text-muted-foreground" />
+   629→                            {opt.label}
+   630→                          </span>
+   631→                        </SelectItem>
+   632→                      )
+   633→                    })}
+   634→                  </SelectContent>
+   635→                </Select>
+   636→                <p className="text-xs text-muted-foreground">
+   637→                  {raidActionOptions.find(o => o.value === config.raidAction)?.description}
+   638→                </p>
+   639→              </div>
+   640→
+   641→              <Separator />
+   642→
+   643→              {/* Auto Lockdown */}
+   644→              <div className="flex items-center justify-between">
+   645→                <div className="space-y-0.5">
+   646→                  <Label className="text-sm font-medium flex items-center gap-2">
+   647→                    <Zap className="w-4 h-4 text-yellow-400" />
+   648→                    Lockdown automático
+   649→                  </Label>
+   650→                  <p className="text-xs text-muted-foreground">
+   651→                    Activar lockdown automáticamente al detectar un raid
+   652→                  </p>
+   653→                </div>
+   654→                <Switch
+   655→                  checked={config.autoLockdown}
+   656→                  onCheckedChange={(v) => setConfig(prev => ({ ...prev, autoLockdown: v }))}
+   657→                />
+   658→              </div>
+   659→
+   660→              <Separator />
+   661→
+   662→              {/* Alert Channel */}
+   663→              <div className="space-y-2">
+   664→                <Label className="text-sm font-medium flex items-center gap-2">
+   665→                  <Hash className="w-4 h-4 text-blue-400" />
+   666→                  Canal de alertas
+   667→                </Label>
+   668→                <ChannelSelector
+   669→                  value={config.alertChannelId}
+   670→                  onValueChange={(v) => setConfig(prev => ({ ...prev, alertChannelId: v }))}
+   671→                  placeholder="Seleccionar canal de alertas..."
+   672→                />
+   673→              </div>
+   674→
+   675→              <Separator />
+   676→
+   677→              {/* Quarantine Role ID */}
+   678→              <div className="space-y-2">
+   679→                <Label className="text-sm font-medium flex items-center gap-2">
+   680→                  <Lock className="w-4 h-4 text-orange-400" />
+   681→                  Rol de cuarentena
+   682→                </Label>
+   683→                <Input
+   684→                  placeholder="ID del rol de cuarentena"
+   685→                  value={config.quarantineRoleId || ''}
+   686→                  onChange={(e) => setConfig(prev => ({ ...prev, quarantineRoleId: e.target.value || null }))}
+   687→                  className="bg-background/50 font-mono text-sm"
+   688→                />
+   689→                <p className="text-xs text-muted-foreground">
+   690→                  Rol asignado a usuarios sospechosos al usar la acción Cuarentena
+   691→                </p>
+   692→              </div>
+   693→
+   694→              <Separator />
+   695→
+   696→              {/* Staff Role ID */}
+   697→              <div className="space-y-2">
+   698→                <Label className="text-sm font-medium flex items-center gap-2">
+   699→                  <Shield className="w-4 h-4 text-emerald-400" />
+   700→                  Rol de staff
+   701→                </Label>
+   702→                <Input
+   703→                  placeholder="ID del rol de staff"
+   704→                  value={config.staffRoleId || ''}
+   705→                  onChange={(e) => setConfig(prev => ({ ...prev, staffRoleId: e.target.value || null }))}
+   706→                  className="bg-background/50 font-mono text-sm"
+   707→                />
+   708→                <p className="text-xs text-muted-foreground">
+   709→                  Usuarios con este rol no serán afectados por las acciones de AntiRaid
+   710→                </p>
+   711→              </div>
+   712→
+   713→              {/* Save Button */}
+   714→              <div className="flex items-center gap-3 pt-2">
+   715→                <Button
+   716→                  onClick={handleSaveConfig}
+   717→                  disabled={saving}
+   718→                  className="gap-2 flex-1 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white"
+   719→                >
+   720→                  {saving ? (
+   721→                    <Loader2 className="w-4 h-4 animate-spin" />
+   722→                  ) : (
+   723→                    <Save className="w-4 h-4" />
+   724→                  )}
+   725→                  {saving ? 'Guardando...' : 'Guardar Configuración'}
+   726→                </Button>
+   727→                <Button
+   728→                  variant="outline"
+   729→                  onClick={fetchData}
+   730→                  disabled={saving}
+   731→                  className="gap-2"
+   732→                >
+   733→                  <RotateCcw className="w-4 h-4" />
+   734→                  Restaurar
+   735→                </Button>
+   736→              </div>
+   737→            </CardContent>
+   738→          </Card>
+   739→        </motion.div>
+   740→      </div>
+   741→
+   742→      {/* ── Raid History Card ───────────────────────────────────────────── */}
+   743→      <motion.div variants={item}>
+   744→        <Card>
+   745→          <CardHeader>
+   746→            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+   747→              <div className="flex items-center gap-2">
+   748→                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-[#FF3A2F]/20 to-purple-600/10">
+   749→                  <Activity className="w-4 h-4 text-[#FF3A2F]" />
+   750→                </div>
+   751→                <div>
+   752→                  <CardTitle className="text-lg">Historial de Raids</CardTitle>
+   753→                  <CardDescription>Registro de eventos de raid detectados</CardDescription>
+   754→                </div>
+   755→              </div>
+   756→
+   757→              {/* Stats */}
+   758→              <div className="flex items-center gap-4">
+   759→                <div className="flex items-center gap-1.5 text-sm">
+   760→                  <ShieldAlert className="w-4 h-4 text-red-400" />
+   761→                  <span className="text-muted-foreground">Total:</span>
+   762→                  <span className="font-semibold text-foreground">{config.totalRaidsDetected}</span>
+   763→                </div>
+   764→                <Separator orientation="vertical" className="h-4" />
+   765→                <div className="flex items-center gap-1.5 text-sm">
+   766→                  <Clock className="w-4 h-4 text-muted-foreground" />
+   767→                  <span className="text-muted-foreground">Último:</span>
+   768→                  <span className="font-semibold text-foreground">{formatRelativeTime(config.lastRaidAt)}</span>
+   769→                </div>
+   770→              </div>
+   771→            </div>
+   772→          </CardHeader>
+   773→
+   774→          <CardContent>
+   775→            {events.length === 0 ? (
+   776→              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-3">
+   777→                <ShieldCheck className="w-12 h-12 opacity-30" />
+   778→                <p className="text-sm">No se han detectado raids todavía</p>
+   779→                <p className="text-xs opacity-60">Los eventos de raid aparecerán aquí cuando se detecten</p>
+   780→              </div>
+   781→            ) : (
+   782→              <ScrollArea className="max-h-96">
+   783→                <div className="space-y-3 pr-3">
+   784→                  <AnimatePresence>
+   785→                    {events.map((event, index) => {
+   786→                      const typeConf = raidTypeConfig[event.type] || raidTypeConfig.manual
+   787→                      const TypeIcon = typeConf.icon
+   788→
+   789→                      return (
+   790→                        <motion.div
+   791→                          key={event.id}
+   792→                          initial={{ opacity: 0, x: -10 }}
+   793→                          animate={{ opacity: 1, x: 0 }}
+   794→                          exit={{ opacity: 0, x: 10 }}
+   795→                          transition={{ delay: index * 0.03, duration: 0.3 }}
+   796→                          className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
+   797→                            event.isResolved
+   798→                              ? 'bg-background/30 border-border/50 opacity-70'
+   799→                              : 'bg-background/60 border-border hover:border-foreground/20'
+   800→                          }`}
+   801→                        >
+   802→                          {/* Type Icon */}
+   803→                          <div className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${typeConf.bg} border`}>
+   804→                            <TypeIcon className={`w-5 h-5 ${typeConf.color}`} />
+   805→                          </div>
+   806→
+   807→                          {/* Content */}
+   808→                          <div className="flex-1 min-w-0 space-y-1">
+   809→                            <div className="flex items-center gap-2 flex-wrap">
+   810→                              <Badge className={`${typeConf.bg} ${typeConf.color} border text-xs font-medium`}>
+   811→                                {typeConf.label}
+   812→                              </Badge>
+   813→                              <span className="text-sm font-medium">
+   814→                                {event.joinsDetected} uniones detectadas
+   815→                              </span>
+   816→                            </div>
+   817→                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+   818→                              <span className="flex items-center gap-1">
+   819→                                <Clock className="w-3 h-3" />
+   820→                                {formatDate(event.createdAt)}
+   821→                              </span>
+   822→                              <span className="flex items-center gap-1">
+   823→                                <Shield className="w-3 h-3" />
+   824→                                {raidActionOptions.find(o => o.value === event.action)?.label || event.action}
+   825→                              </span>
+   826→                            </div>
+   827→                            {/* Show event details if available */}
+   828→                            {event.details && (() => {
+   829→                              try {
+   830→                                const details = JSON.parse(event.details)
+   831→                                if (details && typeof details === 'object' && Object.keys(details).length > 0) {
+   832→                                  return (
+   833→                                    <div className="text-xs text-muted-foreground/70 mt-1">
+   834→                                      {Object.entries(details).slice(0, 3).map(([k, v]) => (
+   835→                                        <span key={k} className="mr-3">
+   836→                                          {k}: <span className="font-medium">{String(v)}</span>
+   837→                                        </span>
+   838→                                      ))}
+   839→                                    </div>
+   840→                                  )
+   841→                                }
+   842→                                return null
+   843→                              } catch {
+   844→                                return null
+   845→                              }
+   846→                            })()}
+   847→                          </div>
+   848→
+   849→                          {/* Status & Action */}
+   850→                          <div className="flex items-center gap-3 shrink-0">
+   851→                            {event.isResolved ? (
+   852→                              <Badge className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 gap-1 text-xs">
+   853→                                <CheckCircle2 className="w-3 h-3" />
+   854→                                Resuelto
+   855→                              </Badge>
+   856→                            ) : (
+   857→                              <>
+   858→                                <Badge className="bg-red-500/15 text-red-400 border border-red-500/30 gap-1 text-xs">
+   859→                                  <AlertTriangle className="w-3 h-3" />
+   860→                                  Activo
+   861→                                </Badge>
+   862→                                <Button
+   863→                                  size="sm"
+   864→                                  variant="outline"
+   865→                                  onClick={() => handleResolveEvent(event.id)}
+   866→                                  disabled={resolvingEventId === event.id}
+   867→                                  className="gap-1.5 text-xs h-8 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+   868→                                >
+   869→                                  {resolvingEventId === event.id ? (
+   870→                                    <Loader2 className="w-3 h-3 animate-spin" />
+   871→                                  ) : (
+   872→                                    <CheckCircle2 className="w-3 h-3" />
+   873→                                  )}
+   874→                                  Resolver
+   875→                                </Button>
+   876→                              </>
+   877→                            )}
+   878→                          </div>
+   879→                        </motion.div>
+   880→                      )
+   881→                    })}
+   882→                  </AnimatePresence>
+   883→                </div>
+   884→              </ScrollArea>
+   885→            )}
+   886→          </CardContent>
+   887→        </Card>
+   888→      </motion.div>
+   889→
+   890→      {/* ── Lockdown Confirm Dialog ─────────────────────────────────────── */}
+   891→      <Dialog open={lockdownDialogOpen} onOpenChange={setLockdownDialogOpen}>
+   892→        <DialogContent className="sm:max-w-md">
+   893→          <DialogHeader>
+   894→            <DialogTitle className="flex items-center gap-2">
+   895→              {config.isLockedDown ? (
+   896→                <>
+   897→                  <Unlock className="w-5 h-5 text-emerald-400" />
+   898→                  ¿Desactivar Lockdown?
+   899→                </>
+   900→              ) : (
+   901→                <>
+   902→                  <Lock className="w-5 h-5 text-red-400" />
+   903→                  ¿Activar Lockdown?
+   904→                </>
+   905→              )}
+   906→            </DialogTitle>
+   907→            <DialogDescription>
+   908→              {config.isLockedDown
+   909→                ? 'El servidor volverá a estar abierto para nuevos usuarios. Asegúrate de que la amenaza haya pasado.'
+   910→                : 'Se bloquearán todas las nuevas uniones al servidor. Solo el staff podrá ingresar nuevos miembros manualmente.'}
+   911→            </DialogDescription>
+   912→          </DialogHeader>
+   913→
+   914→          {!config.isLockedDown && (
+   915→            <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+   916→              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+   917→              <div className="text-sm text-red-300 space-y-1">
+   918→                <p className="font-medium">Esta es una acción de emergencia</p>
+   919→                <p className="text-xs opacity-80">
+   920→                  Solo debes activar lockdown cuando detectes un ataque activo al servidor.
+   921→                  Los usuarios legítimos también serán bloqueados.
+   922→                </p>
+   923→              </div>
+   924→            </div>
+   925→          )}
+   926→
+   927→          <DialogFooter className="gap-2 sm:gap-0">
+   928→            <Button
+   929→              variant="outline"
+   930→              onClick={() => setLockdownDialogOpen(false)}
+   931→              disabled={lockdownLoading}
+   932→            >
+   933→              Cancelar
+   934→            </Button>
+   935→            <Button
+   936→              onClick={handleToggleLockdown}
+   937→              disabled={lockdownLoading}
+   938→              className={`gap-2 ${
+   939→                config.isLockedDown
+   940→                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+   941→                  : 'bg-red-600 hover:bg-red-700 text-white'
+   942→              }`}
+   943→            >
+   944→              {lockdownLoading ? (
+   945→                <Loader2 className="w-4 h-4 animate-spin" />
+   946→              ) : config.isLockedDown ? (
+   947→                <Unlock className="w-4 h-4" />
+   948→              ) : (
+   949→                <Lock className="w-4 h-4" />
+   950→              )}
+   951→              {config.isLockedDown ? 'Desactivar Lockdown' : 'Activar Lockdown'}
+   952→            </Button>
+   953→          </DialogFooter>
+   954→        </DialogContent>
+   955→      </Dialog>
+   956→    </motion.div>
+   957→  )
+   958→}
+   959→

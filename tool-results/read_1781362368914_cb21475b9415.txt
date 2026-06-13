@@ -1,0 +1,789 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { useAppStore } from '@/lib/store'
+     6→     6→import {
+     7→     7→  Code2, Plus, Trash2, Eye, Save, Send, Bookmark, ChevronDown,
+     8→     8→  GripVertical, Image as ImageIcon, Palette, Type, Hash, User, MessageSquare,
+     9→     9→  Sparkles, Copy, RotateCcw, Grid2X2, LayoutGrid
+    10→    10→} from 'lucide-react'
+    11→    11→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    12→    12→import { Button } from '@/components/ui/button'
+    13→    13→import { Input } from '@/components/ui/input'
+    14→    14→import { Textarea } from '@/components/ui/textarea'
+    15→    15→import { Badge } from '@/components/ui/badge'
+    16→    16→import { Switch } from '@/components/ui/switch'
+    17→    17→import { Label } from '@/components/ui/label'
+    18→    18→import { Separator } from '@/components/ui/separator'
+    19→    19→import { ScrollArea } from '@/components/ui/scroll-area'
+    20→    20→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+    21→    21→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+    22→    22→import { toast } from 'sonner'
+    23→    23→
+    24→    24→interface EmbedField {
+    25→    25→  id: string
+    26→    26→  name: string
+    27→    27→  value: string
+    28→    28→  inline: boolean
+    29→    29→}
+    30→    30→
+    31→    31→interface EmbedPreset {
+    32→    32→  id: string
+    33→    33→  name: string
+    34→    34→  title: string | null
+    35→    35→  description: string | null
+    36→    36→  author: string | null
+    37→    37→  authorIcon: string | null
+    38→    38→  footer: string | null
+    39→    39→  footerIcon: string | null
+    40→    40→  thumbnail: string | null
+    41→    41→  image: string | null
+    42→    42→  color: string
+    43→    43→  fields: string // JSON
+    44→    44→  channelId: string | null
+    45→    45→}
+    46→    46→
+    47→    47→const defaultEmbed = {
+    48→    48→  title: '',
+    49→    49→  description: '',
+    50→    50→  author: '',
+    51→    51→  authorIcon: '',
+    52→    52→  footer: '',
+    53→    53→  footerIcon: '',
+    54→    54→  thumbnail: '',
+    55→    55→  image: '',
+    56→    56→  color: '#5865F2',
+    57→    57→  fields: [] as EmbedField[],
+    58→    58→  channelId: '',
+    59→    59→}
+    60→    60→
+    61→    61→const mockChannels = [
+    62→    62→  { id: 'ch_1', name: 'anuncios' },
+    63→    63→  { id: 'ch_2', name: 'general' },
+    64→    64→  { id: 'ch_3', name: 'normas' },
+    65→    65→  { id: 'ch_4', name: 'informacion' },
+    66→    66→  { id: 'ch_5', name: 'bienvenidas' },
+    67→    67→]
+    68→    68→
+    69→    69→const container = {
+    70→    70→  hidden: { opacity: 0 },
+    71→    71→  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
+    72→    72→}
+    73→    73→
+    74→    74→const item = {
+    75→    75→  hidden: { opacity: 0, y: 20 },
+    76→    76→  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    77→    77→}
+    78→    78→
+    79→    79→let fieldIdCounter = 0
+    80→    80→const generateFieldId = () => `field_${++fieldIdCounter}`
+    81→    81→
+    82→    82→export function EmbedBuilder() {
+    83→    83→  const { currentServer } = useAppStore()
+    84→    84→  const [embed, setEmbed] = useState(defaultEmbed)
+    85→    85→  const [presets, setPresets] = useState<EmbedPreset[]>([])
+    86→    86→  const [loading, setLoading] = useState(true)
+    87→    87→  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+    88→    88→  const [presetName, setPresetName] = useState('')
+    89→    89→  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    90→    90→  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+    91→    91→
+    92→    92→  const fetchPresets = useCallback(async () => {
+    93→    93→    if (!currentServer) return
+    94→    94→    setLoading(true)
+    95→    95→    try {
+    96→    96→      const res = await fetch(`/api/embeds?serverId=${currentServer.id}`)
+    97→    97→      const data = await res.json()
+    98→    98→      setPresets(data.presets || [])
+    99→    99→    } catch (err) {
+   100→   100→      console.error('Failed to fetch embed presets:', err)
+   101→   101→    } finally {
+   102→   102→      setLoading(false)
+   103→   103→    }
+   104→   104→  }, [currentServer])
+   105→   105→
+   106→   106→  useEffect(() => {
+   107→   107→    fetchPresets()
+   108→   108→  }, [fetchPresets])
+   109→   109→
+   110→   110→  const addField = () => {
+   111→   111→    setEmbed(prev => ({
+   112→   112→      ...prev,
+   113→   113→      fields: [...prev.fields, { id: generateFieldId(), name: '', value: '', inline: false }],
+   114→   114→    }))
+   115→   115→  }
+   116→   116→
+   117→   117→  const updateField = (id: string, key: keyof EmbedField, val: string | boolean) => {
+   118→   118→    setEmbed(prev => ({
+   119→   119→      ...prev,
+   120→   120→      fields: prev.fields.map(f => f.id === id ? { ...f, [key]: val } : f),
+   121→   121→    }))
+   122→   122→  }
+   123→   123→
+   124→   124→  const removeField = (id: string) => {
+   125→   125→    setEmbed(prev => ({
+   126→   126→      ...prev,
+   127→   127→      fields: prev.fields.filter(f => f.id !== id),
+   128→   128→    }))
+   129→   129→  }
+   130→   130→
+   131→   131→  const loadPreset = (preset: EmbedPreset) => {
+   132→   132→    let parsedFields: EmbedField[] = []
+   133→   133→    try {
+   134→   134→      const raw = JSON.parse(preset.fields)
+   135→   135→      parsedFields = raw.map((f: { name: string; value: string; inline?: boolean }) => ({
+   136→   136→        id: generateFieldId(),
+   137→   137→        name: f.name || '',
+   138→   138→        value: f.value || '',
+   139→   139→        inline: f.inline || false,
+   140→   140→      }))
+   141→   141→    } catch {}
+   142→   142→
+   143→   143→    setEmbed({
+   144→   144→      title: preset.title || '',
+   145→   145→      description: preset.description || '',
+   146→   146→      author: preset.author || '',
+   147→   147→      authorIcon: preset.authorIcon || '',
+   148→   148→      footer: preset.footer || '',
+   149→   149→      footerIcon: preset.footerIcon || '',
+   150→   150→      thumbnail: preset.thumbnail || '',
+   151→   151→      image: preset.image || '',
+   152→   152→      color: preset.color || '#5865F2',
+   153→   153→      fields: parsedFields,
+   154→   154→      channelId: preset.channelId || '',
+   155→   155→    })
+   156→   156→    toast.success(`Plantilla "${preset.name}" cargada`)
+   157→   157→  }
+   158→   158→
+   159→   159→  const handleSavePreset = async () => {
+   160→   160→    if (!currentServer || !presetName) return
+   161→   161→    try {
+   162→   162→      const res = await fetch('/api/embeds', {
+   163→   163→        method: 'POST',
+   164→   164→        headers: { 'Content-Type': 'application/json' },
+   165→   165→        body: JSON.stringify({
+   166→   166→          serverId: currentServer.id,
+   167→   167→          name: presetName,
+   168→   168→          title: embed.title || null,
+   169→   169→          description: embed.description || null,
+   170→   170→          author: embed.author || null,
+   171→   171→          authorIcon: embed.authorIcon || null,
+   172→   172→          footer: embed.footer || null,
+   173→   173→          footerIcon: embed.footerIcon || null,
+   174→   174→          thumbnail: embed.thumbnail || null,
+   175→   175→          image: embed.image || null,
+   176→   176→          color: embed.color,
+   177→   177→          fields: JSON.stringify(embed.fields.map(f => ({ name: f.name, value: f.value, inline: f.inline }))),
+   178→   178→          channelId: embed.channelId || null,
+   179→   179→        }),
+   180→   180→      })
+   181→   181→      if (res.ok) {
+   182→   182→        toast.success('Plantilla guardada exitosamente')
+   183→   183→        setSaveDialogOpen(false)
+   184→   184→        setPresetName('')
+   185→   185→        fetchPresets()
+   186→   186→      }
+   187→   187→    } catch {
+   188→   188→      toast.error('Error al guardar plantilla')
+   189→   189→    }
+   190→   190→  }
+   191→   191→
+   192→   192→  const handleDeletePreset = async () => {
+   193→   193→    if (!deleteTarget) return
+   194→   194→    try {
+   195→   195→      const res = await fetch(`/api/embeds?presetId=${deleteTarget}`, { method: 'DELETE' })
+   196→   196→      if (res.ok) {
+   197→   197→        toast.success('Plantilla eliminada')
+   198→   198→        fetchPresets()
+   199→   199→      }
+   200→   200→    } catch {
+   201→   201→      toast.error('Error al eliminar plantilla')
+   202→   202→    }
+   203→   203→    setDeleteDialogOpen(false)
+   204→   204→    setDeleteTarget(null)
+   205→   205→  }
+   206→   206→
+   207→   207→  const handleSendEmbed = () => {
+   208→   208→    toast.success('Embed enviado al canal #' + (mockChannels.find(c => c.id === embed.channelId)?.name || 'no seleccionado'))
+   209→   209→  }
+   210→   210→
+   211→   211→  const handleReset = () => {
+   212→   212→    setEmbed(defaultEmbed)
+   213→   213→    toast.info('Embed restablecido')
+   214→   214→  }
+   215→   215→
+   216→   216→  const hasContent = embed.title || embed.description || embed.author || embed.footer || embed.fields.length > 0 || embed.image || embed.thumbnail
+   217→   217→
+   218→   218→  // Loading skeleton
+   219→   219→  if (loading && !presets.length) {
+   220→   220→    return (
+   221→   221→      <div className="space-y-6 p-6">
+   222→   222→        <div className="h-8 w-48 rounded-lg bg-card/50 animate-pulse" />
+   223→   223→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   224→   224→          <div className="h-96 rounded-xl bg-card/50 animate-pulse" />
+   225→   225→          <div className="h-96 rounded-xl bg-card/50 animate-pulse" />
+   226→   226→        </div>
+   227→   227→      </div>
+   228→   228→    )
+   229→   229→  }
+   230→   230→
+   231→   231→  return (
+   232→   232→    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-4 md:p-6">
+   233→   233→      {/* Header */}
+   234→   234→      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+   235→   235→        <div>
+   236→   236→          <h2 className="text-xl font-bold flex items-center gap-2">
+   237→   237→            <Code2 className="w-5 h-5 text-[#FF3A2F]" />
+   238→   238→            Constructor de Embeds
+   239→   239→          </h2>
+   240→   240→          <p className="text-sm text-muted-foreground mt-1">Crea y envía embeds personalizados</p>
+   241→   241→        </div>
+   242→   242→        <div className="flex items-center gap-2">
+   243→   243→          <Button variant="outline" size="sm" onClick={handleReset} className="gap-1.5">
+   244→   244→            <RotateCcw className="w-3.5 h-3.5" /> Limpiar
+   245→   245→          </Button>
+   246→   246→          <Button
+   247→   247→            size="sm"
+   248→   248→            onClick={() => {
+   249→   249→              setPresetName('')
+   250→   250→              setSaveDialogOpen(true)
+   251→   251→            }}
+   252→   252→            className="gap-1.5 bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
+   253→   253→          >
+   254→   254→            <Bookmark className="w-3.5 h-3.5" /> Guardar como Plantilla
+   255→   255→          </Button>
+   256→   256→          <Button
+   257→   257→            size="sm"
+   258→   258→            onClick={handleSendEmbed}
+   259→   259→            disabled={!hasContent}
+   260→   260→            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+   261→   261→          >
+   262→   262→            <Send className="w-3.5 h-3.5" /> Enviar Embed
+   263→   263→          </Button>
+   264→   264→        </div>
+   265→   265→      </motion.div>
+   266→   266→
+   267→   267→      {/* Saved Presets */}
+   268→   268→      {presets.length > 0 && (
+   269→   269→        <motion.div variants={item}>
+   270→   270→          <Card>
+   271→   271→            <CardHeader className="pb-3">
+   272→   272→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   273→   273→                <Bookmark className="w-4 h-4 text-fuchsia-400" />
+   274→   274→                Plantillas Guardadas
+   275→   275→              </CardTitle>
+   276→   276→            </CardHeader>
+   277→   277→            <CardContent>
+   278→   278→              <div className="flex flex-wrap gap-2">
+   279→   279→                <AnimatePresence>
+   280→   280→                  {presets.map(preset => (
+   281→   281→                    <motion.div
+   282→   282→                      key={preset.id}
+   283→   283→                      initial={{ opacity: 0, scale: 0.9 }}
+   284→   284→                      animate={{ opacity: 1, scale: 1 }}
+   285→   285→                      exit={{ opacity: 0, scale: 0.9 }}
+   286→   286→                      className="flex items-center gap-1.5"
+   287→   287→                    >
+   288→   288→                      <Button
+   289→   289→                        variant="outline"
+   290→   290→                        size="sm"
+   291→   291→                        onClick={() => loadPreset(preset)}
+   292→   292→                        className="gap-1.5 text-xs h-8"
+   293→   293→                      >
+   294→   294→                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: preset.color }} />
+   295→   295→                        {preset.name}
+   296→   296→                      </Button>
+   297→   297→                      <Button
+   298→   298→                        variant="ghost"
+   299→   299→                        size="icon"
+   300→   300→                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+   301→   301→                        onClick={() => {
+   302→   302→                          setDeleteTarget(preset.id)
+   303→   303→                          setDeleteDialogOpen(true)
+   304→   304→                        }}
+   305→   305→                      >
+   306→   306→                        <Trash2 className="w-3 h-3" />
+   307→   307→                      </Button>
+   308→   308→                    </motion.div>
+   309→   309→                  ))}
+   310→   310→                </AnimatePresence>
+   311→   311→              </div>
+   312→   312→            </CardContent>
+   313→   313→          </Card>
+   314→   314→        </motion.div>
+   315→   315→      )}
+   316→   316→
+   317→   317→      {/* Main Content: Form + Preview */}
+   318→   318→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   319→   319→        {/* Left: Form */}
+   320→   320→        <motion.div variants={item} className="space-y-4">
+   321→   321→          <Card>
+   322→   322→            <CardHeader className="pb-3">
+   323→   323→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   324→   324→                <Palette className="w-4 h-4 text-[#FF3A2F]" />
+   325→   325→                Propiedades del Embed
+   326→   326→              </CardTitle>
+   327→   327→            </CardHeader>
+   328→   328→            <CardContent className="space-y-4">
+   329→   329→              {/* Author */}
+   330→   330→              <div className="space-y-2">
+   331→   331→                <Label className="text-xs font-medium flex items-center gap-1.5">
+   332→   332→                  <User className="w-3 h-3 text-muted-foreground" /> Autor
+   333→   333→                </Label>
+   334→   334→                <div className="flex gap-2">
+   335→   335→                  <Input
+   336→   336→                    value={embed.authorIcon}
+   337→   337→                    onChange={e => setEmbed(prev => ({ ...prev, authorIcon: e.target.value }))}
+   338→   338→                    placeholder="URL del icono"
+   339→   339→                    className="h-8 text-[11px] w-1/3"
+   340→   340→                  />
+   341→   341→                  <Input
+   342→   342→                    value={embed.author}
+   343→   343→                    onChange={e => setEmbed(prev => ({ ...prev, author: e.target.value }))}
+   344→   344→                    placeholder="Nombre del autor"
+   345→   345→                    className="h-8 text-[11px] flex-1"
+   346→   346→                  />
+   347→   347→                </div>
+   348→   348→              </div>
+   349→   349→
+   350→   350→              {/* Title */}
+   351→   351→              <div>
+   352→   352→                <Label className="text-xs font-medium flex items-center gap-1.5">
+   353→   353→                  <Type className="w-3 h-3 text-muted-foreground" /> Título
+   354→   354→                </Label>
+   355→   355→                <Input
+   356→   356→                  value={embed.title}
+   357→   357→                  onChange={e => setEmbed(prev => ({ ...prev, title: e.target.value }))}
+   358→   358→                  placeholder="Título del embed"
+   359→   359→                  className="h-8 text-[11px]"
+   360→   360→                />
+   361→   361→              </div>
+   362→   362→
+   363→   363→              {/* Description */}
+   364→   364→              <div>
+   365→   365→                <Label className="text-xs font-medium flex items-center gap-1.5">
+   366→   366→                  <MessageSquare className="w-3 h-3 text-muted-foreground" /> Descripción
+   367→   367→                </Label>
+   368→   368→                <Textarea
+   369→   369→                  value={embed.description}
+   370→   370→                  onChange={e => setEmbed(prev => ({ ...prev, description: e.target.value }))}
+   371→   371→                  placeholder="Descripción del embed..."
+   372→   372→                  className="min-h-[100px] text-[11px] resize-none"
+   373→   373→                />
+   374→   374→              </div>
+   375→   375→
+   376→   376→              {/* Color */}
+   377→   377→              <div>
+   378→   378→                <Label className="text-xs font-medium flex items-center gap-1.5">
+   379→   379→                  <Palette className="w-3 h-3 text-muted-foreground" /> Color
+   380→   380→                </Label>
+   381→   381→                <div className="flex items-center gap-2">
+   382→   382→                  <input
+   383→   383→                    type="color"
+   384→   384→                    value={embed.color}
+   385→   385→                    onChange={e => setEmbed(prev => ({ ...prev, color: e.target.value }))}
+   386→   386→                    className="w-9 h-9 rounded-lg border border-border cursor-pointer"
+   387→   387→                  />
+   388→   388→                  <Input
+   389→   389→                    value={embed.color}
+   390→   390→                    onChange={e => setEmbed(prev => ({ ...prev, color: e.target.value }))}
+   391→   391→                    className="h-9 font-mono text-xs w-28"
+   392→   392→                    maxLength={7}
+   393→   393→                  />
+   394→   394→                  <div className="flex gap-1">
+   395→   395→                    {['#5865F2', '#57F287', '#FEE75C', '#ED4245', '#EB459E', '#2F3136'].map(c => (
+   396→   396→                      <motion.button
+   397→   397→                        key={c}
+   398→   398→                        whileHover={{ scale: 1.2 }}
+   399→   399→                        whileTap={{ scale: 0.9 }}
+   400→   400→                        className="w-5 h-5 rounded-md border border-white/10"
+   401→   401→                        style={{ backgroundColor: c }}
+   402→   402→                        onClick={() => setEmbed(prev => ({ ...prev, color: c }))}
+   403→   403→                      />
+   404→   404→                    ))}
+   405→   405→                  </div>
+   406→   406→                </div>
+   407→   407→              </div>
+   408→   408→
+   409→   409→              <Separator />
+   410→   410→
+   411→   411→              {/* Thumbnail & Image */}
+   412→   412→              <div className="grid grid-cols-2 gap-3">
+   413→   413→                <div>
+   414→   414→                  <Label className="text-xs font-medium flex items-center gap-1.5">
+   415→   415→                    <ImageIcon className="w-3 h-3 text-muted-foreground" /> Thumbnail URL
+   416→   416→                  </Label>
+   417→   417→                  <Input
+   418→   418→                    value={embed.thumbnail}
+   419→   419→                    onChange={e => setEmbed(prev => ({ ...prev, thumbnail: e.target.value }))}
+   420→   420→                    placeholder="URL de miniatura"
+   421→   421→                    className="h-8 text-[11px]"
+   422→   422→                  />
+   423→   423→                </div>
+   424→   424→                <div>
+   425→   425→                  <Label className="text-xs font-medium flex items-center gap-1.5">
+   426→   426→                    <ImageIcon className="w-3 h-3 text-muted-foreground" /> Imagen URL
+   427→   427→                  </Label>
+   428→   428→                  <Input
+   429→   429→                    value={embed.image}
+   430→   430→                    onChange={e => setEmbed(prev => ({ ...prev, image: e.target.value }))}
+   431→   431→                    placeholder="URL de imagen"
+   432→   432→                    className="h-8 text-[11px]"
+   433→   433→                  />
+   434→   434→                </div>
+   435→   435→              </div>
+   436→   436→
+   437→   437→              <Separator />
+   438→   438→
+   439→   439→              {/* Footer */}
+   440→   440→              <div className="space-y-2">
+   441→   441→                <Label className="text-xs font-medium flex items-center gap-1.5">
+   442→   442→                  <Hash className="w-3 h-3 text-muted-foreground" /> Footer
+   443→   443→                </Label>
+   444→   444→                <div className="flex gap-2">
+   445→   445→                  <Input
+   446→   446→                    value={embed.footerIcon}
+   447→   447→                    onChange={e => setEmbed(prev => ({ ...prev, footerIcon: e.target.value }))}
+   448→   448→                    placeholder="URL del icono"
+   449→   449→                    className="h-8 text-[11px] w-1/3"
+   450→   450→                  />
+   451→   451→                  <Input
+   452→   452→                    value={embed.footer}
+   453→   453→                    onChange={e => setEmbed(prev => ({ ...prev, footer: e.target.value }))}
+   454→   454→                    placeholder="Texto del footer"
+   455→   455→                    className="h-8 text-[11px] flex-1"
+   456→   456→                  />
+   457→   457→                </div>
+   458→   458→              </div>
+   459→   459→
+   460→   460→              {/* Channel */}
+   461→   461→              <div>
+   462→   462→                <Label className="text-xs font-medium flex items-center gap-1.5">
+   463→   463→                  <Hash className="w-3 h-3 text-muted-foreground" /> Canal de Envío
+   464→   464→                </Label>
+   465→   465→                <Select value={embed.channelId} onValueChange={v => setEmbed(prev => ({ ...prev, channelId: v }))}>
+   466→   466→                  <SelectTrigger className="h-8 text-[11px]">
+   467→   467→                    <SelectValue placeholder="Seleccionar canal" />
+   468→   468→                  </SelectTrigger>
+   469→   469→                  <SelectContent>
+   470→   470→                    {mockChannels.map(ch => (
+   471→   471→                      <SelectItem key={ch.id} value={ch.id}>
+   472→   472→                        #{ch.name}
+   473→   473→                      </SelectItem>
+   474→   474→                    ))}
+   475→   475→                  </SelectContent>
+   476→   476→                </Select>
+   477→   477→              </div>
+   478→   478→            </CardContent>
+   479→   479→          </Card>
+   480→   480→
+   481→   481→          {/* Fields Editor */}
+   482→   482→          <Card>
+   483→   483→            <CardHeader className="pb-3">
+   484→   484→              <div className="flex items-center justify-between">
+   485→   485→                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   486→   486→                  <Grid2X2 className="w-4 h-4 text-cyan-400" />
+   487→   487→                  Campos Personalizados
+   488→   488→                </CardTitle>
+   489→   489→                <Button variant="outline" size="sm" onClick={addField} className="gap-1 text-xs h-7">
+   490→   490→                  <Plus className="w-3 h-3" /> Agregar Campo
+   491→   491→                </Button>
+   492→   492→              </div>
+   493→   493→            </CardHeader>
+   494→   494→            <CardContent>
+   495→   495→              {embed.fields.length === 0 ? (
+   496→   496→                <div className="text-center py-6">
+   497→   497→                  <Grid2X2 className="w-8 h-8 text-muted-foreground/20 mx-auto mb-2" />
+   498→   498→                  <p className="text-xs text-muted-foreground">No hay campos agregados</p>
+   499→   499→                  <p className="text-[10px] text-muted-foreground/50 mt-1">Los campos permiten mostrar información estructurada</p>
+   500→   500→                </div>
+   501→   501→              ) : (
+   502→   502→                <ScrollArea className="max-h-72">
+   503→   503→                  <div className="space-y-3">
+   504→   504→                    <AnimatePresence>
+   505→   505→                      {embed.fields.map((field, i) => (
+   506→   506→                        <motion.div
+   507→   507→                          key={field.id}
+   508→   508→                          initial={{ opacity: 0, y: 10 }}
+   509→   509→                          animate={{ opacity: 1, y: 0 }}
+   510→   510→                          exit={{ opacity: 0, x: -20 }}
+   511→   511→                          transition={{ duration: 0.2 }}
+   512→   512→                          className="p-3 rounded-lg border border-border/50 bg-card/30 space-y-2"
+   513→   513→                        >
+   514→   514→                          <div className="flex items-center justify-between">
+   515→   515→                            <span className="text-[10px] text-muted-foreground font-medium">Campo #{i + 1}</span>
+   516→   516→                            <div className="flex items-center gap-2">
+   517→   517→                              <div className="flex items-center gap-1.5">
+   518→   518→                                <Switch
+   519→   519→                                  checked={field.inline}
+   520→   520→                                  onCheckedChange={v => updateField(field.id, 'inline', v)}
+   521→   521→                                  className="scale-75"
+   522→   522→                                />
+   523→   523→                                <Label className="text-[10px] text-muted-foreground">Inline</Label>
+   524→   524→                              </div>
+   525→   525→                              <Button
+   526→   526→                                variant="ghost"
+   527→   527→                                size="icon"
+   528→   528→                                className="h-6 w-6 text-destructive hover:text-destructive"
+   529→   529→                                onClick={() => removeField(field.id)}
+   530→   530→                              >
+   531→   531→                                <Trash2 className="w-3 h-3" />
+   532→   532→                              </Button>
+   533→   533→                            </div>
+   534→   534→                          </div>
+   535→   535→                          <Input
+   536→   536→                            value={field.name}
+   537→   537→                            onChange={e => updateField(field.id, 'name', e.target.value)}
+   538→   538→                            placeholder="Nombre del campo"
+   539→   539→                            className="h-7 text-[11px]"
+   540→   540→                          />
+   541→   541→                          <Textarea
+   542→   542→                            value={field.value}
+   543→   543→                            onChange={e => updateField(field.id, 'value', e.target.value)}
+   544→   544→                            placeholder="Valor del campo"
+   545→   545→                            className="min-h-[40px] text-[11px] resize-none"
+   546→   546→                          />
+   547→   547→                        </motion.div>
+   548→   548→                      ))}
+   549→   549→                    </AnimatePresence>
+   550→   550→                  </div>
+   551→   551→                </ScrollArea>
+   552→   552→              )}
+   553→   553→            </CardContent>
+   554→   554→          </Card>
+   555→   555→        </motion.div>
+   556→   556→
+   557→   557→        {/* Right: Preview */}
+   558→   558→        <motion.div variants={item} className="space-y-4">
+   559→   559→          <Card className="sticky top-4">
+   560→   560→            <CardHeader className="pb-3">
+   561→   561→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   562→   562→                <Eye className="w-4 h-4 text-emerald-400" />
+   563→   563→                Vista Previa en Discord
+   564→   564→              </CardTitle>
+   565→   565→              <CardDescription className="text-[10px]">
+   566→   566→                Así se verá tu embed en Discord
+   567→   567→              </CardDescription>
+   568→   568→            </CardHeader>
+   569→   569→            <CardContent>
+   570→   570→              <div className="bg-[#313338] rounded-lg overflow-hidden">
+   571→   571→                {/* Channel header */}
+   572→   572→                <div className="flex items-center gap-2 px-3 py-2 border-b border-[#3F4147]">
+   573→   573→                  <Hash className="w-4 h-4 text-[#80848E]" />
+   574→   574→                  <span className="text-xs font-semibold text-white">
+   575→   575→                    {mockChannels.find(c => c.id === embed.channelId)?.name || 'canal'}
+   576→   576→                  </span>
+   577→   577→                </div>
+   578→   578→
+   579→   579→                {/* Message area */}
+   580→   580→                <div className="p-3">
+   581→   581→                  <div className="flex items-start gap-2.5">
+   582→   582→                    {/* Bot avatar */}
+   583→   583→                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center shrink-0">
+   584→   584→                      <Sparkles className="w-4 h-4 text-white" />
+   585→   585→                    </div>
+   586→   586→                    <div className="flex-1 min-w-0">
+   587→   587→                      <div className="flex items-center gap-1.5 mb-1">
+   588→   588→                        <span className="text-xs font-semibold text-white">DiscordForge Bot</span>
+   589→   589→                        <span className="text-[9px] bg-[#5865F2] text-white px-1 py-0.5 rounded font-medium">BOT</span>
+   590→   590→                        <span className="text-[9px] text-[#949BA4]">Hoy a las {new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+   591→   591→                      </div>
+   592→   592→
+   593→   593→                      {/* Embed */}
+   594→   594→                      {hasContent ? (
+   595→   595→                        <motion.div
+   596→   596→                          key={`${embed.title}-${embed.color}-${embed.fields.length}`}
+   597→   597→                          initial={{ opacity: 0, y: 5 }}
+   598→   598→                          animate={{ opacity: 1, y: 0 }}
+   599→   599→                          transition={{ duration: 0.3 }}
+   600→   600→                          className="max-w-[360px]"
+   601→   601→                        >
+   602→   602→                          <div className="bg-[#2B2D31] rounded-l-lg flex overflow-hidden">
+   603→   603→                            {/* Color bar */}
+   604→   604→                            <div
+   605→   605→                              className="w-1 shrink-0"
+   606→   606→                              style={{ backgroundColor: embed.color }}
+   607→   607→                            />
+   608→   608→                            <div className="p-3 flex-1 min-w-0">
+   609→   609→                              {/* Author */}
+   610→   610→                              {embed.author && (
+   611→   611→                                <div className="flex items-center gap-2 mb-2">
+   612→   612→                                  {embed.authorIcon ? (
+   613→   613→                                    <div className="w-5 h-5 rounded-full bg-[#1E1F22] flex items-center justify-center shrink-0 overflow-hidden">
+   614→   614→                                      <ImageIcon className="w-3 h-3 text-[#949BA4]" />
+   615→   615→                                    </div>
+   616→   616→                                  ) : null}
+   617→   617→                                  <span className="text-[10px] text-white font-medium">{embed.author}</span>
+   618→   618→                                </div>
+   619→   619→                              )}
+   620→   620→
+   621→   621→                              {/* Title */}
+   622→   622→                              {embed.title && (
+   623→   623→                                <p className="text-[11px] font-bold text-white mb-1">{embed.title}</p>
+   624→   624→                              )}
+   625→   625→
+   626→   626→                              {/* Description */}
+   627→   627→                              {embed.description && (
+   628→   628→                                <p className="text-[10px] text-[#DBDEE1] mb-2 whitespace-pre-wrap">{embed.description}</p>
+   629→   629→                              )}
+   630→   630→
+   631→   631→                              {/* Thumbnail */}
+   632→   632→                              {embed.thumbnail && (
+   633→   633→                                <div className="float-right ml-3 mb-2 w-16 h-16 rounded bg-[#1E1F22] flex items-center justify-center">
+   634→   634→                                  <ImageIcon className="w-5 h-5 text-[#949BA4]" />
+   635→   635→                                </div>
+   636→   636→                              )}
+   637→   637→
+   638→   638→                              {/* Fields */}
+   639→   639→                              {embed.fields.length > 0 && (
+   640→   640→                                <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 clear-right">
+   641→   641→                                  {embed.fields.map(field => (
+   642→   642→                                    <div
+   643→   643→                                      key={field.id}
+   644→   644→                                      className={field.inline ? 'w-[calc(50%-8px)]' : 'w-full'}
+   645→   645→                                    >
+   646→   646→                                      <p className="text-[10px] font-bold text-white">{field.name || '\u00A0'}</p>
+   647→   647→                                      <p className="text-[9px] text-[#DBDEE1]">{field.value || '\u00A0'}</p>
+   648→   648→                                    </div>
+   649→   649→                                  ))}
+   650→   650→                                </div>
+   651→   651→                              )}
+   652→   652→
+   653→   653→                              {/* Image */}
+   654→   654→                              {embed.image && (
+   655→   655→                                <div className="rounded overflow-hidden mb-2 clear-right">
+   656→   656→                                  <div className="h-28 bg-[#1E1F22] flex items-center justify-center">
+   657→   657→                                    <ImageIcon className="w-8 h-8 text-[#949BA4]" />
+   658→   658→                                  </div>
+   659→   659→                                </div>
+   660→   660→                              )}
+   661→   661→
+   662→   662→                              {/* Footer */}
+   663→   663→                              {embed.footer && (
+   664→   664→                                <div className="flex items-center gap-1.5 mt-2">
+   665→   665→                                  {embed.footerIcon && (
+   666→   666→                                    <div className="w-4 h-4 rounded-full bg-[#1E1F22] flex items-center justify-center shrink-0 overflow-hidden">
+   667→   667→                                      <ImageIcon className="w-2.5 h-2.5 text-[#949BA4]" />
+   668→   668→                                    </div>
+   669→   669→                                  )}
+   670→   670→                                  <span className="text-[9px] text-[#949BA4]">{embed.footer}</span>
+   671→   671→                                  <span className="text-[9px] text-[#949BA4]">•</span>
+   672→   672→                                  <span className="text-[9px] text-[#949BA4]">Hoy</span>
+   673→   673→                                </div>
+   674→   674→                              )}
+   675→   675→                            </div>
+   676→   676→                          </div>
+   677→   677→                        </motion.div>
+   678→   678→                      ) : (
+   679→   679→                        <div className="bg-[#2B2D31] rounded-lg p-8 max-w-[360px] flex flex-col items-center justify-center">
+   680→   680→                          <Code2 className="w-8 h-8 text-[#949BA4]/30 mb-2" />
+   681→   681→                          <p className="text-[10px] text-[#949BA4]/50 text-center">
+   682→   682→                            Empieza a editar para ver la vista previa
+   683→   683→                          </p>
+   684→   684→                        </div>
+   685→   685→                      )}
+   686→   686→                    </div>
+   687→   687→                  </div>
+   688→   688→                </div>
+   689→   689→              </div>
+   690→   690→
+   691→   691→              {/* Embed Info */}
+   692→   692→              <div className="mt-4 flex flex-wrap gap-2">
+   693→   693→                {embed.title && (
+   694→   694→                  <Badge variant="secondary" className="text-[9px] gap-1">
+   695→   695→                    <Type className="w-2.5 h-2.5" /> Título
+   696→   696→                  </Badge>
+   697→   697→                )}
+   698→   698→                {embed.description && (
+   699→   699→                  <Badge variant="secondary" className="text-[9px] gap-1">
+   700→   700→                    <MessageSquare className="w-2.5 h-2.5" /> Descripción
+   701→   701→                  </Badge>
+   702→   702→                )}
+   703→   703→                {embed.fields.length > 0 && (
+   704→   704→                  <Badge variant="secondary" className="text-[9px] gap-1">
+   705→   705→                    <Grid2X2 className="w-2.5 h-2.5" /> {embed.fields.length} campo{embed.fields.length !== 1 ? 's' : ''}
+   706→   706→                  </Badge>
+   707→   707→                )}
+   708→   708→                {embed.image && (
+   709→   709→                  <Badge variant="secondary" className="text-[9px] gap-1">
+   710→   710→                    <ImageIcon className="w-2.5 h-2.5" /> Imagen
+   711→   711→                  </Badge>
+   712→   712→                )}
+   713→   713→                {embed.footer && (
+   714→   714→                  <Badge variant="secondary" className="text-[9px] gap-1">
+   715→   715→                    <Hash className="w-2.5 h-2.5" /> Footer
+   716→   716→                  </Badge>
+   717→   717→                )}
+   718→   718→                <Badge variant="secondary" className="text-[9px] gap-1">
+   719→   719→                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: embed.color }} />
+   720→   720→                  {embed.color}
+   721→   721→                </Badge>
+   722→   722→              </div>
+   723→   723→            </CardContent>
+   724→   724→          </Card>
+   725→   725→        </motion.div>
+   726→   726→      </div>
+   727→   727→
+   728→   728→      {/* Save Preset Dialog */}
+   729→   729→      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+   730→   730→        <DialogContent className="sm:max-w-sm">
+   731→   731→          <DialogHeader>
+   732→   732→            <DialogTitle className="flex items-center gap-2">
+   733→   733→              <Bookmark className="w-4 h-4 text-[#FF3A2F]" /> Guardar como Plantilla
+   734→   734→            </DialogTitle>
+   735→   735→            <DialogDescription>
+   736→   736→              Guarda este embed como plantilla para reutilizarlo más tarde
+   737→   737→            </DialogDescription>
+   738→   738→          </DialogHeader>
+   739→   739→          <div className="py-2">
+   740→   740→            <Label className="text-xs mb-1.5 block">Nombre de la Plantilla</Label>
+   741→   741→            <Input
+   742→   742→              value={presetName}
+   743→   743→              onChange={e => setPresetName(e.target.value)}
+   744→   744→              placeholder="Ej: Normas del Servidor"
+   745→   745→              className="h-9"
+   746→   746→              autoFocus
+   747→   747→            />
+   748→   748→          </div>
+   749→   749→          <DialogFooter>
+   750→   750→            <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(false)}>
+   751→   751→              Cancelar
+   752→   752→            </Button>
+   753→   753→            <Button
+   754→   754→              size="sm"
+   755→   755→              onClick={handleSavePreset}
+   756→   756→              disabled={!presetName}
+   757→   757→              className="bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90 text-white border-0"
+   758→   758→            >
+   759→   759→              Guardar
+   760→   760→            </Button>
+   761→   761→          </DialogFooter>
+   762→   762→        </DialogContent>
+   763→   763→      </Dialog>
+   764→   764→
+   765→   765→      {/* Delete Confirmation Dialog */}
+   766→   766→      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+   767→   767→        <DialogContent className="sm:max-w-sm">
+   768→   768→          <DialogHeader>
+   769→   769→            <DialogTitle className="flex items-center gap-2 text-destructive">
+   770→   770→              <Trash2 className="w-4 h-4" /> Eliminar Plantilla
+   771→   771→            </DialogTitle>
+   772→   772→            <DialogDescription>
+   773→   773→              ¿Estás seguro de que quieres eliminar esta plantilla? Esta acción no se puede deshacer.
+   774→   774→            </DialogDescription>
+   775→   775→          </DialogHeader>
+   776→   776→          <DialogFooter>
+   777→   777→            <Button variant="outline" size="sm" onClick={() => setDeleteDialogOpen(false)}>
+   778→   778→              Cancelar
+   779→   779→            </Button>
+   780→   780→            <Button variant="destructive" size="sm" onClick={handleDeletePreset}>
+   781→   781→              Eliminar
+   782→   782→            </Button>
+   783→   783→          </DialogFooter>
+   784→   784→        </DialogContent>
+   785→   785→      </Dialog>
+   786→   786→    </motion.div>
+   787→   787→  )
+   788→   788→}
+   789→   789→

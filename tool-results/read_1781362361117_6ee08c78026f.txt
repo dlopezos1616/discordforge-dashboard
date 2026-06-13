@@ -1,0 +1,838 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useAppStore } from '@/lib/store'
+     6→import {
+     7→  Bot, Wifi, WifiOff, Activity, Server, Users, Clock,
+     8→  Zap, AlertCircle, CheckCircle2, RefreshCw, Copy,
+     9→  Terminal, ArrowRight, Shield, Settings2, ExternalLink,
+    10→  ChevronDown, ChevronUp, Code2, FileCode, Play
+    11→} from 'lucide-react'
+    12→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+    13→import { Button } from '@/components/ui/button'
+    14→import { Badge } from '@/components/ui/badge'
+    15→import { Separator } from '@/components/ui/separator'
+    16→import { ScrollArea } from '@/components/ui/scroll-area'
+    17→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    18→import { toast } from 'sonner'
+    19→
+    20→interface BotStatusData {
+    21→  online: boolean
+    22→  guilds: number
+    23→  users: number
+    24→  uptime: number
+    25→  ping: number
+    26→  lastReady: string | null
+    27→}
+    28→
+    29→interface LogEvent {
+    30→  timestamp: string
+    31→  event: string
+    32→  data: any
+    33→}
+    34→
+    35→const container = {
+    36→  hidden: { opacity: 0 },
+    37→  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+    38→}
+    39→const item = {
+    40→  hidden: { opacity: 0, y: 15 },
+    41→  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+    42→}
+    43→
+    44→export function BotStatusPanel() {
+    45→  const { currentServer } = useAppStore()
+    46→  const [botStatus, setBotStatus] = useState<BotStatusData>({
+    47→    online: false,
+    48→    guilds: 0,
+    49→    users: 0,
+    50→    uptime: 0,
+    51→    ping: 0,
+    52→    lastReady: null,
+    53→  })
+    54→  const [recentEvents, setRecentEvents] = useState<LogEvent[]>([])
+    55→  const [wsConnected, setWsConnected] = useState(false)
+    56→  const [showSetup, setShowSetup] = useState(true)
+    57→  const [expandedSection, setExpandedSection] = useState<string | null>('architecture')
+    58→
+    59→  // ============================================
+    60→  // CONEXIÓN WEBSOCKET CON EL WS BRIDGE
+    61→  // ============================================
+    62→  useEffect(() => {
+    63→    let socket: any = null
+    64→
+    65→    const connectWS = () => {
+    66→      try {
+    67→        // Dynamic import to avoid SSR issues
+    68→        import('socket.io-client').then(({ io }) => {
+    69→          // Connect to the WS Bridge
+    70→          // In Vercel: use NEXT_PUBLIC_WS_URL env var pointing to external WS Bridge
+    71→          // In dev: use window.location.origin (same server with Caddy proxy)
+    72→          const wsUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin
+    73→          socket = io(wsUrl, {
+    74→            transports: ['websocket', 'polling'],
+    75→            reconnection: true,
+    76→            reconnectionDelay: 2000,
+    77→            reconnectionAttempts: 20,
+    78→          })
+    79→
+    80→          socket.on('connect', () => {
+    81→            console.log('🔌 Dashboard conectado al WS Bridge')
+    82→            setWsConnected(true)
+    83→            // Identify as dashboard
+    84→            socket.emit('identify', 'dashboard')
+    85→            // Request current state
+    86→            socket.emit('dashboard:getSystemState')
+    87→            socket.emit('dashboard:getStatus')
+    88→          })
+    89→
+    90→          socket.on('disconnect', () => {
+    91→            console.log('⚠️ Dashboard desconectado del WS Bridge')
+    92→            setWsConnected(false)
+    93→          })
+    94→
+    95→          socket.on('connect_error', (err: any) => {
+    96→            console.error('❌ Error conectando al WS Bridge:', err.message)
+    97→            setWsConnected(false)
+    98→          })
+    99→
+   100→          // Listen for bot status updates
+   101→          socket.on('bot:status', (data: BotStatusData) => {
+   102→            setBotStatus(data)
+   103→          })
+   104→
+   105→          socket.on('bot:ready', (data: BotStatusData) => {
+   106→            setBotStatus(data)
+   107→          })
+   108→
+   109→          socket.on('system:state', (data: any) => {
+   110→            if (data.botStatus) {
+   111→              setBotStatus(data.botStatus)
+   112→            }
+   113→          })
+   114→
+   115→          socket.on('system:heartbeat', (data: any) => {
+   116→            // Update bot online status from heartbeat
+   117→            setBotStatus(prev => ({
+   118→              ...prev,
+   119→              online: data.botOnline,
+   120→            }))
+   121→          })
+   122→
+   123→          // Listen for all bot events for the event log
+   124→          const botEvents = [
+   125→            'bot:ready', 'bot:status', 'bot:guildJoined', 'bot:guildLeft',
+   126→            'bot:guildSync', 'bot:memberJoined', 'bot:memberLeft',
+   127→            'bot:ticketCreated', 'bot:ticketClaimed', 'bot:ticketClosed',
+   128→            'bot:userVerified', 'bot:autoModTriggered', 'bot:modAction',
+   129→            'bot:moderationDone', 'bot:configUpdated', 'bot:embedSent',
+   130→          ]
+   131→
+   132→          for (const event of botEvents) {
+   133→            socket.on(event, (data: any) => {
+   134→              setRecentEvents(prev => [{
+   135→                timestamp: new Date().toISOString(),
+   136→                event,
+   137→                data,
+   138→              }, ...prev].slice(0, 100))
+   139→            })
+   140→          }
+   141→
+   142→          // Listen for recent events
+   143→          socket.on('system:recentEvents', (events: LogEvent[]) => {
+   144→            setRecentEvents(events)
+   145→          })
+   146→        })
+   147→      } catch (err) {
+   148→        console.error('Failed to connect to WS Bridge:', err)
+   149→      }
+   150→    }
+   151→
+   152→    connectWS()
+   153→
+   154→    return () => {
+   155→      if (socket) {
+   156→        socket.disconnect()
+   157→      }
+   158→    }
+   159→  }, [])
+   160→
+   161→  const formatUptime = (ms: number) => {
+   162→    if (!ms) return '0s'
+   163→    const d = Math.floor(ms / 86400000)
+   164→    const h = Math.floor((ms % 86400000) / 3600000)
+   165→    const m = Math.floor((ms % 3600000) / 60000)
+   166→    if (d > 0) return `${d}d ${h}h`
+   167→    if (h > 0) return `${h}h ${m}m`
+   168→    return `${m}m`
+   169→  }
+   170→
+   171→  const eventColors: Record<string, string> = {
+   172→    'bot:ready': 'bg-emerald-500/20 text-emerald-400',
+   173→    'bot:status': 'bg-blue-500/20 text-blue-400',
+   174→    'bot:memberJoined': 'bg-emerald-500/20 text-emerald-400',
+   175→    'bot:memberLeft': 'bg-red-500/20 text-red-400',
+   176→    'bot:ticketCreated': 'bg-[#FF3A2F]/20 text-[#FF3A2F]',
+   177→    'bot:ticketClosed': 'bg-fuchsia-500/20 text-fuchsia-400',
+   178→    'bot:autoModTriggered': 'bg-orange-500/20 text-orange-400',
+   179→    'bot:modAction': 'bg-red-500/20 text-red-400',
+   180→    'dashboard:sendEmbed': 'bg-cyan-500/20 text-cyan-400',
+   181→    'dashboard:moderate': 'bg-yellow-500/20 text-yellow-400',
+   182→    'error:noBot': 'bg-red-500/20 text-red-400',
+   183→  }
+   184→
+   185→  const INVITE_URL = 'https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8'
+   186→
+   187→  return (
+   188→    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-6">
+   189→      {/* Header */}
+   190→      <motion.div variants={item}>
+   191→        <Card className="border-0 bg-gradient-to-r from-[#FF3A2F]/10 via-fuchsia-500/5 to-transparent overflow-hidden relative">
+   192→          <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+   193→          <CardHeader className="relative">
+   194→            <div className="flex items-center justify-between">
+   195→              <div>
+   196→                <CardTitle className="text-xl flex items-center gap-2">
+   197→                  <Bot className="w-6 h-6 text-[#FF3A2F]" />
+   198→                  Discord Bot — Estado y Configuración
+   199→                </CardTitle>
+   200→                <CardDescription className="mt-1">
+   201→                  Gestiona la conexión del bot con Discord y el dashboard
+   202→                </CardDescription>
+   203→              </div>
+   204→              <div className="flex items-center gap-2">
+   205→                <Badge variant={botStatus.online ? 'default' : 'secondary'} className={`gap-1.5 ${botStatus.online ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+   206→                  {botStatus.online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+   207→                  {botStatus.online ? 'En línea' : 'Desconectado'}
+   208→                </Badge>
+   209→                <Badge variant="secondary" className={`gap-1.5 ${wsConnected ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+   210→                  {wsConnected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+   211→                  WS: {wsConnected ? 'Conectado' : 'Sin conexión'}
+   212→                </Badge>
+   213→              </div>
+   214→            </div>
+   215→          </CardHeader>
+   216→        </Card>
+   217→
+   218→      {/* ALERT: Bot no está en ningún servidor */}
+   219→      {botStatus.online && botStatus.guilds === 0 && (
+   220→        <motion.div
+   221→          initial={{ opacity: 0, y: -10 }}
+   222→          animate={{ opacity: 1, y: 0 }}
+   223→          className="mt-4"
+   224→        >
+   225→          <Card className="border-orange-500/50 bg-gradient-to-r from-orange-500/10 via-red-500/5 to-transparent">
+   226→            <CardContent className="p-4">
+   227→              <div className="flex items-start gap-3">
+   228→                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
+   229→                  <AlertCircle className="w-5 h-5 text-orange-400" />
+   230→                </div>
+   231→                <div className="space-y-3 flex-1">
+   232→                  <div>
+   233→                    <h3 className="text-sm font-semibold text-orange-400">Bot conectado pero no está en ningún servidor</h3>
+   234→                    <p className="text-xs text-muted-foreground mt-1">
+   235→                      El bot <strong>disbotForge#7927</strong> está conectado a Discord pero no se encuentra en ningún servidor. 
+   236→                      Necesitas invitarlo a tu servidor para que funcione.
+   237→                    </p>
+   238→                  </div>
+   239→                  
+   240→                  <div className="bg-[#1a1b26] rounded-lg p-3 text-xs font-mono">
+   241→                    <p className="text-[#565f89]"># URL de invitación directa:</p>
+   242→                    <p className="text-[#7aa2f7] break-all">{INVITE_URL}</p>
+   243→                  </div>
+   244→
+   245→                  <div className="flex flex-wrap gap-2">
+   246→                    <Button
+   247→                      size="sm"
+   248→                      className="gap-2 text-xs bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90"
+   249→                      onClick={() => {
+   250→                        window.open(INVITE_URL, '_blank')
+   251→                        toast.success('Abriendo invitación del bot...')
+   252→                      }}
+   253→                    >
+   254→                      <ExternalLink className="w-3.5 h-3.5" />
+   255→                      Invitar Bot a mi Servidor
+   256→                    </Button>
+   257→                    <Button
+   258→                      variant="outline"
+   259→                      size="sm"
+   260→                      className="gap-2 text-xs"
+   261→                      onClick={() => {
+   262→                        navigator.clipboard.writeText(INVITE_URL)
+   263→                        toast.success('URL de invitación copiada al portapapeles')
+   264→                      }}
+   265→                    >
+   266→                      <Copy className="w-3.5 h-3.5" />
+   267→                      Copiar URL
+   268→                    </Button>
+   269→                  </div>
+   270→
+   271→                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+   272→                    <p className="text-xs text-yellow-400 flex items-center gap-2 font-semibold">
+   273→                      <Shield className="w-4 h-4 shrink-0" />
+   274→                      IMPORTANTE: Intents Privilegiados
+   275→                    </p>
+   276→                    <p className="text-xs text-muted-foreground mt-1">
+   277→                      Para que el bot funcione correctamente, debes activar estos intents en el 
+   278→                      <a href="https://discord.com/developers/applications/1514983732761854113/bot" target="_blank" rel="noopener noreferrer" className="text-[#FF3A2F] underline">Discord Developer Portal</a>:
+   279→                    </p>
+   280→                    <div className="mt-2 space-y-1.5">
+   281→                      <div className="flex items-center gap-2">
+   282→                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+   283→                        <span className="text-xs"><strong>PRESENCE INTENT</strong> — Para ver estados de usuarios</span>
+   284→                      </div>
+   285→                      <div className="flex items-center gap-2">
+   286→                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+   287→                        <span className="text-xs"><strong>SERVER MEMBERS INTENT</strong> — Para eventos de miembros (bienvenida, etc.)</span>
+   288→                      </div>
+   289→                      <div className="flex items-center gap-2">
+   290→                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+   291→                        <span className="text-xs"><strong>MESSAGE CONTENT INTENT</strong> — Para leer contenido de mensajes (auto-mod)</span>
+   292→                      </div>
+   293→                    </div>
+   294→                  </div>
+   295→                </div>
+   296→              </div>
+   297→            </CardContent>
+   298→          </Card>
+   299→        </motion.div>
+   300→      )}
+   301→      </motion.div>
+   302→
+   303→      {/* Stats */}
+   304→      <motion.div variants={item} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+   305→        {[
+   306→          { label: 'Servidores', value: botStatus.guilds.toString(), icon: Server, color: 'from-[#FF3A2F] to-[#FF6B00]' },
+   307→          { label: 'Usuarios', value: botStatus.users.toLocaleString(), icon: Users, color: 'from-emerald-500 to-teal-500' },
+   308→          { label: 'Uptime', value: formatUptime(botStatus.uptime), icon: Clock, color: 'from-orange-500 to-red-500' },
+   309→          { label: 'Ping', value: `${botStatus.ping}ms`, icon: Zap, color: 'from-blue-500 to-cyan-500' },
+   310→        ].map((stat, i) => (
+   311→          <motion.div
+   312→            key={stat.label}
+   313→            initial={{ opacity: 0, y: 15 }}
+   314→            animate={{ opacity: 1, y: 0 }}
+   315→            transition={{ delay: i * 0.1 }}
+   316→          >
+   317→            <Card className="group hover:shadow-lg transition-all duration-300 border-border/50">
+   318→              <CardContent className="p-4">
+   319→                <div className="flex items-start justify-between">
+   320→                  <div>
+   321→                    <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+   322→                    <p className="text-2xl font-bold mt-1">{stat.value}</p>
+   323→                  </div>
+   324→                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center opacity-80`}>
+   325→                    <stat.icon className="w-5 h-5 text-white" />
+   326→                  </div>
+   327→                </div>
+   328→              </CardContent>
+   329→            </Card>
+   330→          </motion.div>
+   331→        ))}
+   332→      </motion.div>
+   333→
+   334→      {/* Main Content */}
+   335→      <Tabs defaultValue="architecture" className="space-y-4">
+   336→        <TabsList className="bg-card/50 border border-border">
+   337→          <TabsTrigger value="architecture" className="text-xs gap-1.5">
+   338→            <Settings2 className="w-3.5 h-3.5" /> Arquitectura
+   339→          </TabsTrigger>
+   340→          <TabsTrigger value="setup" className="text-xs gap-1.5">
+   341→            <Play className="w-3.5 h-3.5" /> Configuración
+   342→          </TabsTrigger>
+   343→          <TabsTrigger value="events" className="text-xs gap-1.5">
+   344→            <Activity className="w-3.5 h-3.5" /> Eventos en Vivo
+   345→          </TabsTrigger>
+   346→          <TabsTrigger value="commands" className="text-xs gap-1.5">
+   347→            <Terminal className="w-3.5 h-3.5" /> Comandos
+   348→          </TabsTrigger>
+   349→        </TabsList>
+   350→
+   351→        {/* ============================================
+   352→            TAB: ARQUITECTURA
+   353→            ============================================ */}
+   354→        <TabsContent value="architecture">
+   355→          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   356→            {/* Architecture diagram */}
+   357→            <motion.div variants={item}>
+   358→              <Card>
+   359→                <CardHeader className="pb-2">
+   360→                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   361→                    <Code2 className="w-4 h-4 text-[#FF3A2F]" />
+   362→                    Arquitectura del Sistema
+   363→                  </CardTitle>
+   364→                  <CardDescription className="text-xs">Cómo se comunican todos los componentes</CardDescription>
+   365→                </CardHeader>
+   366→                <CardContent>
+   367→                  <div className="bg-[#1a1b26] rounded-xl p-4 font-mono text-[11px] space-y-3 text-[#a9b1d6]">
+   368→                    {/* Diagram */}
+   369→                    <div className="text-center space-y-1">
+   370→                      <div className="inline-block bg-[#FF3A2F]/20 border border-[#FF3A2F]/30 rounded-lg px-4 py-2 text-[#FF6B00]">
+   371→                        🖥️ Dashboard (Next.js :3000)
+   372→                      </div>
+   373→                      <div className="text-[#FF3A2F]">↕ Socket.io via XTransformPort=3003</div>
+   374→                      <div className="inline-block bg-fuchsia-500/20 border border-fuchsia-500/30 rounded-lg px-4 py-2 text-fuchsia-300">
+   375→                        🔌 WS Bridge (:3003)
+   376→                      </div>
+   377→                      <div className="text-fuchsia-400">↕ Socket.io</div>
+   378→                      <div className="inline-block bg-emerald-500/20 border border-emerald-500/30 rounded-lg px-4 py-2 text-emerald-300">
+   379→                        🤖 Discord Bot (discord.js)
+   380→                      </div>
+   381→                      <div className="text-emerald-400">↕ Discord Gateway (WebSocket)</div>
+   382→                      <div className="inline-block bg-blue-500/20 border border-blue-500/30 rounded-lg px-4 py-2 text-blue-300">
+   383→                        💬 Discord API
+   384→                      </div>
+   385→                    </div>
+   386→
+   387→                    <Separator className="bg-white/10" />
+   388→
+   389→                    <div className="space-y-2">
+   390→                      <p className="text-[#bb9af7] font-semibold">Flujo de Datos:</p>
+   391→                      <div className="space-y-1">
+   392→                        <p>1️⃣ Admin configura algo en el Dashboard</p>
+   393→                        <p>2️⃣ Dashboard → API REST → Base de Datos (guardar)</p>
+   394→                        <p>3️⃣ Dashboard → WebSocket → Bot (ejecutar)</p>
+   395→                        <p>4️⃣ Bot lee config de la DB y ejecuta en Discord</p>
+   396→                        <p>5️⃣ Bot → WebSocket → Dashboard (confirmar)</p>
+   397→                      </div>
+   398→                    </div>
+   399→
+   400→                    <Separator className="bg-white/10" />
+   401→
+   402→                    <div className="space-y-2">
+   403→                      <p className="text-[#bb9af7] font-semibold">Ejemplo: Sistema de Tickets</p>
+   404→                      <div className="space-y-1">
+   405→                        <p>📌 Dashboard: Crear categoría → API → DB</p>
+   406→                        <p>📌 Dashboard: Enviar panel → WS → Bot</p>
+   407→                        <p>📌 Bot: Crea botones en el canal de Discord</p>
+   408→                        <p>📌 Usuario: Hace clic en botón en Discord</p>
+   409→                        <p>📌 Bot: Crea canal + permisos → DB</p>
+   410→                        <p>📌 Bot: WS → Dashboard actualiza lista</p>
+   411→                      </div>
+   412→                    </div>
+   413→                  </div>
+   414→                </CardContent>
+   415→              </Card>
+   416→            </motion.div>
+   417→
+   418→            {/* File structure */}
+   419→            <motion.div variants={item}>
+   420→              <Card>
+   421→                <CardHeader className="pb-2">
+   422→                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   423→                    <FileCode className="w-4 h-4 text-emerald-400" />
+   424→                    Estructura del Proyecto
+   425→                  </CardTitle>
+   426→                  <CardDescription className="text-xs">Archivos del bot y su función</CardDescription>
+   427→                </CardHeader>
+   428→                <CardContent>
+   429→                  <ScrollArea className="h-[420px]">
+   430→                    <div className="space-y-1 font-mono text-[11px]">
+   431→                      {[
+   432→                        { path: 'mini-services/', type: 'folder', desc: 'Servicios independientes' },
+   433→                        { path: '├── discord-bot/', type: 'folder', desc: 'Bot de Discord' },
+   434→                        { path: '│   ├── src/', type: 'folder', desc: '' },
+   435→                        { path: '│   │   ├── index.ts', type: 'file', desc: '🤖 Entry point - Eventos de Discord, WebSocket' },
+   436→                        { path: '│   │   └── commands/', type: 'folder', desc: '' },
+   437→                        { path: '│   │       └── slashHandler.ts', type: 'file', desc: '⚡ Comandos slash (/ban, /kick, etc.)' },
+   438→                        { path: '│   └── package.json', type: 'file', desc: '📦 Dependencias del bot' },
+   439→                        { path: '├── ws-bridge/', type: 'folder', desc: 'Puente WebSocket' },
+   440→                        { path: '│   ├── index.ts', type: 'file', desc: '🔌 Servidor Socket.io (puerto 3003)' },
+   441→                        { path: '│   └── package.json', type: 'file', desc: '📦 Dependencias del bridge' },
+   442→                        { path: 'src/', type: 'folder', desc: 'Dashboard web (Next.js)' },
+   443→                        { path: '├── app/', type: 'folder', desc: '' },
+   444→                        { path: '│   ├── page.tsx', type: 'file', desc: '🖥️ Dashboard principal' },
+   445→                        { path: '│   └── api/', type: 'folder', desc: '' },
+   446→                        { path: '│       ├── auth/login/', type: 'folder', desc: '🔐 Discord OAuth2' },
+   447→                        { path: '│       ├── seed/', type: 'folder', desc: '🌱 Datos demo' },
+   448→                        { path: '│       ├── servers/', type: 'folder', desc: '🏛️ CRUD servidores' },
+   449→                        { path: '│       ├── stats/', type: 'folder', desc: '📊 Estadísticas' },
+   450→                        { path: '│       ├── tickets/', type: 'folder', desc: '🎫 CRUD tickets' },
+   451→                        { path: '│       ├── moderation/', type: 'folder', desc: '🛡️ Moderación' },
+   452→                        { path: '│       ├── automod/', type: 'folder', desc: '🤖 Auto-mod' },
+   453→                        { path: '│       ├── embeds/', type: 'folder', desc: '📝 Embeds' },
+   454→                        { path: '│       ├── reaction-roles/', type: 'folder', desc: '😀 Reaction roles' },
+   455→                        { path: '│       ├── whitelist/', type: 'folder', desc: '📋 Whitelist' },
+   456→                        { path: '│       ├── polls/', type: 'folder', desc: '📊 Encuestas' },
+   457→                        { path: '│       ├── giveaways/', type: 'folder', desc: '🎁 Sorteos' },
+   458→                        { path: '│       ├── logs/', type: 'folder', desc: '📄 Logs' },
+   459→                        { path: '│       └── settings/', type: 'folder', desc: '⚙️ Configuración' },
+   460→                        { path: '├── components/dashboard/', type: 'folder', desc: '' },
+   461→                        { path: '│   ├── Sidebar.tsx', type: 'file', desc: '📐 Sidebar animada' },
+   462→                        { path: '│   ├── Header.tsx', type: 'file', desc: '🔝 Cabecera' },
+   463→                        { path: '│   ├── LoginScreen.tsx', type: 'file', desc: '🔐 Pantalla login' },
+   464→                        { path: '│   ├── DashboardHome.tsx', type: 'file', desc: '🏠 Dashboard principal' },
+   465→                        { path: '│   ├── TicketSystem.tsx', type: 'file', desc: '🎫 Sistema tickets' },
+   466→                        { path: '│   ├── WelcomeSystem.tsx', type: 'file', desc: '👋 Bienvenidas' },
+   467→                        { path: '│   ├── EmbedBuilder.tsx', type: 'file', desc: '📝 Constructor embeds' },
+   468→                        { path: '│   ├── ModerationPanel.tsx', type: 'file', desc: '🛡️ Panel moderación' },
+   469→                        { path: '│   ├── AutoModConfig.tsx', type: 'file', desc: '🤖 Auto-mod config' },
+   470→                        { path: '│   ├── VerificationSystem.tsx', type: 'file', desc: '✅ Verificación' },
+   471→                        { path: '│   ├── ReactionRoles.tsx', type: 'file', desc: '😀 Reaction roles' },
+   472→                        { path: '│   ├── WhitelistSystem.tsx', type: 'file', desc: '📋 Whitelist FiveM' },
+   473→                        { path: '│   ├── PollsSystem.tsx', type: 'file', desc: '📊 Encuestas' },
+   474→                        { path: '│   ├── GiveawaysSystem.tsx', type: 'file', desc: '🎁 Sorteos' },
+   475→                        { path: '│   ├── LogsViewer.tsx', type: 'file', desc: '📄 Visor logs' },
+   476→                        { path: '│   ├── SettingsPanel.tsx', type: 'file', desc: '⚙️ Ajustes' },
+   477→                        { path: '│   ├── SuperAdmin.tsx', type: 'file', desc: '👑 Super admin' },
+   478→                        { path: '│   └── BotStatusPanel.tsx', type: 'file', desc: '🤖 Estado del bot' },
+   479→                        { path: '└── lib/', type: 'folder', desc: '' },
+   480→                        { path: '    ├── store.ts', type: 'file', desc: '📦 Zustand state' },
+   481→                        { path: '    └── db.ts', type: 'file', desc: '💾 Prisma client' },
+   482→                        { path: 'prisma/', type: 'folder', desc: '' },
+   483→                        { path: '└── schema.prisma', type: 'file', desc: '🗂️ 20+ modelos de datos' },
+   484→                      ].map((file, i) => (
+   485→                        <div key={i} className="flex items-start gap-2 py-0.5">
+   486→                          <span className={file.type === 'folder' ? 'text-[#bb9af7]' : 'text-[#9ece6a]'}>{file.path}</span>
+   487→                          {file.desc && <span className="text-muted-foreground shrink-0 ml-1">{file.desc}</span>}
+   488→                        </div>
+   489→                      ))}
+   490→                    </div>
+   491→                  </ScrollArea>
+   492→                </CardContent>
+   493→              </Card>
+   494→            </motion.div>
+   495→          </div>
+   496→        </TabsContent>
+   497→
+   498→        {/* ============================================
+   499→            TAB: CONFIGURACIÓN
+   500→            ============================================ */}
+   501→        <TabsContent value="setup">
+   502→          <div className="space-y-4">
+   503→            {/* Step 1 */}
+   504→            <motion.div variants={item}>
+   505→              <Card className="border-l-4 border-l-violet-500">
+   506→                <CardHeader className="pb-2">
+   507→                  <div className="flex items-center gap-3">
+   508→                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-white text-sm font-bold">1</div>
+   509→                    <div>
+   510→                      <CardTitle className="text-sm">Crear Aplicación en Discord</CardTitle>
+   511→                      <CardDescription className="text-xs">Registra tu bot en el Portal de Desarrolladores</CardDescription>
+   512→                    </div>
+   513→                  </div>
+   514→                </CardHeader>
+   515→                <CardContent className="space-y-3">
+   516→                  <div className="bg-[#1a1b26] rounded-lg p-4 text-xs space-y-2 font-mono">
+   517→                    <p className="text-[#9ece6a]"># Pasos para crear tu bot:</p>
+   518→                    <p className="text-[#a9b1d6]">1. Ve a <span className="text-[#7aa2f7] underline">https://discord.com/developers/applications</span></p>
+   519→                    <p className="text-[#a9b1d6]">2. Haz clic en &quot;New Application&quot;</p>
+   520→                    <p className="text-[#a9b1d6]">3. Dale un nombre (ej: DiscordForge)</p>
+   521→                    <p className="text-[#a9b1d6]">4. Ve a la pestaña &quot;Bot&quot;</p>
+   522→                    <p className="text-[#a9b1d6]">5. Haz clic en &quot;Add Bot&quot;</p>
+   523→                    <p className="text-[#a9b1d6]">6. Copia el <span className="text-[#bb9af7]">TOKEN</span></p>
+   524→                    <p className="text-[#a9b1d6]">7. Copia el <span className="text-[#bb9af7]">APPLICATION ID</span></p>
+   525→                  </div>
+   526→
+   527→                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+   528→                    <p className="text-xs text-yellow-400 flex items-center gap-2">
+   529→                      <AlertCircle className="w-4 h-4 shrink-0" />
+   530→                      <strong>Intents requeridos:</strong> Activa PRESENCE INTENT, SERVER MEMBERS INTENT y MESSAGE CONTENT INTENT en la pestaña Bot.
+   531→                    </p>
+   532→                  </div>
+   533→
+   534→                  <Button
+   535→                    variant="outline"
+   536→                    size="sm"
+   537→                    className="gap-2 text-xs"
+   538→                    onClick={() => {
+   539→                      window.open('https://discord.com/developers/applications', '_blank')
+   540→                      toast.success('Abriendo Discord Developer Portal...')
+   541→                    }}
+   542→                  >
+   543→                    <ExternalLink className="w-3.5 h-3.5" />
+   544→                    Abrir Discord Developer Portal
+   545→                  </Button>
+   546→                </CardContent>
+   547→              </Card>
+   548→            </motion.div>
+   549→
+   550→            {/* Step 2 */}
+   551→            <motion.div variants={item}>
+   552→              <Card className="border-l-4 border-l-fuchsia-500">
+   553→                <CardHeader className="pb-2">
+   554→                  <div className="flex items-center gap-3">
+   555→                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-white text-sm font-bold">2</div>
+   556→                    <div>
+   557→                      <CardTitle className="text-sm">Configurar Variables de Entorno</CardTitle>
+   558→                      <CardDescription className="text-xs">Establece las credenciales del bot</CardDescription>
+   559→                    </div>
+   560→                  </div>
+   561→                </CardHeader>
+   562→                <CardContent className="space-y-3">
+   563→                  <div className="bg-[#1a1b26] rounded-lg p-4 text-xs font-mono space-y-1">
+   564→                    <p className="text-[#565f89]"># Archivo: mini-services/discord-bot/.env</p>
+   565→                    <p><span className="text-[#bb9af7]">DISCORD_BOT_TOKEN</span>=<span className="text-[#9ece6a]">tu_token_aqui</span></p>
+   566→                    <p><span className="text-[#bb9af7]">DISCORD_CLIENT_ID</span>=<span className="text-[#9ece6a]">tu_client_id_aqui</span></p>
+   567→                    <p><span className="text-[#bb9af7]">DASHBOARD_WS_URL</span>=<span className="text-[#9ece6a]">http://localhost:3003</span></p>
+   568→                    <p><span className="text-[#bb9af7]">DATABASE_URL</span>=<span className="text-[#9ece6a]">file:../../db/custom.db</span></p>
+   569→                  </div>
+   570→                  <Button
+   571→                    variant="outline"
+   572→                    size="sm"
+   573→                    className="gap-2 text-xs"
+   574→                    onClick={() => {
+   575→                      const envContent = `DISCORD_BOT_TOKEN=tu_token_aqui\nDISCORD_CLIENT_ID=tu_client_id_aqui\nDASHBOARD_WS_URL=http://localhost:3003\nDATABASE_URL=file:../../db/custom.db`
+   576→                      navigator.clipboard.writeText(envContent)
+   577→                      toast.success('Contenido del .env copiado al portapapeles')
+   578→                    }}
+   579→                  >
+   580→                    <Copy className="w-3.5 h-3.5" />
+   581→                    Copiar template .env
+   582→                  </Button>
+   583→                </CardContent>
+   584→              </Card>
+   585→            </motion.div>
+   586→
+   587→            {/* Step 3 */}
+   588→            <motion.div variants={item}>
+   589→              <Card className="border-l-4 border-l-emerald-500">
+   590→                <CardHeader className="pb-2">
+   591→                  <div className="flex items-center gap-3">
+   592→                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white text-sm font-bold">3</div>
+   593→                    <div>
+   594→                      <CardTitle className="text-sm">Invitar el Bot a tu Servidor</CardTitle>
+   595→                      <CardDescription className="text-xs">Genera la URL de invitación con permisos</CardDescription>
+   596→                    </div>
+   597→                  </div>
+   598→                </CardHeader>
+   599→                <CardContent className="space-y-3">
+   600→                  <div className="bg-[#1a1b26] rounded-lg p-4 text-xs font-mono space-y-2">
+   601→                    <p className="text-[#565f89]"># URL de invitación directa:</p>
+   602→                    <p className="text-[#7aa2f7] break-all">
+   603→                      https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8
+   604→                    </p>
+   605→                  </div>
+   606→
+   607→                  <div className="bg-muted/30 rounded-lg p-3 space-y-2">
+   608→                    <p className="text-xs font-semibold">Permisos necesarios (Administrator = 8):</p>
+   609→                    <div className="grid grid-cols-2 gap-1">
+   610→                      {[
+   611→                        'Manage Channels', 'Manage Roles', 'Kick Members', 'Ban Members',
+   612→                        'Timeout Members', 'Manage Messages', 'Send Messages', 'Embed Links',
+   613→                        'Read Messages', 'Add Reactions', 'Use Slash Commands', 'View Audit Log',
+   614→                      ].map(perm => (
+   615→                        <div key={perm} className="flex items-center gap-1.5">
+   616→                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+   617→                          <span className="text-[11px] text-muted-foreground">{perm}</span>
+   618→                        </div>
+   619→                      ))}
+   620→                    </div>
+   621→                  </div>
+   622→
+   623→                  <div className="flex flex-wrap gap-2">
+   624→                    <Button
+   625→                      size="sm"
+   626→                      className="gap-2 text-xs bg-gradient-to-r from-[#FF3A2F] to-[#FF6B00] hover:from-[#FF3A2F]/90 hover:to-[#FF6B00]/90"
+   627→                      onClick={() => {
+   628→                        window.open('https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8', '_blank')
+   629→                        toast.success('Abriendo invitación del bot...')
+   630→                      }}
+   631→                    >
+   632→                      <ExternalLink className="w-3.5 h-3.5" />
+   633→                      Invitar Bot
+   634→                    </Button>
+   635→                    <Button
+   636→                      variant="outline"
+   637→                      size="sm"
+   638→                      className="gap-2 text-xs"
+   639→                      onClick={() => {
+   640→                        navigator.clipboard.writeText('https://discord.com/oauth2/authorize?client_id=1514983732761854113&scope=bot%20applications.commands&permissions=8')
+   641→                        toast.success('URL de invitación copiada al portapapeles')
+   642→                      }}
+   643→                    >
+   644→                      <Copy className="w-3.5 h-3.5" />
+   645→                      Copiar URL
+   646→                    </Button>
+   647→                  </div>
+   648→                </CardContent>
+   649→              </Card>
+   650→            </motion.div>
+   651→
+   652→            {/* Step 4 */}
+   653→            <motion.div variants={item}>
+   654→              <Card className="border-l-4 border-l-orange-500">
+   655→                <CardHeader className="pb-2">
+   656→                  <div className="flex items-center gap-3">
+   657→                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white text-sm font-bold">4</div>
+   658→                    <div>
+   659→                      <CardTitle className="text-sm">Iniciar los Servicios</CardTitle>
+   660→                      <CardDescription className="text-xs">Ejecuta el WebSocket Bridge y el Bot</CardDescription>
+   661→                    </div>
+   662→                  </div>
+   663→                </CardHeader>
+   664→                <CardContent className="space-y-3">
+   665→                  <div className="bg-[#1a1b26] rounded-lg p-4 text-xs font-mono space-y-3">
+   666→                    <div>
+   667→                      <p className="text-[#565f89]"># Terminal 1: WebSocket Bridge</p>
+   668→                      <p className="text-[#a9b1d6]">$ <span className="text-[#9ece6a]">cd</span> mini-services/ws-bridge</p>
+   669→                      <p className="text-[#a9b1d6]">$ <span className="text-[#9ece6a]">bun</span> install</p>
+   670→                      <p className="text-[#a9b1d6]">$ <span className="text-[#9ece6a]">bun</span> run dev</p>
+   671→                    </div>
+   672→                    <Separator className="bg-white/10" />
+   673→                    <div>
+   674→                      <p className="text-[#565f89]"># Terminal 2: Discord Bot</p>
+   675→                      <p className="text-[#a9b1d6]">$ <span className="text-[#9ece6a]">cd</span> mini-services/discord-bot</p>
+   676→                      <p className="text-[#a9b1d6]">$ <span className="text-[#9ece6a]">bun</span> install</p>
+   677→                      <p className="text-[#a9b1d6]">$ <span className="text-[#9ece6a]">bun</span> run dev</p>
+   678→                    </div>
+   679→                    <Separator className="bg-white/10" />
+   680→                    <div>
+   681→                      <p className="text-[#565f89]"># Terminal 3: Dashboard (ya está corriendo)</p>
+   682→                      <p className="text-[#a9b1d6]">$ <span className="text-[#9ece6a]">bun</span> run dev  <span className="text-[#565f89]"># Puerto 3000</span></p>
+   683→                    </div>
+   684→                    <Separator className="bg-white/10" />
+   685→                    <div>
+   686→                      <p className="text-[#565f89]"># Registrar Slash Commands (una sola vez):</p>
+   687→                      <p className="text-[#a9b1d6]">$ <span className="text-[#9ece6a]">bun</span> run register  <span className="text-[#565f89]"># Opcional, registrar /ban, /kick, etc.</span></p>
+   688→                    </div>
+   689→                  </div>
+   690→
+   691→                  <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3">
+   692→                    <p className="text-xs text-emerald-400">
+   693→                      ✅ Una vez que los 3 servicios estén corriendo, el dashboard se conectará automáticamente al bot via WebSocket.
+   694→                      Los cambios en el dashboard se reflejarán en Discord en tiempo real.
+   695→                    </p>
+   696→                  </div>
+   697→                </CardContent>
+   698→              </Card>
+   699→            </motion.div>
+   700→          </div>
+   701→        </TabsContent>
+   702→
+   703→        {/* ============================================
+   704→            TAB: EVENTOS EN VIVO
+   705→            ============================================ */}
+   706→        <TabsContent value="events">
+   707→          <motion.div variants={item}>
+   708→            <Card>
+   709→              <CardHeader className="pb-2">
+   710→                <div className="flex items-center justify-between">
+   711→                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   712→                    <Activity className="w-4 h-4 text-emerald-400" />
+   713→                    Eventos en Tiempo Real
+   714→                  </CardTitle>
+   715→                  <div className="flex items-center gap-2">
+   716→                    <div className="flex items-center gap-1.5">
+   717→                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+   718→                      <span className="text-[10px] text-emerald-400 font-medium">En vivo</span>
+   719→                    </div>
+   720→                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setRecentEvents([])}>
+   721→                      <RefreshCw className="w-3.5 h-3.5" />
+   722→                    </Button>
+   723→                  </div>
+   724→                </div>
+   725→              </CardHeader>
+   726→              <CardContent>
+   727→                {recentEvents.length === 0 ? (
+   728→                  <div className="text-center py-12 space-y-3">
+   729→                    <Bot className="w-12 h-12 text-muted-foreground/30 mx-auto" />
+   730→                    <p className="text-sm text-muted-foreground">No hay eventos aún</p>
+   731→                    <p className="text-xs text-muted-foreground/60">
+   732→                      Los eventos aparecerán aquí cuando el bot esté conectado y el dashboard envíe comandos.
+   733→                    </p>
+   734→                  </div>
+   735→                ) : (
+   736→                  <ScrollArea className="h-96">
+   737→                    <div className="space-y-2">
+   738→                      {recentEvents.map((event, i) => (
+   739→                        <motion.div
+   740→                          key={i}
+   741→                          initial={{ opacity: 0, x: -10 }}
+   742→                          animate={{ opacity: 1, x: 0 }}
+   743→                          transition={{ delay: i * 0.02 }}
+   744→                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent/30 transition-colors"
+   745→                        >
+   746→                          <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 ${eventColors[event.event] || 'bg-muted text-muted-foreground'}`}>
+   747→                            {event.event.replace('bot:', '🤖 ').replace('dashboard:', '📊 ')}
+   748→                          </Badge>
+   749→                          <p className="text-xs flex-1 truncate text-muted-foreground">
+   750→                            {JSON.stringify(event.data).substring(0, 80)}
+   751→                          </p>
+   752→                          <span className="text-[10px] text-muted-foreground/50 shrink-0">
+   753→                            {new Date(event.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+   754→                          </span>
+   755→                        </motion.div>
+   756→                      ))}
+   757→                    </div>
+   758→                  </ScrollArea>
+   759→                )}
+   760→              </CardContent>
+   761→            </Card>
+   762→          </motion.div>
+   763→        </TabsContent>
+   764→
+   765→        {/* ============================================
+   766→            TAB: COMANDOS
+   767→            ============================================ */}
+   768→        <TabsContent value="commands">
+   769→          <motion.div variants={item}>
+   770→            <Card>
+   771→              <CardHeader className="pb-2">
+   772→                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   773→                  <Terminal className="w-4 h-4 text-cyan-400" />
+   774→                  Comandos del Bot
+   775→                </CardTitle>
+   776→                <CardDescription className="text-xs">Comandos slash disponibles en Discord</CardDescription>
+   777→              </CardHeader>
+   778→              <CardContent>
+   779→                <ScrollArea className="h-96">
+   780→                  <div className="space-y-3">
+   781→                    {[
+   782→                      {
+   783→                        category: '🛡️ Moderación',
+   784→                        commands: [
+   785→                          { cmd: '/ban @usuario razón', desc: 'Banear permanentemente', perms: 'BanMembers' },
+   786→                          { cmd: '/kick @usuario razón', desc: 'Expulsar del servidor', perms: 'KickMembers' },
+   787→                          { cmd: '/timeout @usuario duración razón', desc: 'Aislar temporalmente', perms: 'ModerateMembers' },
+   788→                          { cmd: '/warn @usuario razón', desc: 'Advertir (se registra)', perms: 'ModerateMembers' },
+   789→                          { cmd: '/softban @usuario razón', desc: 'Ban+Unban (limpiar mensajes)', perms: 'BanMembers' },
+   790→                          { cmd: '/unban usuario_id', desc: 'Desbanear', perms: 'BanMembers' },
+   791→                        ],
+   792→                      },
+   793→                      {
+   794→                        category: '🎫 Tickets',
+   795→                        commands: [
+   796→                          { cmd: '/ticket', desc: 'Abrir un ticket', perms: 'Everyone' },
+   797→                          { cmd: '/ticket-close', desc: 'Cerrar ticket actual', perms: 'Staff' },
+   798→                        ],
+   799→                      },
+   800→                      {
+   801→                        category: '📊 Utilidades',
+   802→                        commands: [
+   803→                          { cmd: '/help', desc: 'Lista de comandos', perms: 'Everyone' },
+   804→                          { cmd: '/userinfo @usuario', desc: 'Info de usuario', perms: 'Everyone' },
+   805→                          { cmd: '/serverinfo', desc: 'Info del servidor', perms: 'Everyone' },
+   806→                          { cmd: '/poll pregunta opciones', desc: 'Crear encuesta', perms: 'ManageChannels' },
+   807→                          { cmd: '/giveaway premio duración', desc: 'Crear sorteo', perms: 'ManageChannels' },
+   808→                          { cmd: '/embed', desc: 'Constructor de embed', perms: 'ManageChannels' },
+   809→                        ],
+   810→                      },
+   811→                    ].map((cat, i) => (
+   812→                      <div key={i}>
+   813→                        <h3 className="text-xs font-semibold mb-2">{cat.category}</h3>
+   814→                        <div className="space-y-1.5">
+   815→                          {cat.commands.map((cmd, j) => (
+   816→                            <div key={j} className="flex items-center gap-3 p-2 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors">
+   817→                              <code className="text-[11px] font-mono text-[#FF3A2F] min-w-[200px]">{cmd.cmd}</code>
+   818→                              <span className="text-[11px] text-muted-foreground flex-1">{cmd.desc}</span>
+   819→                              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-blue-500/20 text-blue-400">
+   820→                                {cmd.perms}
+   821→                              </Badge>
+   822→                            </div>
+   823→                          ))}
+   824→                        </div>
+   825→                        {i < 2 && <Separator className="mt-3 opacity-30" />}
+   826→                      </div>
+   827→                    ))}
+   828→                  </div>
+   829→                </ScrollArea>
+   830→              </CardContent>
+   831→            </Card>
+   832→          </motion.div>
+   833→        </TabsContent>
+   834→      </Tabs>
+   835→    </motion.div>
+   836→  )
+   837→}
+   838→
