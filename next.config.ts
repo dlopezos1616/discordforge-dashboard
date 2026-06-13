@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  images: {
+    localPatterns: [
+      {
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
