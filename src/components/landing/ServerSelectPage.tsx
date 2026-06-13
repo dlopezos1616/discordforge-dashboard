@@ -125,7 +125,7 @@ export function ServerSelectPage() {
       {/* Ambient background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/3 left-1/3 w-[600px] h-[600px] bg-[#FF6600]/5 rounded-full blur-3xl" style={{ animation: 'forge-pulse 8s ease-in-out infinite' }} />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#FF3A2F]/4 rounded-full blur-3xl" style={{ animation: 'forge-pulse 10s ease-in-out infinite 3s' }} />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#DC2626]/4 rounded-full blur-3xl" style={{ animation: 'forge-pulse 10s ease-in-out infinite 3s' }} />
       </div>
 
       {/* Header */}
@@ -134,7 +134,7 @@ export function ServerSelectPage() {
           <div className="flex items-center gap-2.5">
             <motion.div
               className="w-9 h-9 rounded-lg flex items-center justify-center relative overflow-hidden neon-orange"
-              style={{ background: 'linear-gradient(135deg, #FF6600, #FF3A2F)' }}
+              style={{ background: 'linear-gradient(135deg, #FF6600, #DC2626)' }}
               whileHover={{ scale: 1.08, rotate: 3 }}
             >
               <Image
@@ -173,8 +173,8 @@ export function ServerSelectPage() {
           </p>
 
           {error && (
-            <Card className="border-[#FF3A2F]/30 bg-[#FF3A2F]/5 mb-6">
-              <CardContent className="p-4 text-[#FF3A2F] text-sm">{error}</CardContent>
+            <Card className="border-[#DC2626]/30 bg-[#DC2626]/5 mb-6">
+              <CardContent className="p-4 text-[#DC2626] text-sm">{error}</CardContent>
             </Card>
           )}
 
@@ -205,7 +205,7 @@ export function ServerSelectPage() {
                   onClick={() => handleSelectServer(guild)}
                 >
                   <CardContent className="p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-[#FF6600]/20 to-[#FF3A2F]/20 flex items-center justify-center shrink-0 group-hover:shadow-[0_0_12px_rgba(255,102,0,0.2)] transition-shadow">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-[#FF6600]/20 to-[#DC2626]/20 flex items-center justify-center shrink-0 group-hover:shadow-[0_0_12px_rgba(255,102,0,0.2)] transition-shadow">
                       {iconUrl(guild) ? (
                         <img src={iconUrl(guild)!} alt={guild.name} className="w-full h-full object-cover" />
                       ) : (
@@ -235,7 +235,7 @@ export function ServerSelectPage() {
           </div>
 
           {/* Add bot section */}
-          <Card className="border-[#FF6600]/20 bg-gradient-to-r from-[#FF6600]/5 to-[#FF3A2F]/5 forge-card-premium">
+          <Card className="border-[#FF6600]/20 bg-gradient-to-r from-[#FF6600]/5 to-[#DC2626]/5 forge-card-premium">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-[#FF6600]/20 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(255,102,0,0.15)]">
@@ -249,7 +249,7 @@ export function ServerSelectPage() {
                 </div>
                 <Button
                   onClick={() => window.open(INVITE_URL, '_blank')}
-                  className="bg-gradient-to-r from-[#FF6600] to-[#FF3A2F] hover:from-[#FF6600]/90 hover:to-[#FF3A2F]/90 text-white gap-2 shrink-0 neon-orange"
+                  className="bg-gradient-to-r from-[#FF6600] to-[#DC2626] hover:from-[#FF6600]/90 hover:to-[#DC2626]/90 text-white gap-2 shrink-0 neon-orange"
                 >
                   <Plus className="w-4 h-4" /> Añadir Bot
                 </Button>

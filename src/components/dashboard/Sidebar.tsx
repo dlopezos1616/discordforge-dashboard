@@ -86,12 +86,12 @@ export function Sidebar() {
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         className="relative flex flex-col h-full bg-[#0A0A0A] sidebar-forge-border overflow-hidden"
       >
-        {/* Animated flame glow at top */}
+        {/* Animated glow at top - matching logo's gear energy */}
         <div className="absolute top-0 left-0 right-0 h-32 pointer-events-none overflow-hidden">
           <div
             className="absolute -top-10 left-1/2 -translate-x-1/2 w-[200%] h-40 opacity-[0.07]"
             style={{
-              background: 'radial-gradient(ellipse 50% 80% at 50% 100%, #FF6600, #FF3A2F 40%, transparent 70%)',
+              background: 'radial-gradient(ellipse 50% 80% at 50% 100%, #FF6600, #DC2626 30%, #00B4D8 50%, transparent 70%)',
               animation: 'forge-pulse 4s ease-in-out infinite',
             }}
           />
@@ -100,17 +100,21 @@ export function Sidebar() {
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-white/5 relative z-10">
           <motion.div
-            className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 relative overflow-hidden neon-orange"
-            whileHover={{ scale: 1.08, rotate: 3 }}
+            className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 relative overflow-hidden"
+            whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.95 }}
-            style={{ background: 'linear-gradient(135deg, #FF6600, #FF3A2F)' }}
+            style={{
+              background: 'linear-gradient(135deg, #FF6600, #DC2626)',
+              boxShadow: '0 0 12px rgba(255,102,0,0.3), 0 0 24px rgba(0,180,216,0.1)',
+            }}
           >
             <Image
               src="/logo.png"
               alt="DiscordForge"
-              width={28}
-              height={28}
-              className="w-7 h-7 relative z-10 object-contain drop-shadow-[0_0_6px_rgba(255,102,0,0.5)]"
+              width={32}
+              height={32}
+              className="w-8 h-8 relative z-10 object-contain"
+              style={{ filter: 'drop-shadow(0 0 4px rgba(255,102,0,0.5))' }}
             />
             {/* Inner glow overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-[#FFD700]/20 to-transparent pointer-events-none" />

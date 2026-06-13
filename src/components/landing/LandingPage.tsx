@@ -14,11 +14,11 @@ import Image from 'next/image'
 
 const features = [
   { icon: Ticket, title: 'Sistema de Tickets', desc: 'Categorías ilimitadas, transcripciones automáticas, claimed por staff.', color: 'from-[#FFD700] to-[#FF6600]' },
-  { icon: ShieldAlert, title: 'AntiRaid', desc: 'Protección contra ataques, lockdown de emergencia, detección en tiempo real.', color: 'from-[#FF3A2F] to-[#FF6600]' },
-  { icon: Users, title: 'Verificación', desc: 'Botón, reacción, captcha matemático. Evita raids y bots automáticos.', color: 'from-[#00B4D8] to-[#FF3A2F]' },
+  { icon: ShieldAlert, title: 'AntiRaid', desc: 'Protección contra ataques, lockdown de emergencia, detección en tiempo real.', color: 'from-[#DC2626] to-[#FF6600]' },
+  { icon: Users, title: 'Verificación', desc: 'Botón, reacción, captcha matemático. Evita raids y bots automáticos.', color: 'from-[#00B4D8] to-[#DC2626]' },
   { icon: MessageSquare, title: 'Welcome System', desc: 'Embeds personalizables, imágenes, auto-roles, variables dinámicas.', color: 'from-[#FF6600] to-[#FFD700]' },
-  { icon: BarChart3, title: 'Encuestas y Sorteos', desc: 'Encuestas con opciones múltiples, giveaways con roles requeridos.', color: 'from-[#FFD700] to-[#FF3A2F]' },
-  { icon: Wrench, title: 'Embed Builder', desc: 'Constructor visual de embeds, presets guardados, envío a canales.', color: 'from-[#FF3A2F] to-[#FFD700]' },
+  { icon: BarChart3, title: 'Encuestas y Sorteos', desc: 'Encuestas con opciones múltiples, giveaways con roles requeridos.', color: 'from-[#FFD700] to-[#DC2626]' },
+  { icon: Wrench, title: 'Embed Builder', desc: 'Constructor visual de embeds, presets guardados, envío a canales.', color: 'from-[#DC2626] to-[#FFD700]' },
   { icon: Lock, title: 'Whitelist FiveM', desc: 'Formularios personalizados, revisión de aplicaciones, integración RP.', color: 'from-[#00B4D8] to-[#FF6600]' },
   { icon: Globe, title: 'Reaction Roles', desc: 'Reacciones, botones o select menu. Modos single, multiple, toggle.', color: 'from-[#FF6600] to-[#00B4D8]' },
 ]
@@ -46,7 +46,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
       left: Math.random() * 100,
       top: 40 + Math.random() * 60,
       size: 1 + Math.random() * 3,
-      color: i % 4 === 0 ? '#FF6600' : i % 4 === 1 ? '#FFD700' : i % 4 === 2 ? '#FF3A2F' : '#FF8C00',
+      color: i % 5 === 0 ? '#FF6600' : i % 5 === 1 ? '#FFD700' : i % 5 === 2 ? '#DC2626' : i % 5 === 3 ? '#00B4D8' : '#FF8C00',
       duration: 5 + Math.random() * 10,
       delay: Math.random() * 6,
       opacity: 0.2 + Math.random() * 0.6,
@@ -58,7 +58,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
       id: i,
       left: Math.random() * 100,
       size: 1 + Math.random() * 2,
-      color: i % 3 === 0 ? '#FF6600' : i % 3 === 1 ? '#FF3A2F' : '#FFD700',
+      color: i % 4 === 0 ? '#FF6600' : i % 4 === 1 ? '#DC2626' : i % 4 === 2 ? '#00B4D8' : '#FFD700',
       duration: 8 + Math.random() * 15,
       delay: Math.random() * 10,
       drift: -50 + Math.random() * 100,
@@ -79,7 +79,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-0 left-0 right-0 z-[100] bg-[#FF3A2F]/90 backdrop-blur-sm text-white px-4 py-3"
+            className="fixed top-0 left-0 right-0 z-[100] bg-[#DC2626]/90 backdrop-blur-sm text-white px-4 py-3"
           >
             <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -99,16 +99,17 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <motion.div
-              className="w-9 h-9 rounded-lg flex items-center justify-center relative overflow-hidden neon-orange"
-              style={{ background: 'linear-gradient(135deg, #FF6600, #FF3A2F)' }}
-              whileHover={{ scale: 1.08, rotate: 3 }}
+              className="w-9 h-9 rounded-lg flex items-center justify-center relative overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, #FF6600, #DC2626)', boxShadow: '0 0 10px rgba(255,102,0,0.3), 0 0 20px rgba(0,180,216,0.1)' }}
+              whileHover={{ scale: 1.08 }}
             >
               <Image
                 src="/logo.png"
                 alt="DiscordForge"
-                width={24}
-                height={24}
-                className="w-6 h-6 relative z-10 object-contain drop-shadow-[0_0_6px_rgba(255,102,0,0.5)]"
+                width={26}
+                height={26}
+                className="w-[26px] h-[26px] relative z-10 object-contain"
+                style={{ filter: 'drop-shadow(0 0 4px rgba(255,102,0,0.5))' }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#FFD700]/20 to-transparent pointer-events-none" />
             </motion.div>
@@ -116,7 +117,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
           </div>
           <div className="flex items-center gap-4">
             <a href="#features" className="text-sm text-[#888] hover:text-[#FF6600] transition-colors hidden sm:block">Características</a>
-            <Button onClick={handleLogin} disabled={loginLoading} className="bg-gradient-to-r from-[#FF6600] to-[#FF3A2F] hover:from-[#FF6600]/90 hover:to-[#FF3A2F]/90 text-white gap-2 border-0 neon-orange font-semibold">
+            <Button onClick={handleLogin} disabled={loginLoading} className="bg-gradient-to-r from-[#FF6600] to-[#DC2626] hover:from-[#FF6600]/90 hover:to-[#DC2626]/90 text-white gap-2 border-0 font-semibold" style={{ boxShadow: '0 0 12px rgba(255,102,0,0.3)' }}>
               {loginLoading ? (
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
                   <Cog className="w-4 h-4" />
@@ -138,14 +139,14 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           {/* Large glow orbs */}
           <div className="absolute top-1/4 left-1/4 w-[700px] h-[700px] bg-[#FF6600]/8 rounded-full blur-3xl" style={{ animation: 'forge-pulse 6s ease-in-out infinite' }} />
-          <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-[#FF3A2F]/6 rounded-full blur-3xl" style={{ animation: 'forge-pulse 8s ease-in-out infinite 2s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#FFD700]/4 rounded-full blur-3xl" style={{ animation: 'forge-pulse 10s ease-in-out infinite 4s' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-[#DC2626]/6 rounded-full blur-3xl" style={{ animation: 'forge-pulse 8s ease-in-out infinite 2s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00B4D8]/3 rounded-full blur-3xl" style={{ animation: 'forge-pulse 10s ease-in-out infinite 4s' }} />
 
           {/* Abstract flame shapes derived from logo - very subtle */}
           <div
             className="absolute -bottom-[10%] left-[20%] w-[500px] h-[600px] opacity-[0.04] pointer-events-none"
             style={{
-              background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #FF3A2F 30%, #FF8C00 60%, transparent 100%)',
+              background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #DC2626 30%, #FF8C00 60%, transparent 100%)',
               clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)',
               animation: 'forge-pulse 8s ease-in-out infinite 1s',
             }}
@@ -209,8 +210,11 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
             >
               <div className="relative">
                 <motion.div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center neon-orange"
-                  style={{ background: 'linear-gradient(135deg, #FF6600, #FF3A2F)' }}
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(135deg, #FF6600, #DC2626)',
+                    boxShadow: '0 0 20px rgba(255,102,0,0.3), 0 0 40px rgba(0,180,216,0.1)',
+                  }}
                   animate={{ y: [0, -4, 0] }}
                   transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
                 >
@@ -219,15 +223,16 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
                     alt="DiscordForge"
                     width={56}
                     height={56}
-                    className="w-14 h-14 relative z-10 object-contain drop-shadow-[0_0_12px_rgba(255,102,0,0.6)]"
+                    className="w-14 h-14 relative z-10 object-contain"
+                    style={{ filter: 'drop-shadow(0 0 8px rgba(255,102,0,0.6))' }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#FFD700]/25 to-transparent rounded-2xl pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#FFD700]/20 to-transparent rounded-2xl pointer-events-none" />
                 </motion.div>
                 {/* Rotating glow ring */}
                 <div
                   className="absolute -inset-2 rounded-3xl opacity-30"
                   style={{
-                    background: 'conic-gradient(from 0deg, #FF6600, #FFD700, #FF3A2F, #FF8C00, #FF6600)',
+                    background: 'conic-gradient(from 0deg, #FF6600, #FFD700, #DC2626, #00B4D8, #FF8C00, #FF6600)',
                     animation: 'rotate-glow 8s linear infinite',
                     filter: 'blur(8px)',
                   }}
@@ -257,7 +262,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
               Todo desde un dashboard web intuitivo y en tiempo real.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button onClick={handleLogin} disabled={loginLoading} size="lg" className="h-14 text-base font-semibold bg-gradient-to-r from-[#FF6600] to-[#FF3A2F] hover:from-[#FF6600]/90 hover:to-[#FF3A2F]/90 text-white gap-3 px-8 hover:scale-105 transition-all neon-orange group">
+              <Button onClick={handleLogin} disabled={loginLoading} size="lg" className="h-14 text-base font-semibold bg-gradient-to-r from-[#FF6600] to-[#DC2626] hover:from-[#FF6600]/90 hover:to-[#DC2626]/90 text-white gap-3 px-8 hover:scale-105 transition-all neon-orange group">
                 {loginLoading ? (
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Cog className="w-5 h-5" /></motion.div>
                 ) : (
@@ -308,7 +313,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
                 <Card className="border-white/5 bg-[#111]/80 backdrop-blur h-full forge-card-premium group">
                   <CardContent className="p-6 text-center relative">
                     <motion.div
-                      className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FF6600] to-[#FF3A2F] flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl shadow-lg shadow-[#FF6600]/25"
+                      className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FF6600] to-[#DC2626] flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl shadow-lg shadow-[#FF6600]/25"
                       whileHover={{ rotate: 10, scale: 1.1 }}
                       transition={{ type: 'spring', stiffness: 300 }}
                     >
@@ -380,16 +385,16 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
             className="relative overflow-hidden rounded-2xl"
           >
             {/* Animated gradient border */}
-            <div className="absolute inset-0 rounded-2xl p-[1.5px]" style={{ background: 'linear-gradient(135deg, #FF6600, #FFD700, #FF3A2F, #FF8C00, #FF6600)', backgroundSize: '300% 300%', animation: 'gradient-shift 4s ease infinite' }}>
+            <div className="absolute inset-0 rounded-2xl p-[1.5px]" style={{ background: 'linear-gradient(135deg, #FF6600, #FFD700, #DC2626, #FF8C00, #FF6600)', backgroundSize: '300% 300%', animation: 'gradient-shift 4s ease infinite' }}>
               <div className="w-full h-full rounded-2xl bg-[#0A0A0A]" />
             </div>
-            <div className="relative bg-gradient-to-br from-[#FF6600]/8 via-[#FF3A2F]/5 to-[#FFD700]/3 rounded-2xl p-8 sm:p-12 text-center overflow-hidden">
+            <div className="relative bg-gradient-to-br from-[#FF6600]/8 via-[#DC2626]/5 to-[#FFD700]/3 rounded-2xl p-8 sm:p-12 text-center overflow-hidden">
               <div className="absolute inset-0 bg-forge-grid opacity-50" />
               {/* Flame accent shapes */}
               <div
                 className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[300px] h-[300px] opacity-[0.06] pointer-events-none"
                 style={{
-                  background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #FF3A2F 30%, #FF8C00 60%, transparent 100%)',
+                  background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #DC2626 30%, #FF8C00 60%, transparent 100%)',
                   clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)',
                   animation: 'forge-pulse 5s ease-in-out infinite',
                 }}
@@ -400,13 +405,13 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
                   transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
                   className="inline-block mb-4"
                 >
-                  <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center neon-orange" style={{ background: 'linear-gradient(135deg, #FF6600, #FF3A2F)' }}>
+                  <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center neon-orange" style={{ background: 'linear-gradient(135deg, #FF6600, #DC2626)' }}>
                     <Image src="/logo.png" alt="DiscordForge" width={40} height={40} className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,102,0,0.5)]" />
                   </div>
                 </motion.div>
                 <h2 className="text-3xl font-bold mb-4">¿Listo para <span className="animate-gradient-text">empezar</span>?</h2>
                 <p className="text-[#888] mb-8 max-w-lg mx-auto">Añade DiscordForge a tu servidor y gestiona todo desde un dashboard moderno y en tiempo real.</p>
-                <Button onClick={handleLogin} disabled={loginLoading} size="lg" className="h-14 text-base font-semibold bg-gradient-to-r from-[#FF6600] to-[#FF3A2F] hover:from-[#FF6600]/90 hover:to-[#FF3A2F]/90 text-white gap-3 px-10 hover:scale-105 transition-all neon-orange group">
+                <Button onClick={handleLogin} disabled={loginLoading} size="lg" className="h-14 text-base font-semibold bg-gradient-to-r from-[#FF6600] to-[#DC2626] hover:from-[#FF6600]/90 hover:to-[#DC2626]/90 text-white gap-3 px-10 hover:scale-105 transition-all neon-orange group">
                   {loginLoading ? (
                     <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}><Cog className="w-5 h-5" /></motion.div>
                   ) : (
@@ -423,7 +428,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
       <footer className="py-8 px-4 border-t border-white/5">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#888]">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF6600, #FF3A2F)' }}>
+            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF6600, #DC2626)' }}>
               <Image src="/logo.png" alt="" width={14} height={14} className="w-3.5 h-3.5 object-contain" />
             </div>
             <span>DiscordForge © 2025</span>

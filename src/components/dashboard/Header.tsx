@@ -50,10 +50,10 @@ export function Header() {
 
   const getServerColor = (name: string) => {
     const colors = [
-      'from-[#FF6600] to-[#FF3A2F]',
+      'from-[#FF6600] to-[#DC2626]',
       'from-[#FFD700] to-[#FF6600]',
-      'from-[#00B4D8] to-[#FF3A2F]',
-      'from-[#FF3A2F] to-[#FFD700]',
+      'from-[#00B4D8] to-[#DC2626]',
+      'from-[#DC2626] to-[#FFD700]',
     ]
     const idx = name.length % colors.length
     return colors[idx]
@@ -147,7 +147,7 @@ export function Header() {
             <Button variant="ghost" size="icon" className="h-8 w-8 relative hover:bg-[#FF6600]/10 hover:text-[#FF6600] transition-colors">
               <Bell className="w-4 h-4" />
               {notifications > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-gradient-to-r from-[#FF6600] to-[#FF3A2F] text-[9px] font-bold text-white flex items-center justify-center shadow-[0_0_8px_rgba(255,102,0,0.4)]">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-gradient-to-r from-[#FF6600] to-[#DC2626] text-[9px] font-bold text-white flex items-center justify-center shadow-[0_0_8px_rgba(255,102,0,0.4)]">
                   {notifications}
                 </span>
               )}
@@ -183,7 +183,7 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
               <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#FF3A2F] text-white text-[10px] font-bold shadow-[0_0_8px_rgba(255,102,0,0.3)]">
+                <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#DC2626] text-white text-[10px] font-bold shadow-[0_0_8px_rgba(255,102,0,0.3)]">
                   {user?.username?.[0] || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -193,7 +193,7 @@ export function Header() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex items-center gap-2">
                 <Avatar className="h-6 w-6">
-                  <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#FF3A2F] text-white text-[9px] font-bold">
+                  <AvatarFallback className="bg-gradient-to-br from-[#FF6600] to-[#DC2626] text-white text-[9px] font-bold">
                     {user?.username?.[0] || 'U'}
                   </AvatarFallback>
                 </Avatar>

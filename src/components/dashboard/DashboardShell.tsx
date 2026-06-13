@@ -79,7 +79,7 @@ function ForgeParticles() {
       left: Math.random() * 100,
       top: 50 + Math.random() * 50,
       size: 1 + Math.random() * 2.5,
-      color: i % 4 === 0 ? '#FF6600' : i % 4 === 1 ? '#FFD700' : i % 4 === 2 ? '#FF3A2F' : '#FF8C00',
+      color: i % 5 === 0 ? '#FF6600' : i % 5 === 1 ? '#FFD700' : i % 5 === 2 ? '#DC2626' : i % 5 === 3 ? '#00B4D8' : '#FF8C00',
       duration: 4 + Math.random() * 8,
       delay: Math.random() * 6,
       opacity: 0.3 + Math.random() * 0.5,
@@ -93,7 +93,7 @@ function ForgeParticles() {
       id: i,
       left: Math.random() * 100,
       size: 1 + Math.random() * 2,
-      color: i % 3 === 0 ? '#FF6600' : i % 3 === 1 ? '#FF3A2F' : '#FFD700',
+      color: i % 4 === 0 ? '#FF6600' : i % 4 === 1 ? '#DC2626' : i % 4 === 2 ? '#00B4D8' : '#FFD700',
       duration: 8 + Math.random() * 12,
       delay: Math.random() * 8,
       drift: -40 + Math.random() * 80,
@@ -122,7 +122,7 @@ function ForgeParticles() {
       <div
         className="absolute top-[40%] left-[40%] w-[700px] h-[700px] rounded-full opacity-[0.02]"
         style={{
-          background: 'radial-gradient(circle, #FF3A2F, transparent 70%)',
+          background: 'radial-gradient(circle, #DC2626, transparent 70%)',
           animation: 'forge-pulse 10s ease-in-out infinite 4s',
         }}
       />
@@ -139,7 +139,7 @@ function ForgeParticles() {
       <div
         className="absolute -bottom-[10%] right-[10%] w-[500px] h-[600px] opacity-[0.02] pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #FF3A2F 30%, #FF8C00 60%, transparent 100%)',
+          background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #DC2626 30%, #FF8C00 60%, transparent 100%)',
           clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)',
           animation: 'forge-pulse 8s ease-in-out infinite 1s',
         }}

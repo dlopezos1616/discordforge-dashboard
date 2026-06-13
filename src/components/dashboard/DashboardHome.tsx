@@ -41,7 +41,7 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 }
 
-const COLORS = ['#FF6600', '#FFD700', '#FF3A2F', '#FF8C00', '#00B4D8', '#EC4899', '#10B981', '#F97316', '#6366F1', '#14B8A6']
+const COLORS = ['#FF6600', '#FFD700', '#DC2626', '#FF8C00', '#00B4D8', '#EC4899', '#10B981', '#F97316', '#6366F1', '#14B8A6']
 
 const logTypeColors: Record<string, string> = {
   join: 'bg-emerald-500/20 text-emerald-400',
@@ -50,7 +50,7 @@ const logTypeColors: Record<string, string> = {
   unban: 'bg-emerald-500/20 text-emerald-400',
   role_add: 'bg-blue-500/20 text-blue-400',
   role_remove: 'bg-orange-500/20 text-orange-400',
-  ticket_create: 'bg-[#FF3A2F]/20 text-[#FF3A2F]',
+  ticket_create: 'bg-[#DC2626]/20 text-[#DC2626]',
   ticket_close: 'bg-fuchsia-500/20 text-fuchsia-400',
   message_delete: 'bg-yellow-500/20 text-yellow-400',
   message_edit: 'bg-cyan-500/20 text-cyan-400',
@@ -107,9 +107,9 @@ export function DashboardHome() {
   }
 
   const statCards = [
-    { label: 'Miembros', value: stats.totalMembers.toLocaleString(), icon: Users, color: 'from-[#FF6600] to-[#FF3A2F]', change: '+12%', up: true },
+    { label: 'Miembros', value: stats.totalMembers.toLocaleString(), icon: Users, color: 'from-[#FF6600] to-[#DC2626]', change: '+12%', up: true },
     { label: 'Tickets Abiertos', value: stats.openTickets.toString(), icon: Ticket, color: 'from-[#FFD700] to-[#FF6600]', change: `${stats.closedTickets} cerrados`, up: true },
-    { label: 'Moderaciones', value: stats.moderationCount.toString(), icon: Shield, color: 'from-[#FF3A2F] to-[#FF8C00]', change: 'Hoy', up: false },
+    { label: 'Moderaciones', value: stats.moderationCount.toString(), icon: Shield, color: 'from-[#DC2626] to-[#FF8C00]', change: 'Hoy', up: false },
     { label: 'Whitelist Pendiente', value: stats.whitelistPending.toString(), icon: AlertCircle, color: 'from-[#00B4D8] to-[#FF6600]', change: `${stats.activePolls} encuestas`, up: true },
   ]
 
@@ -122,7 +122,7 @@ export function DashboardHome() {
         <Card className="border-0 overflow-hidden relative forge-card-premium" style={{ background: 'linear-gradient(135deg, rgba(255,102,0,0.08) 0%, rgba(255,58,47,0.04) 50%, transparent 100%)' }}>
           <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
           {/* Subtle flame accent */}
-          <div className="absolute -right-10 -top-10 w-40 h-40 opacity-[0.04] pointer-events-none" style={{ background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #FF3A2F 30%, #FF8C00 60%, transparent 100%)', clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)' }} />
+          <div className="absolute -right-10 -top-10 w-40 h-40 opacity-[0.04] pointer-events-none" style={{ background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #DC2626 30%, #FF8C00 60%, transparent 100%)', clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)' }} />
           <CardHeader className="relative">
             <CardTitle className="text-xl">
               ¡Bienvenido a <span className="animate-gradient-text">{currentServer.name}</span>!
@@ -340,7 +340,7 @@ export function DashboardHome() {
                 { label: 'Auto-Mod', value: 85, color: 'bg-[#FF6600]' },
                 { label: 'Actividad', value: 72, color: 'bg-[#FFD700]' },
                 { label: 'Seguridad', value: 94, color: 'bg-[#00B4D8]' },
-                { label: 'Engagement', value: 68, color: 'bg-[#FF3A2F]' },
+                { label: 'Engagement', value: 68, color: 'bg-[#DC2626]' },
               ].map(metric => (
                 <div key={metric.label} className="space-y-2">
                   <div className="flex justify-between">
