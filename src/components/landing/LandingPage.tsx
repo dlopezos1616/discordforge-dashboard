@@ -104,7 +104,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
               whileHover={{ scale: 1.08 }}
             >
               <Image
-                src="/logo.png"
+                src="/logo-v2.png"
                 alt="DiscordForge"
                 width={26}
                 height={26}
@@ -219,7 +219,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
                   transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
                 >
                   <Image
-                    src="/logo.png"
+                    src="/logo-v2.png"
                     alt="DiscordForge"
                     width={56}
                     height={56}
@@ -406,7 +406,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
                   className="inline-block mb-4"
                 >
                   <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center neon-orange" style={{ background: 'linear-gradient(135deg, #FF6600, #DC2626)' }}>
-                    <Image src="/logo.png" alt="DiscordForge" width={40} height={40} className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,102,0,0.5)]" />
+                    <Image src="/logo-v2.png" alt="DiscordForge" width={40} height={40} className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,102,0,0.5)]" />
                   </div>
                 </motion.div>
                 <h2 className="text-3xl font-bold mb-4">¿Listo para <span className="animate-gradient-text">empezar</span>?</h2>
@@ -429,7 +429,7 @@ export function LandingPage({ authError, onClearError }: LandingPageProps) {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#888]">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF6600, #DC2626)' }}>
-              <Image src="/logo.png" alt="" width={14} height={14} className="w-3.5 h-3.5 object-contain" />
+              <Image src="/logo-v2.png" alt="" width={14} height={14} className="w-3.5 h-3.5 object-contain" />
             </div>
             <span>DiscordForge © 2025</span>
           </div>

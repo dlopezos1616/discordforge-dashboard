@@ -109,7 +109,7 @@ export function Sidebar() {
             }}
           >
             <Image
-              src="/logo.png"
+              src="/logo-v2.png"
               alt="DiscordForge"
               width={32}
               height={32}

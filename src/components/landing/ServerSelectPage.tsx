@@ -138,7 +138,7 @@ export function ServerSelectPage() {
               whileHover={{ scale: 1.08, rotate: 3 }}
             >
               <Image
-                src="/logo.png"
+                src="/logo-v2.png"
                 alt="DiscordForge"
                 width={22}
                 height={22}
