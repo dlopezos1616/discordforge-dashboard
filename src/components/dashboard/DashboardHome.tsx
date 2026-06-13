@@ -6,13 +6,15 @@ import {
   Users, Ticket, Shield, BarChart3, Activity, Clock,
   TrendingUp, TrendingDown, AlertCircle, CheckCircle2,
   XCircle, Eye, RefreshCw, Zap, Crown, MessageSquare,
-  ShieldCheck, ShieldAlert
+  ShieldCheck, ShieldAlert, Hash, UserPlus, UserMinus, Ban,
+  Trash2, Pin, Bot, ChevronRight
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useEffect, useState, useCallback } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -64,6 +66,35 @@ interface ServerStats {
   }
 }
 
+interface DiscordActivity {
+  activity: {
+    id: string
+    type: string
+    description: string
+    timestamp: string
+    channelName?: string
+    author?: string
+    authorAvatar?: string | null
+    reason?: string | null
+  }[]
+  chartData: {
+    date: string
+    joins: number
+    leaves: number
+    messages: number
+    modActions: number
+  }[]
+  summary: {
+    totalAuditEntries: number
+    memberJoins: number
+    memberLeaves: number
+    modEvents: number
+    messageCount: number
+    hasAuditAccess: boolean
+    hasChannelAccess: boolean
+  }
+}
+
 const container = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.05 } },
@@ -75,19 +106,49 @@ const item = {
 
 const COLORS = ['#FF6600', '#FFD700', '#DC2626', '#FF8C00', '#00B4D8', '#EC4899', '#10B981', '#F97316', '#6366F1', '#14B8A6']
 
-const logTypeColors: Record<string, string> = {
+const activityTypeColors: Record<string, string> = {
+  message: 'bg-blue-500/20 text-blue-400',
   join: 'bg-emerald-500/20 text-emerald-400',
   leave: 'bg-red-500/20 text-red-400',
   ban: 'bg-red-500/20 text-red-400',
   unban: 'bg-emerald-500/20 text-emerald-400',
-  role_add: 'bg-blue-500/20 text-blue-400',
-  role_remove: 'bg-orange-500/20 text-orange-400',
-  ticket_create: 'bg-[#DC2626]/20 text-[#DC2626]',
-  ticket_close: 'bg-fuchsia-500/20 text-fuchsia-400',
+  kick: 'bg-orange-500/20 text-orange-400',
+  role_update: 'bg-blue-500/20 text-blue-400',
+  channel_create: 'bg-cyan-500/20 text-cyan-400',
+  channel_update: 'bg-cyan-500/20 text-cyan-400',
+  channel_delete: 'bg-red-500/20 text-red-400',
   message_delete: 'bg-yellow-500/20 text-yellow-400',
-  message_edit: 'bg-cyan-500/20 text-cyan-400',
-  whitelist_apply: 'bg-teal-500/20 text-teal-400',
-  reaction_add: 'bg-pink-500/20 text-pink-400',
+  message_pin: 'bg-purple-500/20 text-purple-400',
+  message_unpin: 'bg-purple-500/20 text-purple-400',
+  invite_create: 'bg-teal-500/20 text-teal-400',
+  role_create: 'bg-green-500/20 text-green-400',
+  role_delete: 'bg-red-500/20 text-red-400',
+  bot_add: 'bg-indigo-500/20 text-indigo-400',
+  emoji_create: 'bg-pink-500/20 text-pink-400',
+  automod_block: 'bg-amber-500/20 text-amber-400',
+  automod_timeout: 'bg-amber-500/20 text-amber-400',
+  server_update: 'bg-slate-500/20 text-slate-400',
+  member_update: 'bg-blue-500/20 text-blue-400',
+}
+
+const activityTypeIcons: Record<string, any> = {
+  message: MessageSquare,
+  join: UserPlus,
+  leave: UserMinus,
+  ban: Ban,
+  unban: CheckCircle2,
+  kick: Shield,
+  role_update: Shield,
+  channel_create: Hash,
+  channel_update: Hash,
+  channel_delete: Hash,
+  message_delete: Trash2,
+  message_pin: Pin,
+  message_unpin: Pin,
+  invite_create: ChevronRight,
+  bot_add: Bot,
+  automod_block: ShieldAlert,
+  automod_timeout: ShieldAlert,
 }
 
 const modTypeColors: Record<string, string> = {
@@ -99,9 +160,60 @@ const modTypeColors: Record<string, string> = {
   unban: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 }
 
+function formatTimeAgo(dateStr: string): string {
+  try {
+    const now = new Date()
+    const date = new Date(dateStr)
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Ahora'
+    if (diffMins < 60) return `Hace ${diffMins}m`
+    if (diffHours < 24) return `Hace ${diffHours}h`
+    if (diffDays < 7) return `Hace ${diffDays}d`
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+  } catch {
+    return ''
+  }
+}
+
+function getActivityLabel(type: string): string {
+  const labels: Record<string, string> = {
+    message: 'Mensaje',
+    join: 'Nuevo miembro',
+    leave: 'Miembro salió',
+    ban: 'Ban',
+    unban: 'Unban',
+    kick: 'Kick',
+    role_update: 'Rol actualizado',
+    channel_create: 'Canal creado',
+    channel_update: 'Canal editado',
+    channel_delete: 'Canal eliminado',
+    message_delete: 'Mensaje eliminado',
+    message_pin: 'Mensaje fijado',
+    message_unpin: 'Mensaje desfijado',
+    invite_create: 'Invitación creada',
+    invite_delete: 'Invitación eliminada',
+    role_create: 'Rol creado',
+    role_delete: 'Rol eliminado',
+    bot_add: 'Bot añadido',
+    emoji_create: 'Emoji creado',
+    automod_block: 'AutoMod bloqueó',
+    automod_timeout: 'AutoMod timeout',
+    server_update: 'Servidor actualizado',
+    member_update: 'Miembro actualizado',
+    webhook_create: 'Webhook creado',
+    webhook_delete: 'Webhook eliminado',
+  }
+  return labels[type] || type
+}
+
 export function DashboardHome() {
   const { currentServer, setCurrentServer } = useAppStore()
   const [stats, setStats] = useState<ServerStats | null>(null)
+  const [discordActivity, setDiscordActivity] = useState<DiscordActivity | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -110,16 +222,12 @@ export function DashboardHome() {
     try {
       const res = await fetch(`/api/stats?serverId=${currentServer.id}`)
       const data = await res.json()
-      // Only set stats if valid data was returned (not an error response)
       if (data && !data.error) {
         setStats(data)
-        // Update currentServer in store if member count changed
         if (data.totalMembers && data.totalMembers !== currentServer.memberCount) {
           setCurrentServer({ ...currentServer, memberCount: data.totalMembers })
         }
       } else if (!stats) {
-        // If we have no stats at all and got an error, set default empty stats
-        // but try to get live member count from Discord guilds API
         let liveMemberCount = currentServer?.memberCount || 0
         try {
           const guildsRes = await fetch('/api/discord/guilds')
@@ -128,7 +236,6 @@ export function DashboardHome() {
             const matchingGuild = guildsData.guilds.find((g: any) => g.id === currentServer?.discordId)
             if (matchingGuild?.approximate_member_count) {
               liveMemberCount = matchingGuild.approximate_member_count
-              // Also update the server in DB
               await fetch('/api/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -144,7 +251,7 @@ export function DashboardHome() {
             }
           }
         } catch {
-          // Ignore - use existing memberCount
+          // Ignore
         }
         setStats({
           openTickets: 0, closedTickets: 0, totalMembers: liveMemberCount,
@@ -163,7 +270,6 @@ export function DashboardHome() {
       }
     } catch (err) {
       console.error('Failed to fetch stats:', err)
-      // On network error, set empty stats if we don't have any
       if (!stats) {
         setStats({
           openTickets: 0, closedTickets: 0, totalMembers: currentServer?.memberCount || 0,
@@ -186,10 +292,22 @@ export function DashboardHome() {
     }
   }, [currentServer, stats, setCurrentServer])
 
+  const fetchDiscordActivity = useCallback(async () => {
+    if (!currentServer?.discordId) return
+    try {
+      const res = await fetch(`/api/discord/activity?guildId=${currentServer.discordId}`)
+      const data = await res.json()
+      if (data && !data.error) {
+        setDiscordActivity(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch Discord activity:', err)
+    }
+  }, [currentServer?.discordId])
+
   const handleRefresh = async () => {
     if (refreshing) return
     setRefreshing(true)
-    // First refresh from Discord
     try {
       await fetch('/api/servers/refresh', {
         method: 'POST',
@@ -199,15 +317,14 @@ export function DashboardHome() {
     } catch {
       // ignore
     }
-    // Then fetch updated stats
-    await fetchStats()
+    await Promise.all([fetchStats(), fetchDiscordActivity()])
   }
 
   useEffect(() => {
     if (!currentServer) return
     setLoading(true)
-    fetchStats()
-  }, [currentServer, fetchStats])
+    Promise.all([fetchStats(), fetchDiscordActivity()])
+  }, [currentServer])
 
   if (!currentServer) {
     return (
@@ -237,6 +354,18 @@ export function DashboardHome() {
   const serverInfo = stats.serverInfo
   const discordData = stats.discordData
   const onlineMembers = stats.onlineMembers || discordData?.approximate_presence_count || 0
+
+  // Use Discord activity data for chart if available, otherwise fall back to DB data
+  const activityChartData = discordActivity?.chartData?.length
+    ? discordActivity.chartData.map(d => ({
+        date: d.date,
+        joins: d.joins,
+        leaves: d.leaves,
+        tickets: d.modActions || 0,
+      }))
+    : stats.chartData
+
+  const hasDiscordChartData = activityChartData.some(d => d.joins > 0 || d.leaves > 0 || d.tickets > 0)
 
   const statCards = [
     {
@@ -278,6 +407,11 @@ export function DashboardHome() {
   const pieData = (stats.ticketsByCategory || []).map(cat => ({ name: cat.name, value: cat._count?.tickets || 0 }))
 
   const boostTierLabels = ['Sin Boost', 'Nivel 1', 'Nivel 2', 'Nivel 3']
+
+  // Combine activity: Discord activity + DB logs
+  const discordActivityItems = discordActivity?.activity || []
+  const dbLogs = stats.recentLogs || []
+  const hasActivity = discordActivityItems.length > 0 || dbLogs.length > 0
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-6">
@@ -345,6 +479,12 @@ export function DashboardHome() {
                     <span>Verificación activa</span>
                   </div>
                 )}
+                {discordActivity?.summary && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>{discordActivity.summary.messageCount} mensajes recientes</span>
+                  </div>
+                )}
               </div>
             )}
           </CardHeader>
@@ -400,32 +540,50 @@ export function DashboardHome() {
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Activity className="w-4 h-4 text-[#FF6600]" />
                 Actividad del Servidor
+                {discordActivity?.summary?.hasAuditAccess && (
+                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-emerald-500/10 text-emerald-400">En vivo</Badge>
+                )}
               </CardTitle>
               <CardDescription>Últimos 7 días</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={stats.chartData}>
-                  <defs>
-                    <linearGradient id="colorJoins" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FF6600" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#FF6600" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorLeaves" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
-                  />
-                  <Area type="monotone" dataKey="joins" stroke="#FF6600" fill="url(#colorJoins)" strokeWidth={2} name="Entradas" />
-                  <Area type="monotone" dataKey="leaves" stroke="#EF4444" fill="url(#colorLeaves)" strokeWidth={2} name="Salidas" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {hasDiscordChartData ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={activityChartData}>
+                    <defs>
+                      <linearGradient id="colorJoins" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#FF6600" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#FF6600" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorLeaves" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00B4D8" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#00B4D8" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                    />
+                    <Area type="monotone" dataKey="joins" stroke="#FF6600" fill="url(#colorJoins)" strokeWidth={2} name="Entradas" />
+                    <Area type="monotone" dataKey="leaves" stroke="#EF4444" fill="url(#colorLeaves)" strokeWidth={2} name="Salidas" />
+                    {discordActivity?.chartData?.length && (
+                      <Area type="monotone" dataKey="tickets" stroke="#00B4D8" fill="url(#colorMessages)" strokeWidth={2} name="Acciones Mod" />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[250px] text-center">
+                  <Activity className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                  <p className="text-sm text-muted-foreground">Sin datos de actividad aún</p>
+                  <p className="text-xs text-muted-foreground/50 mt-1">Los datos aparecerán conforme haya actividad en el servidor</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -483,31 +641,95 @@ export function DashboardHome() {
 
       {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Recent logs */}
+        {/* Recent activity from Discord */}
         <motion.div variants={item}>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Clock className="w-4 h-4 text-emerald-400" />
                 Actividad Reciente
-                {stats.totalLogs !== undefined && (
-                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-muted/50">{stats.totalLogs} total</Badge>
+                {discordActivity?.activity?.length > 0 && (
+                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-emerald-500/10 text-emerald-400">
+                    {discordActivity.activity.length} eventos
+                  </Badge>
+                )}
+                {discordActivity?.summary?.hasAuditAccess && (
+                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-[#FF6600]/10 text-[#FF6600]">
+                    Discord Live
+                  </Badge>
                 )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-64">
-                {stats.recentLogs.length > 0 ? (
-                  <div className="space-y-2">
-                    {stats.recentLogs.map((log, i) => (
+                {hasActivity ? (
+                  <div className="space-y-1.5">
+                    {/* Discord activity items first */}
+                    {discordActivityItems.slice(0, 15).map((act, i) => {
+                      const IconComponent = activityTypeIcons[act.type] || Activity
+                      const colorClass = activityTypeColors[act.type] || 'bg-muted text-muted-foreground'
+                      const isMessage = act.type === 'message'
+
+                      return (
+                        <motion.div
+                          key={act.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-accent/30 transition-colors"
+                        >
+                          {/* Avatar or icon */}
+                          {isMessage && act.authorAvatar ? (
+                            <Avatar className="w-6 h-6 shrink-0 mt-0.5">
+                              <AvatarImage src={act.authorAvatar} alt={act.author || ''} />
+                              <AvatarFallback className="text-[8px]">{act.author?.[0] || '?'}</AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${colorClass}`}>
+                              <IconComponent className="w-3 h-3" />
+                            </div>
+                          )}
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="secondary" className={`text-[8px] px-1 py-0 ${colorClass}`}>
+                                {getActivityLabel(act.type)}
+                              </Badge>
+                              {act.channelName && (
+                                <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                                  <Hash className="w-2.5 h-2.5" />
+                                  {act.channelName}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs mt-0.5 truncate">
+                              {isMessage && act.author && (
+                                <span className="font-medium text-[#00B4D8]">{act.author}: </span>
+                              )}
+                              <span className="text-muted-foreground">{act.description}</span>
+                            </p>
+                            {act.reason && (
+                              <p className="text-[10px] text-muted-foreground/60 mt-0.5">Razón: {act.reason}</p>
+                            )}
+                          </div>
+
+                          <span className="text-[10px] text-muted-foreground/60 shrink-0 mt-1">
+                            {formatTimeAgo(act.timestamp)}
+                          </span>
+                        </motion.div>
+                      )
+                    })}
+
+                    {/* Then DB logs if any */}
+                    {dbLogs.filter(log => !discordActivityItems.some(a => a.type === log.type)).slice(0, 5).map((log, i) => (
                       <motion.div
-                        key={i}
+                        key={`db-log-${i}`}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05 }}
+                        transition={{ delay: (discordActivityItems.length + i) * 0.03 }}
                         className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent/30 transition-colors"
                       >
-                        <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 ${logTypeColors[log.type] || 'bg-muted text-muted-foreground'}`}>
+                        <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 ${activityTypeColors[log.type] || 'bg-muted text-muted-foreground'}`}>
                           {log.type}
                         </Badge>
                         <p className="text-xs flex-1 truncate">{log.description}</p>
@@ -521,7 +743,9 @@ export function DashboardHome() {
                   <div className="flex flex-col items-center justify-center h-48 text-center">
                     <Clock className="w-8 h-8 text-muted-foreground/30 mb-2" />
                     <p className="text-xs text-muted-foreground">Sin actividad reciente</p>
-                    <p className="text-[10px] text-muted-foreground/60">La actividad aparecerá cuando el bot esté activo</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                      La actividad se obtiene directamente de Discord en tiempo real
+                    </p>
                   </div>
                 )}
               </ScrollArea>
@@ -529,47 +753,89 @@ export function DashboardHome() {
           </Card>
         </motion.div>
 
-        {/* Recent moderation */}
+        {/* Recent moderation from Discord audit log + DB */}
         <motion.div variants={item}>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Shield className="w-4 h-4 text-orange-400" />
                 Acciones de Moderación
+                {discordActivity?.summary?.modEvents > 0 && (
+                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-[#FF6600]/10 text-[#FF6600]">
+                    {discordActivity.summary.modEvents} eventos
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-64">
-                {stats.modActions.length > 0 ? (
-                  <div className="space-y-2">
-                    {stats.modActions.map((action, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        className="p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors"
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 border ${modTypeColors[action.type] || 'bg-muted text-muted-foreground'}`}>
-                            {action.type.toUpperCase()}
-                          </Badge>
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(action.createdAt).toLocaleDateString('es-ES')}
-                          </span>
-                        </div>
-                        <p className="text-xs">{action.moderator?.username || 'Desconocido'} → {action.target?.username || 'Desconocido'}</p>
-                        {action.reason && <p className="text-[11px] text-muted-foreground mt-0.5">Razón: {action.reason}</p>}
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-48 text-center">
-                    <Shield className="w-8 h-8 text-muted-foreground/30 mb-2" />
-                    <p className="text-xs text-muted-foreground">Sin acciones de moderación</p>
-                    <p className="text-[10px] text-muted-foreground/60">Las acciones aparecerán cuando se moderen usuarios</p>
-                  </div>
-                )}
+                {/* Discord audit log mod actions */}
+                {(() => {
+                  const discordModActions = discordActivityItems.filter(a =>
+                    ['ban', 'kick', 'unban', 'automod_block', 'automod_timeout', 'timeout', 'message_delete', 'message_bulk_delete'].includes(a.type)
+                  )
+                  const dbModActions = stats.modActions || []
+
+                  if (discordModActions.length > 0 || dbModActions.length > 0) {
+                    return (
+                      <div className="space-y-2">
+                        {discordModActions.slice(0, 8).map((action, i) => {
+                          const colorClass = modTypeColors[action.type] || activityTypeColors[action.type] || 'bg-muted text-muted-foreground'
+                          return (
+                            <motion.div
+                              key={action.id}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: i * 0.05 }}
+                              className="p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 border ${colorClass}`}>
+                                  {getActivityLabel(action.type).toUpperCase()}
+                                </Badge>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {formatTimeAgo(action.timestamp)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{action.description}</p>
+                              {action.reason && (
+                                <p className="text-[11px] text-muted-foreground/60 mt-0.5">Razón: {action.reason}</p>
+                              )}
+                            </motion.div>
+                          )
+                        })}
+                        {dbModActions.slice(0, 5).map((action, i) => (
+                          <motion.div
+                            key={`db-mod-${i}`}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: (discordModActions.length + i) * 0.05 }}
+                            className="p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 border ${modTypeColors[action.type] || 'bg-muted text-muted-foreground'}`}>
+                                {action.type.toUpperCase()}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(action.createdAt).toLocaleDateString('es-ES')}
+                              </span>
+                            </div>
+                            <p className="text-xs">{action.moderator?.username || 'Desconocido'} → {action.target?.username || 'Desconocido'}</p>
+                            {action.reason && <p className="text-[11px] text-muted-foreground mt-0.5">Razón: {action.reason}</p>}
+                          </motion.div>
+                        ))}
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="flex flex-col items-center justify-center h-48 text-center">
+                      <Shield className="w-8 h-8 text-muted-foreground/30 mb-2" />
+                      <p className="text-xs text-muted-foreground">Sin acciones de moderación</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">Las acciones se obtienen del registro de auditoría de Discord</p>
+                    </div>
+                  )
+                })()}
               </ScrollArea>
             </CardContent>
           </Card>

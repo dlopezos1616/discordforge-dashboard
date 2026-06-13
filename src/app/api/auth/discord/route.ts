@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     discordAuthUrl.searchParams.set('client_id', DISCORD_CLIENT_ID)
     discordAuthUrl.searchParams.set('redirect_uri', redirectUri)
     discordAuthUrl.searchParams.set('response_type', 'code')
-    discordAuthUrl.searchParams.set('scope', 'identify guilds')
+    discordAuthUrl.searchParams.set('scope', 'identify guilds guilds.members.read')
     discordAuthUrl.searchParams.set('prompt', 'consent')
 
     return NextResponse.redirect(discordAuthUrl.toString())

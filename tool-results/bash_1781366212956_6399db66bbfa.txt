@@ -1,0 +1,844 @@
+PID: 15992
+{
+    "openTickets": 6,
+    "closedTickets": 3,
+    "totalMembers": 15420,
+    "onlineMembers": 0,
+    "moderationCount": 15,
+    "activePolls": 6,
+    "activeGiveaways": 3,
+    "whitelistPending": 6,
+    "logsToday": 100,
+    "totalLogs": 150,
+    "chartData": [
+        {
+            "date": "dom 7",
+            "joins": 0,
+            "leaves": 0,
+            "tickets": 0,
+            "messages": 0
+        },
+        {
+            "date": "lun 8",
+            "joins": 0,
+            "leaves": 0,
+            "tickets": 0,
+            "messages": 0
+        },
+        {
+            "date": "mar 9",
+            "joins": 0,
+            "leaves": 0,
+            "tickets": 0,
+            "messages": 0
+        },
+        {
+            "date": "mi\u00e9 10",
+            "joins": 0,
+            "leaves": 0,
+            "tickets": 0,
+            "messages": 0
+        },
+        {
+            "date": "jue 11",
+            "joins": 0,
+            "leaves": 0,
+            "tickets": 0,
+            "messages": 0
+        },
+        {
+            "date": "vie 12",
+            "joins": 15,
+            "leaves": 15,
+            "tickets": 15,
+            "messages": 150
+        },
+        {
+            "date": "s\u00e1b 13",
+            "joins": 0,
+            "leaves": 0,
+            "tickets": 0,
+            "messages": 0
+        }
+    ],
+    "ticketsByCategory": [
+        {
+            "id": "cmqaqh18z000tnru62xyw5gm8",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Donaciones",
+            "emoji": "\ud83d\udcb0",
+            "color": "#F59E0B",
+            "description": "Consultas sobre donaciones",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Donaciones. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 0,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.395Z",
+            "updatedAt": "2026-06-12T09:37:57.395Z",
+            "_count": {
+                "tickets": 15
+            }
+        },
+        {
+            "id": "cmqbgj4fs000tnryunwct83un",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Donaciones",
+            "emoji": "\ud83d\udcb0",
+            "color": "#F59E0B",
+            "description": "Consultas sobre donaciones",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Donaciones. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 0,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.857Z",
+            "updatedAt": "2026-06-12T21:47:24.857Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9sw007bnryuzlx8w7ze",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Donaciones",
+            "emoji": "\ud83d\udcb0",
+            "color": "#F59E0B",
+            "description": "Consultas sobre donaciones",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Donaciones. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 0,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.809Z",
+            "updatedAt": "2026-06-12T21:47:31.809Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh190000vnru6b803w4xs",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Soporte T\u00e9cnico",
+            "emoji": "\ud83d\udd27",
+            "color": "#3B82F6",
+            "description": "Ayuda t\u00e9cnica general",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Soporte T\u00e9cnico. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 1,
+            "isActive": false,
+            "createdAt": "2026-06-12T09:37:57.396Z",
+            "updatedAt": "2026-06-12T10:31:16.027Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4ft000vnryu4019ighi",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Soporte T\u00e9cnico",
+            "emoji": "\ud83d\udd27",
+            "color": "#3B82F6",
+            "description": "Ayuda t\u00e9cnica general",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Soporte T\u00e9cnico. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 1,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.858Z",
+            "updatedAt": "2026-06-12T21:47:24.858Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9sx007dnryugayod8po",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Soporte T\u00e9cnico",
+            "emoji": "\ud83d\udd27",
+            "color": "#3B82F6",
+            "description": "Ayuda t\u00e9cnica general",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Soporte T\u00e9cnico. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 1,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.809Z",
+            "updatedAt": "2026-06-12T21:47:31.809Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh190000xnru6z3p61fo0",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Administraci\u00f3n",
+            "emoji": "\ud83d\udc54",
+            "color": "#8B5CF6",
+            "description": "Consultas administrativas",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Administraci\u00f3n. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 2,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.397Z",
+            "updatedAt": "2026-06-12T09:37:57.397Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4fu000xnryu3h1rit84",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Administraci\u00f3n",
+            "emoji": "\ud83d\udc54",
+            "color": "#8B5CF6",
+            "description": "Consultas administrativas",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Administraci\u00f3n. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 2,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.858Z",
+            "updatedAt": "2026-06-12T21:47:24.858Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9sy007fnryuqjoe79dw",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Administraci\u00f3n",
+            "emoji": "\ud83d\udc54",
+            "color": "#8B5CF6",
+            "description": "Consultas administrativas",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Administraci\u00f3n. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 2,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.810Z",
+            "updatedAt": "2026-06-12T21:47:31.810Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh191000znru6srxbppl1",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Reportes",
+            "emoji": "\ud83d\udce2",
+            "color": "#EF4444",
+            "description": "Reportar jugadores o problemas",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Reportes. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 3,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.398Z",
+            "updatedAt": "2026-06-12T09:37:57.398Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4fv000znryuxje3hb5n",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Reportes",
+            "emoji": "\ud83d\udce2",
+            "color": "#EF4444",
+            "description": "Reportar jugadores o problemas",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Reportes. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 3,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.859Z",
+            "updatedAt": "2026-06-12T21:47:24.859Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9sz007hnryu7ry4pdag",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Reportes",
+            "emoji": "\ud83d\udce2",
+            "color": "#EF4444",
+            "description": "Reportar jugadores o problemas",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Reportes. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 3,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.811Z",
+            "updatedAt": "2026-06-12T21:47:31.811Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh1920011nru66z9t4n5l",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Whitelist",
+            "emoji": "\ud83d\udccb",
+            "color": "#10B981",
+            "description": "Solicitudes de whitelist",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Whitelist. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 4,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.398Z",
+            "updatedAt": "2026-06-12T09:37:57.398Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4fw0011nryun8um40tk",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Whitelist",
+            "emoji": "\ud83d\udccb",
+            "color": "#10B981",
+            "description": "Solicitudes de whitelist",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Whitelist. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 4,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.860Z",
+            "updatedAt": "2026-06-12T21:47:24.860Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9t0007jnryurzdnhj9n",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Whitelist",
+            "emoji": "\ud83d\udccb",
+            "color": "#10B981",
+            "description": "Solicitudes de whitelist",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Whitelist. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 4,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.812Z",
+            "updatedAt": "2026-06-12T21:47:31.812Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh1930013nru6ysjxbr32",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Polic\u00eda",
+            "emoji": "\ud83d\udc6e",
+            "color": "#1D4ED8",
+            "description": "Tickets de polic\u00eda",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Polic\u00eda. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 5,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.399Z",
+            "updatedAt": "2026-06-12T09:37:57.399Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4fx0013nryu0up9s2fv",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Polic\u00eda",
+            "emoji": "\ud83d\udc6e",
+            "color": "#1D4ED8",
+            "description": "Tickets de polic\u00eda",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Polic\u00eda. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 5,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.861Z",
+            "updatedAt": "2026-06-12T21:47:24.861Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9t0007lnryuqr79mb4j",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Polic\u00eda",
+            "emoji": "\ud83d\udc6e",
+            "color": "#1D4ED8",
+            "description": "Tickets de polic\u00eda",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Polic\u00eda. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 5,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.813Z",
+            "updatedAt": "2026-06-12T21:47:31.813Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh1940015nru6a6qjz1k3",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "EMS",
+            "emoji": "\ud83d\ude91",
+            "color": "#DC2626",
+            "description": "Tickets m\u00e9dicos",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de EMS. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 6,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.400Z",
+            "updatedAt": "2026-06-12T09:37:57.400Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4fx0015nryu1ab30jlp",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "EMS",
+            "emoji": "\ud83d\ude91",
+            "color": "#DC2626",
+            "description": "Tickets m\u00e9dicos",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de EMS. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 6,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.862Z",
+            "updatedAt": "2026-06-12T21:47:24.862Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9t1007nnryu6m11m5qm",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "EMS",
+            "emoji": "\ud83d\ude91",
+            "color": "#DC2626",
+            "description": "Tickets m\u00e9dicos",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de EMS. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 6,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.814Z",
+            "updatedAt": "2026-06-12T21:47:31.814Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh1940017nru62luq0u7u",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Gobierno",
+            "emoji": "\ud83c\udfdb\ufe0f",
+            "color": "#D97706",
+            "description": "Asuntos gubernamentales",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Gobierno. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 7,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.401Z",
+            "updatedAt": "2026-06-12T09:37:57.401Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4fy0017nryu8frtto4p",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Gobierno",
+            "emoji": "\ud83c\udfdb\ufe0f",
+            "color": "#D97706",
+            "description": "Asuntos gubernamentales",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Gobierno. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 7,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.863Z",
+            "updatedAt": "2026-06-12T21:47:24.863Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9t2007pnryuids87t5p",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Gobierno",
+            "emoji": "\ud83c\udfdb\ufe0f",
+            "color": "#D97706",
+            "description": "Asuntos gubernamentales",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Gobierno. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 7,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.814Z",
+            "updatedAt": "2026-06-12T21:47:31.814Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh1960019nru68riwme5w",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Facciones",
+            "emoji": "\u2694\ufe0f",
+            "color": "#7C3AED",
+            "description": "Gesti\u00f3n de facciones",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Facciones. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 8,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.402Z",
+            "updatedAt": "2026-06-12T09:37:57.402Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4fz0019nryuaikcp4ob",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Facciones",
+            "emoji": "\u2694\ufe0f",
+            "color": "#7C3AED",
+            "description": "Gesti\u00f3n de facciones",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Facciones. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 8,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.863Z",
+            "updatedAt": "2026-06-12T21:47:24.863Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9t3007rnryum591xiss",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Facciones",
+            "emoji": "\u2694\ufe0f",
+            "color": "#7C3AED",
+            "description": "Gesti\u00f3n de facciones",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Facciones. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 8,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.815Z",
+            "updatedAt": "2026-06-12T21:47:31.815Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqaqh196001bnru6oeqfixsg",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Bugs",
+            "emoji": "\ud83d\udc1b",
+            "color": "#6B7280",
+            "description": "Reportar bugs",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Bugs. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 9,
+            "isActive": true,
+            "createdAt": "2026-06-12T09:37:57.403Z",
+            "updatedAt": "2026-06-12T09:37:57.403Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj4g0001bnryubgwf62wi",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Bugs",
+            "emoji": "\ud83d\udc1b",
+            "color": "#6B7280",
+            "description": "Reportar bugs",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Bugs. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 9,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:24.864Z",
+            "updatedAt": "2026-06-12T21:47:24.864Z",
+            "_count": {
+                "tickets": 0
+            }
+        },
+        {
+            "id": "cmqbgj9t3007tnryui67mebad",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "name": "Bugs",
+            "emoji": "\ud83d\udc1b",
+            "color": "#6B7280",
+            "description": "Reportar bugs",
+            "staffRoleId": null,
+            "logChannelId": null,
+            "customMessage": "Hola, gracias por abrir un ticket de Bugs. Un miembro del staff te atender\u00e1 pronto.",
+            "position": 9,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.816Z",
+            "updatedAt": "2026-06-12T21:47:31.816Z",
+            "_count": {
+                "tickets": 0
+            }
+        }
+    ],
+    "recentLogs": [
+        {
+            "id": "cmqbgj9ui00btnryuwnl22dus",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "whitelist_apply",
+            "description": "Nueva solicitud de whitelist",
+            "metadata": "{\"index\":48}",
+            "createdAt": "2026-06-12T21:47:31.867Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9uj00bvnryu515omd99",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "reaction_add",
+            "description": "Reacci\u00f3n a\u00f1adida para rol",
+            "metadata": "{\"index\":49}",
+            "createdAt": "2026-06-12T21:47:31.867Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9uh00brnryuwc4g5411",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "message_edit",
+            "description": "Mensaje editado",
+            "metadata": "{\"index\":47}",
+            "createdAt": "2026-06-12T21:47:31.866Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9ug00bnnryurbtf8eh4",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "ticket_close",
+            "description": "Ticket cerrado",
+            "metadata": "{\"index\":45}",
+            "createdAt": "2026-06-12T21:47:31.865Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9uh00bpnryudl4244pn",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "message_delete",
+            "description": "Mensaje eliminado por auto-mod",
+            "metadata": "{\"index\":46}",
+            "createdAt": "2026-06-12T21:47:31.865Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9uf00blnryurw85zyse",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "ticket_create",
+            "description": "Ticket de soporte creado",
+            "metadata": "{\"index\":44}",
+            "createdAt": "2026-06-12T21:47:31.864Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9uf00bjnryudwe9k8wz",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "role_add",
+            "description": "Rol Verificado a\u00f1adido",
+            "metadata": "{\"index\":43}",
+            "createdAt": "2026-06-12T21:47:31.863Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9ud00bfnryuswfy5k8t",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "leave",
+            "description": "Usuario sali\u00f3 del servidor",
+            "metadata": "{\"index\":41}",
+            "createdAt": "2026-06-12T21:47:31.862Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9ue00bhnryun9zz13vg",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "ban",
+            "description": "Usuario baneado por spam",
+            "metadata": "{\"index\":42}",
+            "createdAt": "2026-06-12T21:47:31.862Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        },
+        {
+            "id": "cmqbgj9uc00bbnryupa7dyo2u",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "type": "reaction_add",
+            "description": "Reacci\u00f3n a\u00f1adida para rol",
+            "metadata": "{\"index\":39}",
+            "createdAt": "2026-06-12T21:47:31.861Z",
+            "user": {
+                "username": "AdminDemo",
+                "avatar": "https://cdn.discordapp.com/embed/avatars/0.png"
+            }
+        }
+    ],
+    "modActions": [
+        {
+            "id": "cmqbgj9te008jnryuaxnjyc7l",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "moderatorId": "cmqaqh18e0000nru61kpsovut",
+            "type": "warn",
+            "reason": "Lenguaje inapropiado",
+            "duration": null,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.827Z",
+            "moderator": {
+                "username": "AdminDemo"
+            },
+            "target": {
+                "username": "AdminDemo"
+            }
+        },
+        {
+            "id": "cmqbgj9tf008lnryue1ebv3t9",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "moderatorId": "cmqaqh18e0000nru61kpsovut",
+            "type": "kick",
+            "reason": "Invitaciones no autorizadas",
+            "duration": null,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.827Z",
+            "moderator": {
+                "username": "AdminDemo"
+            },
+            "target": {
+                "username": "AdminDemo"
+            }
+        },
+        {
+            "id": "cmqbgj9te008hnryu9cdl5qnp",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "moderatorId": "cmqaqh18e0000nru61kpsovut",
+            "type": "ban",
+            "reason": "Uso de exploits",
+            "duration": null,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.826Z",
+            "moderator": {
+                "username": "AdminDemo"
+            },
+            "target": {
+                "username": "AdminDemo"
+            }
+        },
+        {
+            "id": "cmqbgj9td008fnryufmwnl7cb",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "moderatorId": "cmqaqh18e0000nru61kpsovut",
+            "type": "timeout",
+            "reason": "Comportamiento t\u00f3xico",
+            "duration": "1h",
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.825Z",
+            "moderator": {
+                "username": "AdminDemo"
+            },
+            "target": {
+                "username": "AdminDemo"
+            }
+        },
+        {
+            "id": "cmqbgj9tc008dnryu77uytazu",
+            "serverId": "cmqaqh18g0001nru62iahs7hh",
+            "userId": "cmqaqh18e0000nru61kpsovut",
+            "moderatorId": "cmqaqh18e0000nru61kpsovut",
+            "type": "warn",
+            "reason": "Spam en chat general",
+            "duration": null,
+            "isActive": true,
+            "createdAt": "2026-06-12T21:47:31.824Z",
+            "moderator": {
+                "username": "AdminDemo"
+            },
+            "target": {
+                "username": "AdminDemo"
+            }
+        }
+    ],
+    "healthMetrics": {
+        "automod": 100,
+        "activity": 67,
+        "security": 100,
+        "engagement": 85
+    },
+    "discordData": null,
+    "serverInfo": {
+        "name": "FiveM Roleplay Espa\u00f1a",
+        "icon": null,
+        "boostCount": 0,
+        "boostTier": 0,
+        "emojiCount": 0,
+        "roleCount": 0,
+        "automodRules": 18,
+        "totalAutomodRules": 18,
+        "hasVerification": true,
+        "raidProtectionEnabled": true
+    }
+}

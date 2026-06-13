@@ -1,0 +1,644 @@
+     1→'use client'
+     2→
+     3→import { useAppStore } from '@/lib/store'
+     4→import { motion } from 'framer-motion'
+     5→import {
+     6→  Users, Ticket, Shield, BarChart3, Activity, Clock,
+     7→  TrendingUp, TrendingDown, AlertCircle, CheckCircle2,
+     8→  XCircle, Eye, RefreshCw, Zap, Crown, MessageSquare,
+     9→  ShieldCheck, ShieldAlert
+    10→} from 'lucide-react'
+    11→import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+    12→import { Badge } from '@/components/ui/badge'
+    13→import { Progress } from '@/components/ui/progress'
+    14→import { ScrollArea } from '@/components/ui/scroll-area'
+    15→import { Button } from '@/components/ui/button'
+    16→import { useEffect, useState, useCallback } from 'react'
+    17→import {
+    18→  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+    19→  ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell
+    20→} from 'recharts'
+    21→
+    22→interface ServerStats {
+    23→  openTickets: number
+    24→  closedTickets: number
+    25→  totalMembers: number
+    26→  onlineMembers?: number
+    27→  moderationCount: number
+    28→  activePolls: number
+    29→  activeGiveaways: number
+    30→  whitelistPending: number
+    31→  logsToday: number
+    32→  totalLogs?: number
+    33→  chartData: { date: string; joins: number; leaves: number; tickets: number }[]
+    34→  ticketsByCategory: { name: string; emoji: string; _count: { tickets: number } }[]
+    35→  recentLogs: { type: string; description: string; createdAt: string; user?: { username: string } }[]
+    36→  modActions: { type: string; reason: string | null; createdAt: string; moderator: { username: string }; target: { username: string } }[]
+    37→  healthMetrics?: {
+    38→    automod: number
+    39→    activity: number
+    40→    security: number
+    41→    engagement: number
+    42→  }
+    43→  discordData?: {
+    44→    approximate_member_count: number
+    45→    approximate_presence_count: number
+    46→    boost_count: number
+    47→    boost_tier: number
+    48→    emoji_count: number
+    49→    role_count: number
+    50→    description: string | null
+    51→    banner: string | null
+    52→  } | null
+    53→  serverInfo?: {
+    54→    name: string
+    55→    icon: string | null
+    56→    boostCount: number
+    57→    boostTier: number
+    58→    emojiCount: number
+    59→    roleCount: number
+    60→    automodRules: number
+    61→    totalAutomodRules: number
+    62→    hasVerification: boolean
+    63→    raidProtectionEnabled: boolean
+    64→  }
+    65→}
+    66→
+    67→const container = {
+    68→  hidden: { opacity: 0 },
+    69→  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+    70→}
+    71→const item = {
+    72→  hidden: { opacity: 0, y: 15 },
+    73→  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+    74→}
+    75→
+    76→const COLORS = ['#FF6600', '#FFD700', '#DC2626', '#FF8C00', '#00B4D8', '#EC4899', '#10B981', '#F97316', '#6366F1', '#14B8A6']
+    77→
+    78→const logTypeColors: Record<string, string> = {
+    79→  join: 'bg-emerald-500/20 text-emerald-400',
+    80→  leave: 'bg-red-500/20 text-red-400',
+    81→  ban: 'bg-red-500/20 text-red-400',
+    82→  unban: 'bg-emerald-500/20 text-emerald-400',
+    83→  role_add: 'bg-blue-500/20 text-blue-400',
+    84→  role_remove: 'bg-orange-500/20 text-orange-400',
+    85→  ticket_create: 'bg-[#DC2626]/20 text-[#DC2626]',
+    86→  ticket_close: 'bg-fuchsia-500/20 text-fuchsia-400',
+    87→  message_delete: 'bg-yellow-500/20 text-yellow-400',
+    88→  message_edit: 'bg-cyan-500/20 text-cyan-400',
+    89→  whitelist_apply: 'bg-teal-500/20 text-teal-400',
+    90→  reaction_add: 'bg-pink-500/20 text-pink-400',
+    91→}
+    92→
+    93→const modTypeColors: Record<string, string> = {
+    94→  ban: 'bg-red-500/20 text-red-400 border-red-500/30',
+    95→  kick: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    96→  timeout: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    97→  warn: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    98→  softban: 'bg-red-500/20 text-red-400 border-red-500/30',
+    99→  unban: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+   100→}
+   101→
+   102→export function DashboardHome() {
+   103→  const { currentServer, setCurrentServer } = useAppStore()
+   104→  const [stats, setStats] = useState<ServerStats | null>(null)
+   105→  const [loading, setLoading] = useState(true)
+   106→  const [refreshing, setRefreshing] = useState(false)
+   107→
+   108→  const fetchStats = useCallback(async () => {
+   109→    if (!currentServer) return
+   110→    try {
+   111→      const res = await fetch(`/api/stats?serverId=${currentServer.id}`)
+   112→      const data = await res.json()
+   113→      // Only set stats if valid data was returned (not an error response)
+   114→      if (data && !data.error) {
+   115→        setStats(data)
+   116→        // Update currentServer in store if member count changed
+   117→        if (data.totalMembers && data.totalMembers !== currentServer.memberCount) {
+   118→          setCurrentServer({ ...currentServer, memberCount: data.totalMembers })
+   119→        }
+   120→      } else if (!stats) {
+   121→        // If we have no stats at all and got an error, set default empty stats
+   122→        // but try to get live member count from Discord guilds API
+   123→        let liveMemberCount = currentServer?.memberCount || 0
+   124→        try {
+   125→          const guildsRes = await fetch('/api/discord/guilds')
+   126→          const guildsData = await guildsRes.json()
+   127→          if (guildsData.guilds) {
+   128→            const matchingGuild = guildsData.guilds.find((g: any) => g.id === currentServer?.discordId)
+   129→            if (matchingGuild?.approximate_member_count) {
+   130→              liveMemberCount = matchingGuild.approximate_member_count
+   131→              // Also update the server in DB
+   132→              await fetch('/api/sync', {
+   133→                method: 'POST',
+   134→                headers: { 'Content-Type': 'application/json' },
+   135→                body: JSON.stringify({
+   136→                  discordId: currentServer?.discordId,
+   137→                  name: currentServer?.name,
+   138→                  icon: currentServer?.icon,
+   139→                  memberCount: liveMemberCount,
+   140→                  ownerId: 'unknown',
+   141→                }),
+   142→              })
+   143→              setCurrentServer({ ...currentServer, memberCount: liveMemberCount })
+   144→            }
+   145→          }
+   146→        } catch {
+   147→          // Ignore - use existing memberCount
+   148→        }
+   149→        setStats({
+   150→          openTickets: 0, closedTickets: 0, totalMembers: liveMemberCount,
+   151→          moderationCount: 0, activePolls: 0, activeGiveaways: 0,
+   152→          whitelistPending: 0, logsToday: 0, chartData: [],
+   153→          ticketsByCategory: [], recentLogs: [], modActions: [],
+   154→          healthMetrics: { automod: 0, activity: 0, security: 0, engagement: 0 },
+   155→          discordData: null,
+   156→          serverInfo: {
+   157→            name: currentServer?.name || '', icon: currentServer?.icon || null,
+   158→            boostCount: 0, boostTier: 0, emojiCount: 0, roleCount: 0,
+   159→            automodRules: 0, totalAutomodRules: 0,
+   160→            hasVerification: false, raidProtectionEnabled: false,
+   161→          },
+   162→        })
+   163→      }
+   164→    } catch (err) {
+   165→      console.error('Failed to fetch stats:', err)
+   166→      // On network error, set empty stats if we don't have any
+   167→      if (!stats) {
+   168→        setStats({
+   169→          openTickets: 0, closedTickets: 0, totalMembers: currentServer?.memberCount || 0,
+   170→          moderationCount: 0, activePolls: 0, activeGiveaways: 0,
+   171→          whitelistPending: 0, logsToday: 0, chartData: [],
+   172→          ticketsByCategory: [], recentLogs: [], modActions: [],
+   173→          healthMetrics: { automod: 0, activity: 0, security: 0, engagement: 0 },
+   174→          discordData: null,
+   175→          serverInfo: {
+   176→            name: currentServer?.name || '', icon: currentServer?.icon || null,
+   177→            boostCount: 0, boostTier: 0, emojiCount: 0, roleCount: 0,
+   178→            automodRules: 0, totalAutomodRules: 0,
+   179→            hasVerification: false, raidProtectionEnabled: false,
+   180→          },
+   181→        })
+   182→      }
+   183→    } finally {
+   184→      setLoading(false)
+   185→      setRefreshing(false)
+   186→    }
+   187→  }, [currentServer, stats, setCurrentServer])
+   188→
+   189→  const handleRefresh = async () => {
+   190→    if (refreshing) return
+   191→    setRefreshing(true)
+   192→    // First refresh from Discord
+   193→    try {
+   194→      await fetch('/api/servers/refresh', {
+   195→        method: 'POST',
+   196→        headers: { 'Content-Type': 'application/json' },
+   197→        body: JSON.stringify({ serverId: currentServer?.id }),
+   198→      })
+   199→    } catch {
+   200→      // ignore
+   201→    }
+   202→    // Then fetch updated stats
+   203→    await fetchStats()
+   204→  }
+   205→
+   206→  useEffect(() => {
+   207→    if (!currentServer) return
+   208→    setLoading(true)
+   209→    fetchStats()
+   210→  }, [currentServer, fetchStats])
+   211→
+   212→  if (!currentServer) {
+   213→    return (
+   214→      <div className="flex items-center justify-center h-64">
+   215→        <p className="text-muted-foreground">Selecciona un servidor para ver estadísticas</p>
+   216→      </div>
+   217→    )
+   218→  }
+   219→
+   220→  if (loading || !stats) {
+   221→    return (
+   222→      <div className="space-y-4 p-6">
+   223→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+   224→          {[...Array(4)].map((_, i) => (
+   225→            <div key={i} className="h-28 rounded-xl bg-card/50 animate-pulse" />
+   226→          ))}
+   227→        </div>
+   228→        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   229→          <div className="lg:col-span-2 h-64 rounded-xl bg-card/50 animate-pulse" />
+   230→          <div className="h-64 rounded-xl bg-card/50 animate-pulse" />
+   231→        </div>
+   232→      </div>
+   233→    )
+   234→  }
+   235→
+   236→  const healthMetrics = stats.healthMetrics || { automod: 0, activity: 0, security: 0, engagement: 0 }
+   237→  const serverInfo = stats.serverInfo
+   238→  const discordData = stats.discordData
+   239→  const onlineMembers = stats.onlineMembers || discordData?.approximate_presence_count || 0
+   240→
+   241→  const statCards = [
+   242→    {
+   243→      label: 'Miembros',
+   244→      value: stats.totalMembers.toLocaleString(),
+   245→      subValue: onlineMembers > 0 ? `${onlineMembers.toLocaleString()} en línea` : undefined,
+   246→      icon: Users,
+   247→      color: 'from-[#FF6600] to-[#DC2626]',
+   248→      change: stats.totalMembers > 0 ? 'Activos' : 'Sin datos',
+   249→      up: stats.totalMembers > 0,
+   250→    },
+   251→    {
+   252→      label: 'Tickets Abiertos',
+   253→      value: stats.openTickets.toString(),
+   254→      subValue: stats.closedTickets > 0 ? `${stats.closedTickets} cerrados` : undefined,
+   255→      icon: Ticket,
+   256→      color: 'from-[#FFD700] to-[#FF6600]',
+   257→      change: `${stats.closedTickets} cerrados`,
+   258→      up: true,
+   259→    },
+   260→    {
+   261→      label: 'Moderaciones',
+   262→      value: stats.moderationCount.toString(),
+   263→      icon: Shield,
+   264→      color: 'from-[#DC2626] to-[#FF8C00]',
+   265→      change: `${stats.logsToday} logs hoy`,
+   266→      up: false,
+   267→    },
+   268→    {
+   269→      label: 'Whitelist Pendiente',
+   270→      value: stats.whitelistPending.toString(),
+   271→      icon: AlertCircle,
+   272→      color: 'from-[#00B4D8] to-[#FF6600]',
+   273→      change: `${stats.activePolls} encuestas`,
+   274→      up: true,
+   275→    },
+   276→  ]
+   277→
+   278→  const pieData = (stats.ticketsByCategory || []).map(cat => ({ name: cat.name, value: cat._count?.tickets || 0 }))
+   279→
+   280→  const boostTierLabels = ['Sin Boost', 'Nivel 1', 'Nivel 2', 'Nivel 3']
+   281→
+   282→  return (
+   283→    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 p-6">
+   284→      {/* Welcome banner with server info */}
+   285→      <motion.div variants={item}>
+   286→        <Card className="border-0 overflow-hidden relative forge-card-premium" style={{ background: 'linear-gradient(135deg, rgba(255,102,0,0.08) 0%, rgba(255,58,47,0.04) 50%, transparent 100%)' }}>
+   287→          <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+   288→          <div className="absolute -right-10 -top-10 w-40 h-40 opacity-[0.04] pointer-events-none" style={{ background: 'radial-gradient(ellipse 40% 70% at 50% 60%, #FF6600 0%, #DC2626 30%, #FF8C00 60%, transparent 100%)', clipPath: 'polygon(50% 0%, 75% 25%, 90% 50%, 85% 75%, 70% 90%, 50% 100%, 30% 90%, 15% 75%, 10% 50%, 25% 25%)' }} />
+   289→          <CardHeader className="relative">
+   290→            <div className="flex items-center justify-between">
+   291→              <div>
+   292→                <CardTitle className="text-xl">
+   293→                  ¡Bienvenido a <span className="animate-gradient-text">{currentServer.name}</span>!
+   294→                </CardTitle>
+   295→                <CardDescription>Resumen de la actividad del servidor</CardDescription>
+   296→              </div>
+   297→              <Button
+   298→                variant="ghost"
+   299→                size="sm"
+   300→                onClick={handleRefresh}
+   301→                disabled={refreshing}
+   302→                className="text-[#888] hover:text-[#FF6600] hover:bg-[#FF6600]/10 gap-1.5 shrink-0"
+   303→              >
+   304→                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+   305→                {refreshing ? 'Actualizando...' : 'Actualizar'}
+   306→              </Button>
+   307→            </div>
+   308→            {/* Server quick info bar */}
+   309→            {serverInfo && (
+   310→              <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-white/5">
+   311→                {discordData && discordData.boost_count > 0 && (
+   312→                  <div className="flex items-center gap-1.5 text-xs text-[#FF6600]">
+   313→                    <Zap className="w-3.5 h-3.5" />
+   314→                    <span>{discordData.boost_count} boosts</span>
+   315→                    <span className="text-[#888]">({boostTierLabels[discordData.boost_tier] || 'Nivel 0'})</span>
+   316→                  </div>
+   317→                )}
+   318→                {serverInfo.emojiCount > 0 && (
+   319→                  <div className="flex items-center gap-1.5 text-xs text-[#888]">
+   320→                    <MessageSquare className="w-3.5 h-3.5" />
+   321→                    <span>{serverInfo.emojiCount} emojis</span>
+   322→                  </div>
+   323→                )}
+   324→                {serverInfo.roleCount > 0 && (
+   325→                  <div className="flex items-center gap-1.5 text-xs text-[#888]">
+   326→                    <Shield className="w-3.5 h-3.5" />
+   327→                    <span>{serverInfo.roleCount} roles</span>
+   328→                  </div>
+   329→                )}
+   330→                {serverInfo.automodRules > 0 && (
+   331→                  <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+   332→                    <ShieldCheck className="w-3.5 h-3.5" />
+   333→                    <span>{serverInfo.automodRules} reglas AutoMod</span>
+   334→                  </div>
+   335→                )}
+   336→                {serverInfo.raidProtectionEnabled && (
+   337→                  <div className="flex items-center gap-1.5 text-xs text-[#00B4D8]">
+   338→                    <ShieldAlert className="w-3.5 h-3.5" />
+   339→                    <span>AntiRaid activo</span>
+   340→                  </div>
+   341→                )}
+   342→                {serverInfo.hasVerification && (
+   343→                  <div className="flex items-center gap-1.5 text-xs text-[#FFD700]">
+   344→                    <CheckCircle2 className="w-3.5 h-3.5" />
+   345→                    <span>Verificación activa</span>
+   346→                  </div>
+   347→                )}
+   348→              </div>
+   349→            )}
+   350→          </CardHeader>
+   351→        </Card>
+   352→      </motion.div>
+   353→
+   354→      {/* Stat cards */}
+   355→      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+   356→        {statCards.map((stat, i) => (
+   357→          <motion.div
+   358→            key={stat.label}
+   359→            initial={{ opacity: 0, y: 15 }}
+   360→            animate={{ opacity: 1, y: 0 }}
+   361→            transition={{ delay: i * 0.1 }}
+   362→          >
+   363→            <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 overflow-hidden forge-card-premium">
+   364→              <CardContent className="p-4">
+   365→                <div className="flex items-start justify-between">
+   366→                  <div>
+   367→                    <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
+   368→                    <p className="text-2xl font-bold mt-1">{stat.value}</p>
+   369→                    {stat.subValue && (
+   370→                      <p className="text-[11px] text-[#00B4D8] mt-0.5">{stat.subValue}</p>
+   371→                    )}
+   372→                    <div className="flex items-center gap-1 mt-1">
+   373→                      {stat.up ? (
+   374→                        <TrendingUp className="w-3 h-3 text-emerald-400" />
+   375→                      ) : (
+   376→                        <TrendingDown className="w-3 h-3 text-[#FF6600]" />
+   377→                      )}
+   378→                      <span className="text-[11px] text-muted-foreground">{stat.change}</span>
+   379→                    </div>
+   380→                  </div>
+   381→                  <motion.div
+   382→                    className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center opacity-80 group-hover:opacity-100 transition-all shadow-[0_0_12px_rgba(255,102,0,0.15)] group-hover:shadow-[0_0_16px_rgba(255,102,0,0.25)]`}
+   383→                    whileHover={{ rotate: 5, scale: 1.1 }}
+   384→                  >
+   385→                    <stat.icon className="w-5 h-5 text-white" />
+   386→                  </motion.div>
+   387→                </div>
+   388→              </CardContent>
+   389→            </Card>
+   390→          </motion.div>
+   391→        ))}
+   392→      </motion.div>
+   393→
+   394→      {/* Charts row */}
+   395→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   396→        {/* Activity chart */}
+   397→        <motion.div variants={item} className="lg:col-span-2">
+   398→          <Card>
+   399→            <CardHeader className="pb-2">
+   400→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   401→                <Activity className="w-4 h-4 text-[#FF6600]" />
+   402→                Actividad del Servidor
+   403→              </CardTitle>
+   404→              <CardDescription>Últimos 7 días</CardDescription>
+   405→            </CardHeader>
+   406→            <CardContent>
+   407→              <ResponsiveContainer width="100%" height={250}>
+   408→                <AreaChart data={stats.chartData}>
+   409→                  <defs>
+   410→                    <linearGradient id="colorJoins" x1="0" y1="0" x2="0" y2="1">
+   411→                      <stop offset="5%" stopColor="#FF6600" stopOpacity={0.3} />
+   412→                      <stop offset="95%" stopColor="#FF6600" stopOpacity={0} />
+   413→                    </linearGradient>
+   414→                    <linearGradient id="colorLeaves" x1="0" y1="0" x2="0" y2="1">
+   415→                      <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
+   416→                      <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+   417→                    </linearGradient>
+   418→                  </defs>
+   419→                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+   420→                  <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+   421→                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+   422→                  <RechartsTooltip
+   423→                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+   424→                  />
+   425→                  <Area type="monotone" dataKey="joins" stroke="#FF6600" fill="url(#colorJoins)" strokeWidth={2} name="Entradas" />
+   426→                  <Area type="monotone" dataKey="leaves" stroke="#EF4444" fill="url(#colorLeaves)" strokeWidth={2} name="Salidas" />
+   427→                </AreaChart>
+   428→              </ResponsiveContainer>
+   429→            </CardContent>
+   430→          </Card>
+   431→        </motion.div>
+   432→
+   433→        {/* Tickets by category */}
+   434→        <motion.div variants={item}>
+   435→          <Card>
+   436→            <CardHeader className="pb-2">
+   437→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   438→                <Ticket className="w-4 h-4 text-fuchsia-400" />
+   439→                Tickets por Categoría
+   440→              </CardTitle>
+   441→            </CardHeader>
+   442→            <CardContent>
+   443→              {pieData.length > 0 && pieData.some(d => d.value > 0) ? (
+   444→                <>
+   445→                  <ResponsiveContainer width="100%" height={200}>
+   446→                    <PieChart>
+   447→                      <Pie
+   448→                        data={pieData}
+   449→                        cx="50%"
+   450→                        cy="50%"
+   451→                        innerRadius={50}
+   452→                        outerRadius={80}
+   453→                        paddingAngle={3}
+   454→                        dataKey="value"
+   455→                      >
+   456→                        {pieData.map((_, index) => (
+   457→                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+   458→                        ))}
+   459→                      </Pie>
+   460→                      <RechartsTooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
+   461→                    </PieChart>
+   462→                  </ResponsiveContainer>
+   463→                  <div className="grid grid-cols-2 gap-1 mt-2">
+   464→                    {(stats.ticketsByCategory || []).slice(0, 6).map((cat, i) => (
+   465→                      <div key={`cat-${i}-${cat.name}`} className="flex items-center gap-1.5">
+   466→                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+   467→                        <span className="text-[10px] text-muted-foreground truncate">{cat.emoji} {cat.name}</span>
+   468→                      </div>
+   469→                    ))}
+   470→                  </div>
+   471→                </>
+   472→              ) : (
+   473→                <div className="flex flex-col items-center justify-center h-[200px] text-center">
+   474→                  <Ticket className="w-8 h-8 text-muted-foreground/30 mb-2" />
+   475→                  <p className="text-xs text-muted-foreground">Sin categorías de tickets</p>
+   476→                  <p className="text-[10px] text-muted-foreground/60">Crea categorías desde la sección de Tickets</p>
+   477→                </div>
+   478→              )}
+   479→            </CardContent>
+   480→          </Card>
+   481→        </motion.div>
+   482→      </div>
+   483→
+   484→      {/* Bottom row */}
+   485→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   486→        {/* Recent logs */}
+   487→        <motion.div variants={item}>
+   488→          <Card>
+   489→            <CardHeader className="pb-2">
+   490→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   491→                <Clock className="w-4 h-4 text-emerald-400" />
+   492→                Actividad Reciente
+   493→                {stats.totalLogs !== undefined && (
+   494→                  <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-muted/50">{stats.totalLogs} total</Badge>
+   495→                )}
+   496→              </CardTitle>
+   497→            </CardHeader>
+   498→            <CardContent>
+   499→              <ScrollArea className="h-64">
+   500→                {stats.recentLogs.length > 0 ? (
+   501→                  <div className="space-y-2">
+   502→                    {stats.recentLogs.map((log, i) => (
+   503→                      <motion.div
+   504→                        key={i}
+   505→                        initial={{ opacity: 0, x: -10 }}
+   506→                        animate={{ opacity: 1, x: 0 }}
+   507→                        transition={{ delay: i * 0.05 }}
+   508→                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-accent/30 transition-colors"
+   509→                      >
+   510→                        <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 ${logTypeColors[log.type] || 'bg-muted text-muted-foreground'}`}>
+   511→                          {log.type}
+   512→                        </Badge>
+   513→                        <p className="text-xs flex-1 truncate">{log.description}</p>
+   514→                        <span className="text-[10px] text-muted-foreground shrink-0">
+   515→                          {new Date(log.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+   516→                        </span>
+   517→                      </motion.div>
+   518→                    ))}
+   519→                  </div>
+   520→                ) : (
+   521→                  <div className="flex flex-col items-center justify-center h-48 text-center">
+   522→                    <Clock className="w-8 h-8 text-muted-foreground/30 mb-2" />
+   523→                    <p className="text-xs text-muted-foreground">Sin actividad reciente</p>
+   524→                    <p className="text-[10px] text-muted-foreground/60">La actividad aparecerá cuando el bot esté activo</p>
+   525→                  </div>
+   526→                )}
+   527→              </ScrollArea>
+   528→            </CardContent>
+   529→          </Card>
+   530→        </motion.div>
+   531→
+   532→        {/* Recent moderation */}
+   533→        <motion.div variants={item}>
+   534→          <Card>
+   535→            <CardHeader className="pb-2">
+   536→              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   537→                <Shield className="w-4 h-4 text-orange-400" />
+   538→                Acciones de Moderación
+   539→              </CardTitle>
+   540→            </CardHeader>
+   541→            <CardContent>
+   542→              <ScrollArea className="h-64">
+   543→                {stats.modActions.length > 0 ? (
+   544→                  <div className="space-y-2">
+   545→                    {stats.modActions.map((action, i) => (
+   546→                      <motion.div
+   547→                        key={i}
+   548→                        initial={{ opacity: 0, x: -10 }}
+   549→                        animate={{ opacity: 1, x: 0 }}
+   550→                        transition={{ delay: i * 0.05 }}
+   551→                        className="p-3 rounded-lg border border-border/50 hover:bg-accent/30 transition-colors"
+   552→                      >
+   553→                        <div className="flex items-center gap-2 mb-1">
+   554→                          <Badge variant="secondary" className={`text-[9px] px-1.5 py-0 border ${modTypeColors[action.type] || 'bg-muted text-muted-foreground'}`}>
+   555→                            {action.type.toUpperCase()}
+   556→                          </Badge>
+   557→                          <span className="text-[10px] text-muted-foreground">
+   558→                            {new Date(action.createdAt).toLocaleDateString('es-ES')}
+   559→                          </span>
+   560→                        </div>
+   561→                        <p className="text-xs">{action.moderator?.username || 'Desconocido'} → {action.target?.username || 'Desconocido'}</p>
+   562→                        {action.reason && <p className="text-[11px] text-muted-foreground mt-0.5">Razón: {action.reason}</p>}
+   563→                      </motion.div>
+   564→                    ))}
+   565→                  </div>
+   566→                ) : (
+   567→                  <div className="flex flex-col items-center justify-center h-48 text-center">
+   568→                    <Shield className="w-8 h-8 text-muted-foreground/30 mb-2" />
+   569→                    <p className="text-xs text-muted-foreground">Sin acciones de moderación</p>
+   570→                    <p className="text-[10px] text-muted-foreground/60">Las acciones aparecerán cuando se moderen usuarios</p>
+   571→                  </div>
+   572→                )}
+   573→              </ScrollArea>
+   574→            </CardContent>
+   575→          </Card>
+   576→        </motion.div>
+   577→      </div>
+   578→
+   579→      {/* Server health - now with real computed metrics */}
+   580→      <motion.div variants={item}>
+   581→        <Card>
+   582→          <CardHeader className="pb-2">
+   583→            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+   584→              <BarChart3 className="w-4 h-4 text-cyan-400" />
+   585→              Salud del Servidor
+   586→              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-[#FF6600]/10 text-[#FF6600]">En tiempo real</Badge>
+   587→            </CardTitle>
+   588→          </CardHeader>
+   589→          <CardContent>
+   590→            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+   591→              {[
+   592→                { label: 'Auto-Mod', value: healthMetrics.automod, color: 'bg-[#FF6600]', icon: ShieldCheck, desc: activeAutomodDesc(healthMetrics.automod) },
+   593→                { label: 'Actividad', value: healthMetrics.activity, color: 'bg-[#FFD700]', icon: Activity, desc: activityDesc(healthMetrics.activity) },
+   594→                { label: 'Seguridad', value: healthMetrics.security, color: 'bg-[#00B4D8]', icon: ShieldAlert, desc: securityDesc(healthMetrics.security) },
+   595→                { label: 'Engagement', value: healthMetrics.engagement, color: 'bg-[#DC2626]', icon: Zap, desc: engagementDesc(healthMetrics.engagement) },
+   596→              ].map(metric => (
+   597→                <div key={metric.label} className="space-y-2">
+   598→                  <div className="flex items-center justify-between">
+   599→                    <div className="flex items-center gap-1.5">
+   600→                      <metric.icon className="w-3 h-3 text-muted-foreground" />
+   601→                      <span className="text-xs text-muted-foreground">{metric.label}</span>
+   602→                    </div>
+   603→                    <span className="text-xs font-semibold">{metric.value}%</span>
+   604→                  </div>
+   605→                  <Progress value={metric.value} className="h-2" />
+   606→                  <p className="text-[9px] text-muted-foreground/60">{metric.desc}</p>
+   607→                </div>
+   608→              ))}
+   609→            </div>
+   610→          </CardContent>
+   611→        </Card>
+   612→      </motion.div>
+   613→    </motion.div>
+   614→  )
+   615→}
+   616→
+   617→function activeAutomodDesc(value: number): string {
+   618→  if (value >= 80) return 'AutoMod y AntiRaid activos'
+   619→  if (value >= 50) return 'Protección parcial activa'
+   620→  if (value > 0) return 'Protección básica'
+   621→  return 'Sin protección AutoMod'
+   622→}
+   623→
+   624→function activityDesc(value: number): string {
+   625→  if (value >= 70) return 'Servidor muy activo'
+   626→  if (value >= 40) return 'Actividad moderada'
+   627→  if (value > 0) return 'Baja actividad'
+   628→  return 'Sin actividad registrada'
+   629→}
+   630→
+   631→function securityDesc(value: number): string {
+   632→  if (value >= 75) return 'Seguridad completa'
+   633→  if (value >= 50) return 'Buena seguridad'
+   634→  if (value > 0) return 'Seguridad parcial'
+   635→  return 'Sin medidas de seguridad'
+   636→}
+   637→
+   638→function engagementDesc(value: number): string {
+   639→  if (value >= 70) return 'Alta participación'
+   640→  if (value >= 40) return 'Participación moderada'
+   641→  if (value > 0) return 'Baja participación'
+   642→  return 'Sin engagement registrado'
+   643→}
+   644→
