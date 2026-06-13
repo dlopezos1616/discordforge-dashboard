@@ -110,14 +110,50 @@ export function DashboardHome() {
     try {
       const res = await fetch(`/api/stats?serverId=${currentServer.id}`)
       const data = await res.json()
-      setStats(data)
-    } catch {
-      // ignore
+      // Only set stats if valid data was returned (not an error response)
+      if (data && !data.error) {
+        setStats(data)
+      } else if (!stats) {
+        // If we have no stats at all and got an error, set default empty stats
+        setStats({
+          openTickets: 0, closedTickets: 0, totalMembers: 0,
+          moderationCount: 0, activePolls: 0, activeGiveaways: 0,
+          whitelistPending: 0, logsToday: 0, chartData: [],
+          ticketsByCategory: [], recentLogs: [], modActions: [],
+          healthMetrics: { automod: 0, activity: 0, security: 0, engagement: 0 },
+          discordData: null,
+          serverInfo: {
+            name: currentServer.name, icon: currentServer.icon,
+            boostCount: 0, boostTier: 0, emojiCount: 0, roleCount: 0,
+            automodRules: 0, totalAutomodRules: 0,
+            hasVerification: false, raidProtectionEnabled: false,
+          },
+        })
+      }
+    } catch (err) {
+      console.error('Failed to fetch stats:', err)
+      // On network error, set empty stats if we don't have any
+      if (!stats) {
+        setStats({
+          openTickets: 0, closedTickets: 0, totalMembers: currentServer?.memberCount || 0,
+          moderationCount: 0, activePolls: 0, activeGiveaways: 0,
+          whitelistPending: 0, logsToday: 0, chartData: [],
+          ticketsByCategory: [], recentLogs: [], modActions: [],
+          healthMetrics: { automod: 0, activity: 0, security: 0, engagement: 0 },
+          discordData: null,
+          serverInfo: {
+            name: currentServer?.name || '', icon: currentServer?.icon || null,
+            boostCount: 0, boostTier: 0, emojiCount: 0, roleCount: 0,
+            automodRules: 0, totalAutomodRules: 0,
+            hasVerification: false, raidProtectionEnabled: false,
+          },
+        })
+      }
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [currentServer])
+  }, [currentServer, stats])
 
   const handleRefresh = async () => {
     if (refreshing) return
