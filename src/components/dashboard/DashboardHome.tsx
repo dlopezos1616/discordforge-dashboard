@@ -100,7 +100,7 @@ const modTypeColors: Record<string, string> = {
 }
 
 export function DashboardHome() {
-  const { currentServer } = useAppStore()
+  const { currentServer, setCurrentServer } = useAppStore()
   const [stats, setStats] = useState<ServerStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -113,10 +113,41 @@ export function DashboardHome() {
       // Only set stats if valid data was returned (not an error response)
       if (data && !data.error) {
         setStats(data)
+        // Update currentServer in store if member count changed
+        if (data.totalMembers && data.totalMembers !== currentServer.memberCount) {
+          setCurrentServer({ ...currentServer, memberCount: data.totalMembers })
+        }
       } else if (!stats) {
         // If we have no stats at all and got an error, set default empty stats
+        // but try to get live member count from Discord guilds API
+        let liveMemberCount = currentServer?.memberCount || 0
+        try {
+          const guildsRes = await fetch('/api/discord/guilds')
+          const guildsData = await guildsRes.json()
+          if (guildsData.guilds) {
+            const matchingGuild = guildsData.guilds.find((g: any) => g.id === currentServer?.discordId)
+            if (matchingGuild?.approximate_member_count) {
+              liveMemberCount = matchingGuild.approximate_member_count
+              // Also update the server in DB
+              await fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  discordId: currentServer?.discordId,
+                  name: currentServer?.name,
+                  icon: currentServer?.icon,
+                  memberCount: liveMemberCount,
+                  ownerId: 'unknown',
+                }),
+              })
+              setCurrentServer({ ...currentServer, memberCount: liveMemberCount })
+            }
+          }
+        } catch {
+          // Ignore - use existing memberCount
+        }
         setStats({
-          openTickets: 0, closedTickets: 0, totalMembers: 0,
+          openTickets: 0, closedTickets: 0, totalMembers: liveMemberCount,
           moderationCount: 0, activePolls: 0, activeGiveaways: 0,
           whitelistPending: 0, logsToday: 0, chartData: [],
           ticketsByCategory: [], recentLogs: [], modActions: [],
@@ -153,7 +184,7 @@ export function DashboardHome() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [currentServer, stats])
+  }, [currentServer, stats, setCurrentServer])
 
   const handleRefresh = async () => {
     if (refreshing) return

@@ -136,9 +136,12 @@ export async function GET(request: NextRequest) {
           )
           if (guildRes.ok) {
             const guildJson = await guildRes.json()
+            const memberCount = guildJson.approximate_member_count || 0
+            const presenceCount = guildJson.approximate_presence_count || 0
+
             discordData = {
-              approximate_member_count: guildJson.approximate_member_count || 0,
-              approximate_presence_count: guildJson.approximate_presence_count || 0,
+              approximate_member_count: memberCount,
+              approximate_presence_count: presenceCount,
               boost_count: guildJson.premium_subscription_count || 0,
               boost_tier: guildJson.premium_tier || 0,
               emoji_count: guildJson.emojis ? guildJson.emojis.length : 0,
@@ -147,12 +150,16 @@ export async function GET(request: NextRequest) {
               banner: guildJson.banner || null,
             }
 
-            // Update member count in DB if different
-            if (guildJson.approximate_member_count && guildJson.approximate_member_count !== server.memberCount) {
-              await db.server.update({
-                where: { id: serverId },
-                data: { memberCount: guildJson.approximate_member_count },
-              })
+            // Always update member count in DB with latest Discord data
+            if (memberCount > 0 && memberCount !== server.memberCount) {
+              try {
+                await db.server.update({
+                  where: { id: serverId },
+                  data: { memberCount },
+                })
+              } catch {
+                // Ignore DB update errors
+              }
             }
           }
         }
@@ -161,7 +168,56 @@ export async function GET(request: NextRequest) {
       // Non-critical: just use DB values if Discord API fails
     }
 
-    // Use Discord live data for member count if available
+    // If we still don't have Discord data, try the user guilds endpoint as fallback
+    if (!discordData) {
+      try {
+        const sessionCookie = request.cookies.get('discord_session')
+        if (sessionCookie?.value) {
+          const sessionData = JSON.parse(
+            Buffer.from(sessionCookie.value, 'base64').toString('utf-8')
+          )
+          if (sessionData.accessToken && sessionData.tokenType) {
+            const guildsRes = await fetch(
+              'https://discord.com/api/v10/users/@me/guilds?with_counts=true',
+              { headers: { Authorization: `${sessionData.tokenType} ${sessionData.accessToken}` } }
+            )
+            if (guildsRes.ok) {
+              const allGuilds = await guildsRes.json()
+              const matchingGuild = allGuilds.find((g: any) => g.id === server.discordId)
+              if (matchingGuild) {
+                const memberCount = matchingGuild.approximate_member_count || 0
+                const presenceCount = matchingGuild.approximate_presence_count || 0
+                if (memberCount > 0) {
+                  discordData = {
+                    approximate_member_count: memberCount,
+                    approximate_presence_count: presenceCount,
+                    boost_count: 0,
+                    boost_tier: 0,
+                    emoji_count: 0,
+                    role_count: 0,
+                    description: null,
+                    banner: null,
+                  }
+                  // Update DB with latest count
+                  if (memberCount !== server.memberCount) {
+                    try {
+                      await db.server.update({
+                        where: { id: serverId },
+                        data: { memberCount },
+                      })
+                    } catch { /* ignore */ }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Non-critical fallback
+      }
+    }
+
+    // Use Discord live data for member count if available, otherwise use DB value
     const liveMemberCount = discordData?.approximate_member_count || totalMembers
     const onlineCount = discordData?.approximate_presence_count || 0
 
