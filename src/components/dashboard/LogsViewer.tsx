@@ -363,7 +363,7 @@ export function LogsViewer() {
                               <div className="p-3 rounded-lg bg-background/50 border border-border/20 text-xs">
                                 <p className="text-muted-foreground mb-1">Metadatos:</p>
                                 <pre className="text-foreground whitespace-pre-wrap font-mono text-xs">
-                                  {JSON.stringify(JSON.parse(log.metadata || '{}'), null, 2)}
+                                  {(() => { try { return JSON.stringify(JSON.parse(log.metadata || '{}'), null, 2) } catch { return log.metadata || '{}' } })()}
                                 </pre>
                               </div>
                             </motion.div>

@@ -455,7 +455,7 @@ export function GiveawaysSystem() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Users className="w-3 h-3" />
-                        {giveaway.entries.length} participantes
+                        {(giveaway.entries?.length || 0)} participantes
                       </span>
                     </div>
 
@@ -506,17 +506,17 @@ export function GiveawaysSystem() {
                           {giveaway.prize}
                         </h4>
                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          <span>{giveaway.entries.length} participantes</span>
+                          <span>{giveaway.entries?.length || 0} participantes</span>
                           <span>{giveaway.winnerCount} ganador{giveaway.winnerCount > 1 ? 'es' : ''}</span>
                           <Calendar className="w-3 h-3" />
                           <span>{new Date(giveaway.createdAt).toLocaleDateString('es-ES')}</span>
                         </div>
-                        {giveaway.entries.length > 0 && (
+                        {(giveaway.entries?.length || 0) > 0 && (
                           <div className="mt-2 flex items-center gap-1.5">
                             <Trophy className="w-3.5 h-3.5 text-amber-400" />
                             <span className="text-xs">
                               Ganadores:{' '}
-                              {giveaway.entries.slice(0, giveaway.winnerCount).map(e => e.user.username).join(', ')}
+                              {(giveaway.entries || []).slice(0, giveaway.winnerCount).map(e => e.user?.username || 'Desconocido').join(', ')}
                             </span>
                           </div>
                         )}

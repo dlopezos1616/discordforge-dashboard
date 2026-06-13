@@ -175,17 +175,18 @@ export function PollsSystem() {
   }
 
   const getVoteDistribution = (poll: PollData) => {
-    const parsedOptions: string[] = JSON.parse(poll.options || '[]')
+    let parsedOptions: string[] = []
+    try { parsedOptions = JSON.parse(poll.options || '[]') } catch { parsedOptions = [] }
     const voteCounts: Record<string, number> = {}
     parsedOptions.forEach(opt => { voteCounts[opt] = 0 })
-    poll.votes.forEach(v => {
+    (poll.votes || []).forEach(v => {
       if (voteCounts[v.option] !== undefined) {
         voteCounts[v.option]++
       } else {
         voteCounts[v.option] = 1
       }
     })
-    const total = poll.votes.length || 1
+    const total = (poll.votes?.length) || 1
     return parsedOptions.map((opt, i) => ({
       name: opt,
       votes: voteCounts[opt] || 0,
@@ -195,10 +196,11 @@ export function PollsSystem() {
   }
 
   const getPieData = (poll: PollData) => {
-    const parsedOptions: string[] = JSON.parse(poll.options || '[]')
+    let parsedOptions: string[] = []
+    try { parsedOptions = JSON.parse(poll.options || '[]') } catch { parsedOptions = [] }
     const voteCounts: Record<string, number> = {}
     parsedOptions.forEach(opt => { voteCounts[opt] = 0 })
-    poll.votes.forEach(v => {
+    (poll.votes || []).forEach(v => {
       if (voteCounts[v.option] !== undefined) {
         voteCounts[v.option]++
       } else {
@@ -567,7 +569,7 @@ export function PollsSystem() {
                         <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Vote className="w-3 h-3" />
-                            {poll.votes.length} votos
+                            {poll.votes?.length || 0} votos
                           </span>
                           {poll.endsAt && (
                             <span className="flex items-center gap-1">

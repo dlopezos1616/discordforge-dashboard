@@ -489,9 +489,9 @@ export function TicketSystem() {
                                 <TableCell className="text-xs">
                                   <div className="flex items-center gap-1.5">
                                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#FF3A2F] to-[#FF6B00] flex items-center justify-center text-[8px] font-bold text-white shrink-0">
-                                      {ticket.creator.username[0]}
+                                      {ticket.creator?.username?.[0] || '?'}
                                     </div>
-                                    <span className="truncate max-w-[100px]">{ticket.creator.username}</span>
+                                    <span className="truncate max-w-[100px]">{ticket.creator?.username || 'Desconocido'}</span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-xs">
@@ -584,14 +584,14 @@ export function TicketSystem() {
                           <div className="flex items-center gap-2 mb-2">
                             <div
                               className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
-                              style={{ backgroundColor: ticket.category.color + '20' }}
+                              style={{ backgroundColor: (ticket.category?.color || '#FF6600') + '20' }}
                             >
-                              {ticket.category.emoji}
+                              {ticket.category?.emoji || '🎫'}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium truncate">{ticket.subject || 'Sin asunto'}</p>
                               <p className="text-[10px] text-muted-foreground">
-                                #{ticket.id.slice(-6).toUpperCase()} • {ticket.category.name}
+                                #{ticket.id.slice(-6).toUpperCase()} • {ticket.category?.name || 'Sin categoría'}
                               </p>
                             </div>
                           </div>
@@ -603,7 +603,7 @@ export function TicketSystem() {
                               })}
                             </span>
                             <span>•</span>
-                            <span>{ticket.creator.username}</span>
+                            <span>{ticket.creator?.username || 'Desconocido'}</span>
                           </div>
                           <Button
                             variant="outline"

@@ -267,9 +267,9 @@ export function Sidebar() {
                   className="flex items-center gap-2 flex-1 min-w-0"
                 >
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#FF6600] to-[#FF3A2F] flex items-center justify-center text-[10px] font-bold text-white shrink-0 shadow-[0_0_8px_rgba(255,102,0,0.3)]">
-                    {user.username[0]}
+                    {(user?.username?.[0] || 'U').toUpperCase()}
                   </div>
-                  <span className="text-xs font-medium truncate text-[#ccc]">{user.username}</span>
+                  <span className="text-xs font-medium truncate text-[#ccc]">{user?.username || 'Usuario'}</span>
                 </motion.div>
               )}
             </AnimatePresence>

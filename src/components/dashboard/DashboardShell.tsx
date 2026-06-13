@@ -21,7 +21,54 @@ import { SuperAdmin } from '@/components/dashboard/SuperAdmin'
 import { BotStatusPanel } from '@/components/dashboard/BotStatusPanel'
 import { BotCustomization } from '@/components/dashboard/BotCustomization'
 import { AntiRaidSystem } from '@/components/dashboard/AntiRaidSystem'
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, Component } from 'react'
+import { AlertCircle, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+// Error boundary to catch rendering errors in any section
+class SectionErrorBoundary extends Component<
+  { children: React.ReactNode; section: string },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode; section: string }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(`[SectionErrorBoundary:${this.props.section}]`, error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 gap-4 p-6">
+          <AlertCircle className="w-10 h-10 text-[#FF6600]/60" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-[#FF6600]">Error al cargar esta sección</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-md">
+              {this.state.error?.message || 'Error desconocido'}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="gap-1.5 border-[#FF6600]/20 hover:bg-[#FF6600]/10 text-[#FF6600]"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Reintentar
+          </Button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function SectionRenderer() {
   const { currentSection } = useAppStore()
@@ -56,11 +103,13 @@ function SectionRenderer() {
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
         className="flex-1 overflow-auto"
       >
-        {sections[currentSection] || (
-          <div className="flex items-center justify-center h-64">
-            <p className="text-muted-foreground text-sm">Sección en desarrollo...</p>
-          </div>
-        )}
+        <SectionErrorBoundary section={currentSection}>
+          {sections[currentSection] || (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground text-sm">Sección en desarrollo...</p>
+            </div>
+          )}
+        </SectionErrorBoundary>
       </motion.div>
     </AnimatePresence>
   )

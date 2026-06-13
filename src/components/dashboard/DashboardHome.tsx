@@ -123,7 +123,7 @@ export function DashboardHome() {
           healthMetrics: { automod: 0, activity: 0, security: 0, engagement: 0 },
           discordData: null,
           serverInfo: {
-            name: currentServer.name, icon: currentServer.icon,
+            name: currentServer?.name || '', icon: currentServer?.icon || null,
             boostCount: 0, boostTier: 0, emojiCount: 0, roleCount: 0,
             automodRules: 0, totalAutomodRules: 0,
             hasVerification: false, raidProtectionEnabled: false,
@@ -244,7 +244,7 @@ export function DashboardHome() {
     },
   ]
 
-  const pieData = stats.ticketsByCategory.map(cat => ({ name: cat.name, value: cat._count.tickets }))
+  const pieData = (stats.ticketsByCategory || []).map(cat => ({ name: cat.name, value: cat._count?.tickets || 0 }))
 
   const boostTierLabels = ['Sin Boost', 'Nivel 1', 'Nivel 2', 'Nivel 3']
 
@@ -430,8 +430,8 @@ export function DashboardHome() {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="grid grid-cols-2 gap-1 mt-2">
-                    {stats.ticketsByCategory.slice(0, 6).map((cat, i) => (
-                      <div key={cat.name} className="flex items-center gap-1.5">
+                    {(stats.ticketsByCategory || []).slice(0, 6).map((cat, i) => (
+                      <div key={`cat-${i}-${cat.name}`} className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                         <span className="text-[10px] text-muted-foreground truncate">{cat.emoji} {cat.name}</span>
                       </div>
@@ -527,7 +527,7 @@ export function DashboardHome() {
                             {new Date(action.createdAt).toLocaleDateString('es-ES')}
                           </span>
                         </div>
-                        <p className="text-xs">{action.moderator.username} → {action.target.username}</p>
+                        <p className="text-xs">{action.moderator?.username || 'Desconocido'} → {action.target?.username || 'Desconocido'}</p>
                         {action.reason && <p className="text-[11px] text-muted-foreground mt-0.5">Razón: {action.reason}</p>}
                       </motion.div>
                     ))}

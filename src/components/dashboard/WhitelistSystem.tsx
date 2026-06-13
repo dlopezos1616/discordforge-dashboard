@@ -529,7 +529,8 @@ export function WhitelistSystem() {
               </Card>
             ) : (
               forms.map((form, i) => {
-                const fields: FormField[] = JSON.parse(form.fields || '[]')
+                let fields: FormField[] = []
+                try { fields = JSON.parse(form.fields || '[]') } catch { fields = [] }
                 return (
                   <motion.div
                     key={form.id}
@@ -640,7 +641,7 @@ export function WhitelistSystem() {
                               onClick={() => setExpandedApp(expandedApp === app.id ? null : app.id)}
                             >
                               <TableCell>
-                                <span className="text-sm font-medium">{app.user.username}</span>
+                                <span className="text-sm font-medium">{app.user?.username || 'Desconocido'}</span>
                               </TableCell>
                               <TableCell>
                                 <Badge
@@ -675,9 +676,11 @@ export function WhitelistSystem() {
                   {expandedApp && (() => {
                     const app = filteredApplications.find(a => a.id === expandedApp)
                     if (!app) return null
-                    const responses: Record<string, string> = JSON.parse(app.responses || '{}')
+                    let responses: Record<string, string> = {}
+                    try { responses = JSON.parse(app.responses || '{}') } catch { responses = {} }
                     const form = forms.find(f => f.id === app.formId)
-                    const formFields: FormField[] = form ? JSON.parse(form.fields || '[]') : []
+                    let formFields: FormField[] = []
+                    try { formFields = form ? JSON.parse(form.fields || '[]') : [] } catch { formFields = [] }
                     return (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
@@ -687,7 +690,7 @@ export function WhitelistSystem() {
                       >
                         <div className="space-y-3">
                           <h4 className="font-semibold text-sm">
-                            Respuestas de {app.user.username}
+                            Respuestas de {app.user?.username || 'Desconocido'}
                           </h4>
                           {formFields.map(field => (
                             <div key={field.id} className="flex flex-col gap-1">
@@ -756,9 +759,11 @@ export function WhitelistSystem() {
                 ) : (
                   <div className="space-y-3">
                     {pendingApps.map((app, i) => {
-                      const responses: Record<string, string> = JSON.parse(app.responses || '{}')
+                      let responses: Record<string, string> = {}
+                      try { responses = JSON.parse(app.responses || '{}') } catch { responses = {} }
                       const form = forms.find(f => f.id === app.formId)
-                      const formFields: FormField[] = form ? JSON.parse(form.fields || '[]') : []
+                      let formFields: FormField[] = []
+                      try { formFields = form ? JSON.parse(form.fields || '[]') : [] } catch { formFields = [] }
                       return (
                         <motion.div
                           key={app.id}
@@ -769,7 +774,7 @@ export function WhitelistSystem() {
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="font-semibold text-sm">{app.user.username}</span>
+                              <span className="font-semibold text-sm">{app.user?.username || 'Desconocido'}</span>
                               <span className="text-xs text-muted-foreground ml-2">
                                 {form?.name || 'Formulario'} • {new Date(app.createdAt).toLocaleDateString('es-ES')}
                               </span>

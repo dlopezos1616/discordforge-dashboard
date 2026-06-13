@@ -145,7 +145,7 @@ export function ModerationPanel() {
     const csv = [
       'Fecha,Usuario,Moderador,Tipo,Razón,Duración,Estado',
       ...filteredActions.map(a =>
-        `${new Date(a.createdAt).toLocaleDateString()},${a.target.username},${a.moderator.username},${a.type},${a.reason || '-'},${a.duration || '-'},${a.isActive ? 'Activo' : 'Inactivo'}`
+        `${new Date(a.createdAt).toLocaleDateString()},${a.target?.username || 'Desconocido'},${a.moderator?.username || 'Desconocido'},${a.type},${a.reason || '-'},${a.duration || '-'},${a.isActive ? 'Activo' : 'Inactivo'}`
       ),
     ].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -164,8 +164,8 @@ export function ModerationPanel() {
       if (search) {
         const s = search.toLowerCase()
         return (
-          a.target.username.toLowerCase().includes(s) ||
-          a.moderator.username.toLowerCase().includes(s) ||
+          a.target?.username?.toLowerCase().includes(s) ||
+          a.moderator?.username?.toLowerCase().includes(s) ||
           (a.reason && a.reason.toLowerCase().includes(s))
         )
       }
@@ -429,10 +429,10 @@ export function ModerationPanel() {
                             })}
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm font-medium">{action.target.username}</span>
+                            <span className="text-sm font-medium">{action.target?.username || 'Desconocido'}</span>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm text-muted-foreground">{action.moderator.username}</span>
+                            <span className="text-sm text-muted-foreground">{action.moderator?.username || 'Desconocido'}</span>
                           </TableCell>
                           <TableCell>
                             <Badge
